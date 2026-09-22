@@ -43,6 +43,16 @@ class User extends Authenticatable
         return $this->hasMany(Course::class, 'updated_by');
     }
 
+    public function enrollments(): HasMany
+    {
+        return $this->hasMany(Enrollment::class);
+    }
+
+    public function revokedAccessGrants(): HasMany
+    {
+        return $this->hasMany(EnrollmentAccessGrant::class, 'revoked_by');
+    }
+
     /**
      * Get the attributes that should be cast.
      *

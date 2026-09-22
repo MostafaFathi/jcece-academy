@@ -27,6 +27,11 @@ class Lesson extends Model
         return $this->hasMany(LessonResource::class)->orderBy('sort_order')->orderBy('id');
     }
 
+    public function progressRecords(): HasMany
+    {
+        return $this->hasMany(LessonProgress::class);
+    }
+
     /** @return array<string, string> */
     protected function casts(): array
     {

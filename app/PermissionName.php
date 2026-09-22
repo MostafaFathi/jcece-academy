@@ -21,4 +21,6 @@ enum PermissionName: string
     case CurriculumCreate = 'curriculum.create';
     case CurriculumUpdate = 'curriculum.update';
     case CurriculumDelete = 'curriculum.delete';
+    case EnrollmentsView = 'enrollments.view';
+    case EnrollmentsManage = 'enrollments.manage';
 }

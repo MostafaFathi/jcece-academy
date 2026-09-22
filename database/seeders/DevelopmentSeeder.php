@@ -2,7 +2,10 @@
 
 namespace Database\Seeders;
 
+use App\AccessGrantSource;
 use App\CourseLevel;
+use App\EnrollmentStatus;
+use App\LessonProgressStatus;
 use App\LessonType;
 use App\Models\Category;
 use App\Models\Course;
@@ -11,7 +14,9 @@ use App\Models\CourseRequiredTool;
 use App\Models\CourseRequirement;
 use App\Models\CourseSection;
 use App\Models\CourseTargetAudience;
+use App\Models\Enrollment;
 use App\Models\Lesson;
+use App\Models\LessonProgress;
 use App\Models\LessonResource;
 use App\Models\User;
 use App\RoleName;
@@ -130,6 +135,40 @@ class DevelopmentSeeder extends Seeder
                 'type' => 'pdf',
                 'file_path' => 'lesson-resources/project-planning-worksheet.pdf',
             ]);
+        }
+
+        $student = User::firstOrCreate(
+            ['email' => 'sample.student@jcec.test'],
+            User::factory()->raw([
+                'name' => 'Sample Student',
+                'email' => 'sample.student@jcec.test',
+            ]),
+        );
+        $student->syncRoles(RoleName::Student->value);
+
+        $enrollment = Enrollment::firstOrCreate(
+            ['user_id' => $student->id, 'course_id' => $course->id],
+            ['status' => EnrollmentStatus::Active, 'enrolled_at' => now()],
+        );
+        $enrollment->accessGrants()->firstOrCreate(
+            ['source_type' => AccessGrantSource::Free, 'source_id' => null],
+            ['access_starts_at' => now(), 'access_expires_at' => null],
+        );
+
+        $sampleLesson = $course->lessons()
+            ->where('lessons.slug', 'project-management-overview')
+            ->first();
+
+        if ($sampleLesson !== null) {
+            LessonProgress::firstOrCreate(
+                ['enrollment_id' => $enrollment->id, 'lesson_id' => $sampleLesson->id],
+                [
+                    'status' => LessonProgressStatus::InProgress,
+                    'watched_seconds' => 120,
+                    'last_position_seconds' => 0,
+                    'started_at' => now()->subDay(),
+                ],
+            );
         }
     }
 }

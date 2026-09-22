@@ -60,6 +60,8 @@ class RolesAndPermissionsSeeder extends Seeder
                 PermissionName::InstructorsView->value,
                 PermissionName::UsersView->value,
                 PermissionName::UsersUpdate->value,
+                PermissionName::EnrollmentsView->value,
+                PermissionName::EnrollmentsManage->value,
             ],
             RoleName::Admin->value => array_column(PermissionName::cases(), 'value'),
         ];

@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable(['category_id', 'instructor_id', 'title', 'slug', 'short_description', 'description', 'thumbnail', 'promo_video_url', 'level', 'language', 'duration_minutes', 'access_duration_days', 'price', 'compare_price', 'discount_starts_at', 'discount_ends_at', 'certificate_enabled', 'discussion_enabled', 'status', 'is_featured', 'published_at', 'created_by', 'updated_by'])]
@@ -61,6 +62,16 @@ class Course extends Model
     public function sections(): HasMany
     {
         return $this->hasMany(CourseSection::class)->orderBy('sort_order')->orderBy('id');
+    }
+
+    public function lessons(): HasManyThrough
+    {
+        return $this->hasManyThrough(Lesson::class, CourseSection::class);
+    }
+
+    public function enrollments(): HasMany
+    {
+        return $this->hasMany(Enrollment::class);
     }
 
     /** @return array<string, string> */
