@@ -41,6 +41,7 @@ class CourseResource extends JsonResource
             'requirements' => $this->whenLoaded('requirements', fn () => $this->requirements->map->only(['id', 'requirement', 'sort_order'])),
             'target_audiences' => $this->whenLoaded('targetAudiences', fn () => $this->targetAudiences->map->only(['id', 'audience', 'sort_order'])),
             'required_tools' => $this->whenLoaded('requiredTools', fn () => $this->requiredTools->map->only(['id', 'tool', 'sort_order'])),
+            'curriculum' => PublicCourseSectionResource::collection($this->whenLoaded('sections')),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

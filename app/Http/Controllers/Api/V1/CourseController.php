@@ -63,6 +63,8 @@ class CourseController extends Controller
             'requirements',
             'targetAudiences',
             'requiredTools',
+            'sections' => fn ($query) => $query->where('is_active', true),
+            'sections.lessons' => fn ($query) => $query->where('is_published', true),
         ]));
     }
 }

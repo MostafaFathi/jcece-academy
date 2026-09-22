@@ -35,6 +35,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 PermissionName::CoursesUpdate->value,
                 PermissionName::CategoriesView->value,
                 PermissionName::InstructorsView->value,
+                PermissionName::CurriculumView->value,
             ],
             RoleName::ContentManager->value => [
                 PermissionName::CoursesView->value,
@@ -48,6 +49,10 @@ class RolesAndPermissionsSeeder extends Seeder
                 PermissionName::CategoriesDelete->value,
                 PermissionName::InstructorsView->value,
                 PermissionName::InstructorsUpdate->value,
+                PermissionName::CurriculumView->value,
+                PermissionName::CurriculumCreate->value,
+                PermissionName::CurriculumUpdate->value,
+                PermissionName::CurriculumDelete->value,
             ],
             RoleName::SalesSupport->value => [
                 PermissionName::CoursesView->value,

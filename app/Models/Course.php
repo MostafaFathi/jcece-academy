@@ -58,6 +58,11 @@ class Course extends Model
         return $this->hasMany(CourseRequiredTool::class)->orderBy('sort_order')->orderBy('id');
     }
 
+    public function sections(): HasMany
+    {
+        return $this->hasMany(CourseSection::class)->orderBy('sort_order')->orderBy('id');
+    }
+
     /** @return array<string, string> */
     protected function casts(): array
     {
