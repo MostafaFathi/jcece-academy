@@ -53,6 +53,11 @@ class RolesAndPermissionsSeeder extends Seeder
                 PermissionName::CurriculumCreate->value,
                 PermissionName::CurriculumUpdate->value,
                 PermissionName::CurriculumDelete->value,
+                PermissionName::PackagesView->value,
+                PermissionName::PackagesCreate->value,
+                PermissionName::PackagesUpdate->value,
+                PermissionName::PackagesDelete->value,
+                PermissionName::PackagesPublish->value,
             ],
             RoleName::SalesSupport->value => [
                 PermissionName::CoursesView->value,

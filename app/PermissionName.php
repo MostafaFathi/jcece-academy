@@ -9,6 +9,11 @@ enum PermissionName: string
     case CoursesUpdate = 'courses.update';
     case CoursesDelete = 'courses.delete';
     case CoursesPublish = 'courses.publish';
+    case PackagesView = 'packages.view';
+    case PackagesCreate = 'packages.create';
+    case PackagesUpdate = 'packages.update';
+    case PackagesDelete = 'packages.delete';
+    case PackagesPublish = 'packages.publish';
     case CategoriesView = 'categories.view';
     case CategoriesCreate = 'categories.create';
     case CategoriesUpdate = 'categories.update';

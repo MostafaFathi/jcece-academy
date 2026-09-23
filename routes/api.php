@@ -7,10 +7,14 @@ use App\Http\Controllers\Api\V1\Admin\CurriculumOrderController;
 use App\Http\Controllers\Api\V1\Admin\EnrollmentAccessController;
 use App\Http\Controllers\Api\V1\Admin\LessonController;
 use App\Http\Controllers\Api\V1\Admin\LessonResourceController;
+use App\Http\Controllers\Api\V1\Admin\PackageController as AdminPackageController;
+use App\Http\Controllers\Api\V1\Admin\PackageCourseController;
+use App\Http\Controllers\Api\V1\Admin\PackageCourseOrderController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\CourseController;
 use App\Http\Controllers\Api\V1\Me\CourseController as MeCourseController;
 use App\Http\Controllers\Api\V1\Me\LessonProgressController;
+use App\Http\Controllers\Api\V1\PackageController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->name('api.v1.')->group(function (): void {
@@ -18,6 +22,8 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
     Route::get('categories/{category}', [CategoryController::class, 'show'])->name('categories.show');
     Route::get('courses', [CourseController::class, 'index'])->name('courses.index');
     Route::get('courses/{course:slug}', [CourseController::class, 'show'])->name('courses.show');
+    Route::get('packages', [PackageController::class, 'index'])->name('packages.index');
+    Route::get('packages/{package:slug}', [PackageController::class, 'show'])->name('packages.show');
 
     Route::middleware('auth:sanctum')->prefix('me')->name('me.')->group(function (): void {
         Route::get('courses', [MeCourseController::class, 'index'])->name('courses.index');
@@ -34,10 +40,17 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
     Route::middleware('auth:sanctum')->prefix('admin')->name('admin.')->group(function (): void {
         Route::apiResource('categories', AdminCategoryController::class);
         Route::apiResource('courses', AdminCourseController::class);
+        Route::apiResource('packages', AdminPackageController::class);
         Route::post('users/{user}/courses/{course}/access', [EnrollmentAccessController::class, 'store'])->name('users.courses.access.store');
         Route::delete('access-grants/{grant}', [EnrollmentAccessController::class, 'destroy'])->name('access-grants.destroy');
 
         Route::scopeBindings()->group(function (): void {
+            Route::get('packages/{package}/courses', [PackageCourseController::class, 'index'])->name('packages.courses.index');
+            Route::post('packages/{package}/courses', [PackageCourseController::class, 'store'])->name('packages.courses.store');
+            Route::post('packages/{package}/courses/reorder', PackageCourseOrderController::class)->name('packages.courses.reorder');
+            Route::patch('packages/{package}/courses/{courseMembership}', [PackageCourseController::class, 'update'])->name('packages.courses.update');
+            Route::delete('packages/{package}/courses/{courseMembership}', [PackageCourseController::class, 'destroy'])->name('packages.courses.destroy');
+
             Route::post('courses/{course}/sections/reorder', [CurriculumOrderController::class, 'sections'])->name('courses.sections.reorder');
             Route::apiResource('courses.sections', CourseSectionController::class);
 

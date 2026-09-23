@@ -18,7 +18,10 @@ use App\Models\Enrollment;
 use App\Models\Lesson;
 use App\Models\LessonProgress;
 use App\Models\LessonResource;
+use App\Models\Package;
 use App\Models\User;
+use App\PackageStatus;
+use App\PackageType;
 use App\RoleName;
 use Illuminate\Database\Seeder;
 
@@ -136,6 +139,90 @@ class DevelopmentSeeder extends Seeder
                 'file_path' => 'lesson-resources/project-planning-worksheet.pdf',
             ]);
         }
+
+        $bimCourses = collect([
+            [
+                'title' => 'BIM Modeling Essentials',
+                'slug' => 'bim-modeling-essentials',
+                'short_description' => 'Build a practical foundation in building information modeling.',
+                'price' => 180,
+                'duration_minutes' => 420,
+            ],
+            [
+                'title' => 'Construction Documentation with BIM',
+                'slug' => 'construction-documentation-with-bim',
+                'short_description' => 'Create coordinated construction documents from a BIM workflow.',
+                'price' => 220,
+                'duration_minutes' => 540,
+            ],
+        ])->map(function (array $attributes) use ($admin, $categories, $instructors): Course {
+            $bimCourse = Course::firstOrCreate(
+                ['slug' => $attributes['slug']],
+                Course::factory()
+                    ->published()
+                    ->for($categories->get(1))
+                    ->for($instructors->get(1), 'instructor')
+                    ->raw([
+                        ...$attributes,
+                        'level' => CourseLevel::Beginner,
+                        'language' => 'en',
+                        'created_by' => $admin->id,
+                        'updated_by' => $admin->id,
+                    ]),
+            );
+
+            return $bimCourse;
+        });
+
+        $samplePackages = collect([
+            [
+                'title' => 'BIM Professional Bundle',
+                'slug' => 'bim-professional-bundle',
+                'description' => 'A practical bundle covering BIM modeling and construction documentation.',
+                'type' => PackageType::Package,
+                'price' => 299,
+                'compare_price' => 400,
+                'access_duration_days' => 365,
+                'is_sequential' => false,
+            ],
+            [
+                'title' => 'BIM Career Path',
+                'slug' => 'bim-career-path',
+                'description' => 'A structured, lifetime learning path for BIM career development.',
+                'type' => PackageType::LearningPath,
+                'price' => 349,
+                'compare_price' => 450,
+                'access_duration_days' => null,
+                'is_sequential' => true,
+            ],
+        ])->map(function (array $attributes): Package {
+            $package = Package::firstOrCreate(
+                ['slug' => $attributes['slug']],
+                [
+                    ...$attributes,
+                    'status' => PackageStatus::Published,
+                    'published_at' => now()->subDay(),
+                ],
+            );
+            $package->update([
+                ...$attributes,
+                'status' => PackageStatus::Published,
+            ]);
+
+            return $package;
+        });
+
+        $samplePackages->each(function (Package $package) use ($bimCourses): void {
+            $courseIds = $bimCourses->pluck('id');
+            $package->courseMemberships()->whereNotIn('course_id', $courseIds)->delete();
+
+            $bimCourses->values()->each(function (Course $bimCourse, int $sortOrder) use ($package): void {
+                $package->courseMemberships()->updateOrCreate(
+                    ['course_id' => $bimCourse->id],
+                    ['sort_order' => $sortOrder, 'is_required' => true],
+                );
+            });
+        });
 
         $student = User::firstOrCreate(
             ['email' => 'sample.student@jcec.test'],
