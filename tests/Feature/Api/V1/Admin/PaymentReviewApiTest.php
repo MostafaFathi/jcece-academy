@@ -2,7 +2,10 @@
 
 namespace Tests\Feature\Api\V1\Admin;
 
+use App\AccessGrantSource;
+use App\Models\Course;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\Payment;
 use App\Models\User;
 use App\OrderStatus;
@@ -38,11 +41,16 @@ class PaymentReviewApiTest extends TestCase
         $this->postJson("/api/v1/admin/payments/{$payment->id}/approve")->assertForbidden();
     }
 
-    public function test_approval_marks_payment_and_order_paid_without_provisioning_access(): void
+    public function test_approval_marks_payment_paid_and_completes_order_with_provisioned_access(): void
     {
         $this->travelTo('2026-09-23 12:00:00');
         $reviewer = $this->authenticateAs(RoleName::SalesSupport);
         $order = Order::factory()->awaitingPayment()->create(['total' => '125.75', 'currency' => 'JOD']);
+        $course = Course::factory()->create();
+        $item = OrderItem::factory()->for($order)->create([
+            'purchasable_id' => $course->id,
+            'access_duration_days' => 30,
+        ]);
         $payment = Payment::factory()->for($order)->create(['amount' => '125.75', 'currency' => 'JOD']);
 
         $this->postJson("/api/v1/admin/payments/{$payment->id}/approve")
@@ -55,10 +63,15 @@ class PaymentReviewApiTest extends TestCase
         $this->assertSame(PaymentStatus::Paid, $payment->status);
         $this->assertSame($reviewer->id, $payment->approved_by);
         $this->assertSame('2026-09-23 12:00:00', $payment->paid_at?->format('Y-m-d H:i:s'));
-        $this->assertSame(OrderStatus::Paid, $order->status);
+        $this->assertSame(OrderStatus::Completed, $order->status);
         $this->assertSame('2026-09-23 12:00:00', $order->paid_at?->format('Y-m-d H:i:s'));
-        $this->assertDatabaseCount('enrollments', 0);
-        $this->assertDatabaseCount('enrollment_access_grants', 0);
+        $this->assertDatabaseHas('enrollments', ['user_id' => $order->user_id, 'course_id' => $course->id]);
+        $this->assertDatabaseHas('enrollment_access_grants', [
+            'source_type' => AccessGrantSource::DirectPurchase->value,
+            'source_id' => $item->id,
+            'access_starts_at' => '2026-09-23 12:00:00',
+            'access_expires_at' => '2026-10-23 12:00:00',
+        ]);
     }
 
     public function test_repeated_approval_is_idempotent(): void
@@ -66,6 +79,8 @@ class PaymentReviewApiTest extends TestCase
         $this->travelTo('2026-09-23 12:00:00');
         $this->authenticateAs(RoleName::SalesSupport);
         $order = Order::factory()->awaitingPayment()->create();
+        $course = Course::factory()->create();
+        OrderItem::factory()->for($order)->create(['purchasable_id' => $course->id]);
         $payment = Payment::factory()->for($order)->create();
 
         $this->postJson("/api/v1/admin/payments/{$payment->id}/approve")->assertOk();
@@ -75,6 +90,25 @@ class PaymentReviewApiTest extends TestCase
 
         $this->assertSame($approvedAt, $payment->fresh()->approved_at?->toISOString());
         $this->assertDatabaseCount('payments', 1);
+        $this->assertDatabaseCount('enrollment_access_grants', 1);
+    }
+
+    public function test_failed_provisioning_rolls_back_payment_approval_and_order_completion(): void
+    {
+        $this->authenticateAs(RoleName::SalesSupport);
+        $order = Order::factory()->awaitingPayment()->create();
+        $payment = Payment::factory()->for($order)->create();
+        OrderItem::factory()->for($order)->create(['purchasable_id' => PHP_INT_MAX]);
+
+        $this->postJson("/api/v1/admin/payments/{$payment->id}/approve")
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('order');
+
+        $this->assertSame(PaymentStatus::PendingReview, $payment->fresh()->status);
+        $this->assertNull($payment->paid_at);
+        $this->assertSame(OrderStatus::AwaitingPayment, $order->fresh()->status);
+        $this->assertNull($order->paid_at);
+        $this->assertDatabaseCount('enrollment_access_grants', 0);
     }
 
     public function test_rejection_preserves_attempt_and_returns_order_to_pending(): void

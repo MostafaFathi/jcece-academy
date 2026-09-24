@@ -10,7 +10,9 @@ use App\Models\EnrollmentAccessGrant;
 use App\Models\User;
 use Carbon\CarbonInterface;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class CourseAccessService
 {
@@ -111,6 +113,80 @@ class CourseAccessService
                 'access_starts_at' => $accessStartsAt,
                 'access_expires_at' => $accessExpiresAt,
             ]);
+        });
+    }
+
+    /**
+     * purchase_entitlement_key is the database-enforced identity for retries.
+     * source_id remains the corresponding purchased Order Item ID.
+     *
+     * @return array{grant: EnrollmentAccessGrant, created: bool}
+     */
+    public function grantPurchasedAccess(
+        User $user,
+        Course $course,
+        AccessGrantSource $source,
+        int $sourceId,
+        string $entitlementKey,
+        CarbonInterface $accessStartsAt,
+        ?CarbonInterface $accessExpiresAt,
+    ): array {
+        if (! in_array($source, [AccessGrantSource::DirectPurchase, AccessGrantSource::PackagePurchase], true)) {
+            throw new \InvalidArgumentException('A purchase access grant requires a purchase source.');
+        }
+
+        return DB::transaction(function () use ($user, $course, $source, $sourceId, $entitlementKey, $accessStartsAt, $accessExpiresAt): array {
+            $timestamp = Date::now();
+
+            DB::table('enrollments')->insertOrIgnore([
+                'user_id' => $user->id,
+                'course_id' => $course->id,
+                'status' => EnrollmentStatus::Active->value,
+                'enrolled_at' => $timestamp,
+                'created_at' => $timestamp,
+                'updated_at' => $timestamp,
+            ]);
+
+            $enrollment = Enrollment::query()
+                ->whereBelongsTo($user)
+                ->whereBelongsTo($course)
+                ->lockForUpdate()
+                ->first();
+
+            if ($enrollment === null) {
+                throw ValidationException::withMessages([
+                    'order' => 'The purchased course enrollment could not be created.',
+                ]);
+            }
+
+            $created = DB::table('enrollment_access_grants')->insertOrIgnore([
+                'enrollment_id' => $enrollment->id,
+                'source_type' => $source->value,
+                'source_id' => $sourceId,
+                'purchase_entitlement_key' => $entitlementKey,
+                'access_starts_at' => $accessStartsAt,
+                'access_expires_at' => $accessExpiresAt,
+                'created_at' => $timestamp,
+                'updated_at' => $timestamp,
+            ]) === 1;
+
+            $grant = EnrollmentAccessGrant::query()
+                ->where('purchase_entitlement_key', $entitlementKey)
+                ->lockForUpdate()
+                ->first();
+
+            if (
+                $grant === null
+                || $grant->enrollment_id !== $enrollment->id
+                || $grant->source_type !== $source
+                || $grant->source_id !== $sourceId
+            ) {
+                throw ValidationException::withMessages([
+                    'order' => 'The purchase entitlement conflicts with an existing access grant.',
+                ]);
+            }
+
+            return ['grant' => $grant, 'created' => $created];
         });
     }
 

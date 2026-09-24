@@ -13,6 +13,8 @@ use Illuminate\Validation\ValidationException;
 
 class PaymentReviewService
 {
+    public function __construct(private OrderAccessProvisioningService $provisioning) {}
+
     public function approve(Payment $payment, User $approver): Payment
     {
         return DB::transaction(function () use ($payment, $approver): Payment {
@@ -23,7 +25,9 @@ class PaymentReviewService
                 $lockedPayment->status === PaymentStatus::Paid
                 && in_array($order->status, [OrderStatus::Paid, OrderStatus::Completed], true)
             ) {
-                return $lockedPayment->load(['order', 'approver']);
+                $this->provisioning->provision($order);
+
+                return $lockedPayment->refresh()->load(['order', 'approver']);
             }
 
             if ($lockedPayment->status !== PaymentStatus::PendingReview) {
@@ -57,6 +61,8 @@ class PaymentReviewService
                 'status' => OrderStatus::Paid,
                 'paid_at' => $approvedAt,
             ]);
+
+            $this->provisioning->provision($order);
 
             return $lockedPayment->refresh()->load(['order', 'approver']);
         }, 3);

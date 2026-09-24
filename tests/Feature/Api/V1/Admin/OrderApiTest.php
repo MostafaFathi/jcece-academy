@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api\V1\Admin;
 
+use App\Models\Course;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\User;
@@ -55,12 +56,15 @@ class OrderApiTest extends TestCase
     {
         $this->authenticateAs(RoleName::SalesSupport);
         $order = Order::factory()->paid()->create();
+        $course = Course::factory()->create();
+        OrderItem::factory()->for($order)->create(['purchasable_id' => $course->id]);
 
         $this->patchJson("/api/v1/admin/orders/{$order->id}/status", [
             'status' => OrderStatus::Completed->value,
         ])->assertOk()->assertJsonPath('data.status', OrderStatus::Completed->value);
 
         $this->assertSame(OrderStatus::Completed, $order->fresh()->status);
+        $this->assertDatabaseHas('enrollments', ['user_id' => $order->user_id, 'course_id' => $course->id]);
     }
 
     public function test_invalid_status_transition_returns_422_without_changing_order(): void

@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\Admin\CurriculumOrderController;
 use App\Http\Controllers\Api\V1\Admin\EnrollmentAccessController;
 use App\Http\Controllers\Api\V1\Admin\LessonController;
 use App\Http\Controllers\Api\V1\Admin\LessonResourceController;
+use App\Http\Controllers\Api\V1\Admin\OrderAccessProvisioningController;
 use App\Http\Controllers\Api\V1\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Api\V1\Admin\OrderStatusController;
 use App\Http\Controllers\Api\V1\Admin\PackageController as AdminPackageController;
@@ -68,6 +69,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::get('orders', [AdminOrderController::class, 'index'])->name('orders.index');
         Route::get('orders/{order}', [AdminOrderController::class, 'show'])->name('orders.show');
         Route::patch('orders/{order}/status', OrderStatusController::class)->name('orders.status.update');
+        Route::post('orders/{order}/provision-access', OrderAccessProvisioningController::class)->name('orders.access.store');
         Route::get('payments', [AdminPaymentController::class, 'index'])->name('payments.index');
         Route::get('payments/{payment}', [AdminPaymentController::class, 'show'])->name('payments.show');
         Route::get('payments/{payment}/proof', AdminPaymentProofController::class)->name('payments.proof.show');

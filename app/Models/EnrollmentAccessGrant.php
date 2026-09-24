@@ -6,13 +6,15 @@ use App\AccessGrantSource;
 use Carbon\CarbonInterface;
 use Database\Factories\EnrollmentAccessGrantFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['enrollment_id', 'source_type', 'source_id', 'access_starts_at', 'access_expires_at', 'revoked_at', 'revoked_by', 'revocation_reason'])]
+#[Fillable(['enrollment_id', 'source_type', 'source_id', 'purchase_entitlement_key', 'access_starts_at', 'access_expires_at', 'revoked_at', 'revoked_by', 'revocation_reason'])]
+#[Hidden(['purchase_entitlement_key'])]
 class EnrollmentAccessGrant extends Model
 {
     /** @use HasFactory<EnrollmentAccessGrantFactory> */
