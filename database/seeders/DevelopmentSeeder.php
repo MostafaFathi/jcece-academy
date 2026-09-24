@@ -7,6 +7,7 @@ use App\CourseLevel;
 use App\EnrollmentStatus;
 use App\LessonProgressStatus;
 use App\LessonType;
+use App\Models\Cart;
 use App\Models\Category;
 use App\Models\Course;
 use App\Models\CourseLearningOutcome;
@@ -22,6 +23,7 @@ use App\Models\Package;
 use App\Models\User;
 use App\PackageStatus;
 use App\PackageType;
+use App\PurchasableType;
 use App\RoleName;
 use Illuminate\Database\Seeder;
 
@@ -256,6 +258,16 @@ class DevelopmentSeeder extends Seeder
                     'started_at' => now()->subDay(),
                 ],
             );
+        }
+
+        $sampleBundle = Package::query()->where('slug', 'bim-professional-bundle')->first();
+
+        if ($sampleBundle !== null) {
+            $cart = Cart::query()->firstOrCreate(['user_id' => $student->id]);
+            $cart->items()->firstOrCreate([
+                'purchasable_type' => PurchasableType::Package->value,
+                'purchasable_id' => $sampleBundle->id,
+            ]);
         }
     }
 }

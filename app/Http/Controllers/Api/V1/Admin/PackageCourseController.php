@@ -11,6 +11,7 @@ use App\Models\PackageCourse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 
 class PackageCourseController extends Controller
@@ -25,11 +26,14 @@ class PackageCourseController extends Controller
     public function store(StorePackageCourseRequest $request, Package $package): JsonResponse
     {
         Gate::authorize('update', $package);
-        $attributes = $request->validated();
-        $maximumSortOrder = $package->courseMemberships()->max('sort_order');
-        $attributes['sort_order'] ??= $maximumSortOrder === null ? 0 : ((int) $maximumSortOrder) + 1;
+        $membership = DB::transaction(function () use ($request, $package): PackageCourse {
+            $lockedPackage = Package::query()->lockForUpdate()->findOrFail($package->id);
+            $attributes = $request->validated();
+            $maximumSortOrder = $lockedPackage->courseMemberships()->max('sort_order');
+            $attributes['sort_order'] ??= $maximumSortOrder === null ? 0 : ((int) $maximumSortOrder) + 1;
 
-        $membership = $package->courseMemberships()->create($attributes)->load('course');
+            return $lockedPackage->courseMemberships()->create($attributes)->load('course');
+        });
 
         return (new PackageCourseResource($membership))->response()->setStatusCode(201);
     }
@@ -38,7 +42,10 @@ class PackageCourseController extends Controller
     {
         Gate::authorize('update', $package);
 
-        $courseMembership->update($request->validated());
+        DB::transaction(function () use ($request, $package, $courseMembership): void {
+            Package::query()->lockForUpdate()->findOrFail($package->id);
+            $courseMembership->update($request->validated());
+        });
 
         return new PackageCourseResource($courseMembership->refresh()->load('course'));
     }
@@ -47,7 +54,10 @@ class PackageCourseController extends Controller
     {
         Gate::authorize('update', $package);
 
-        $courseMembership->delete();
+        DB::transaction(function () use ($package, $courseMembership): void {
+            Package::query()->lockForUpdate()->findOrFail($package->id);
+            $courseMembership->delete();
+        });
 
         return response()->noContent();
     }

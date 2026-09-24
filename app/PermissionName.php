@@ -28,4 +28,8 @@ enum PermissionName: string
     case CurriculumDelete = 'curriculum.delete';
     case EnrollmentsView = 'enrollments.view';
     case EnrollmentsManage = 'enrollments.manage';
+    case OrdersView = 'orders.view';
+    case OrdersManage = 'orders.manage';
+    case PaymentsView = 'payments.view';
+    case PaymentsManage = 'payments.manage';
 }

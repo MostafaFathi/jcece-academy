@@ -12,7 +12,8 @@ class PackageCourseOrderService
     public function reorder(Package $package, array $ids): void
     {
         DB::transaction(function () use ($package, $ids): void {
-            $ownedIds = $package->courseMemberships()
+            $lockedPackage = Package::query()->lockForUpdate()->findOrFail($package->id);
+            $ownedIds = $lockedPackage->courseMemberships()
                 ->lockForUpdate()
                 ->pluck('package_courses.id')
                 ->map(fn (mixed $id): int => (int) $id)
@@ -28,7 +29,7 @@ class PackageCourseOrderService
             }
 
             foreach ($ids as $sortOrder => $id) {
-                $package->courseMemberships()->whereKey($id)->update(['sort_order' => $sortOrder]);
+                $lockedPackage->courseMemberships()->whereKey($id)->update(['sort_order' => $sortOrder]);
             }
         });
     }

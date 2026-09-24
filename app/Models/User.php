@@ -48,6 +48,21 @@ class User extends Authenticatable
         return $this->hasMany(Enrollment::class);
     }
 
+    public function cart(): HasOne
+    {
+        return $this->hasOne(Cart::class);
+    }
+
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class);
+    }
+
+    public function approvedPayments(): HasMany
+    {
+        return $this->hasMany(Payment::class, 'approved_by');
+    }
+
     public function revokedAccessGrants(): HasMany
     {
         return $this->hasMany(EnrollmentAccessGrant::class, 'revoked_by');
