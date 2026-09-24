@@ -63,6 +63,11 @@ class User extends Authenticatable
         return $this->hasMany(Payment::class, 'approved_by');
     }
 
+    public function quizAttempts(): HasMany
+    {
+        return $this->hasMany(QuizAttempt::class);
+    }
+
     public function revokedAccessGrants(): HasMany
     {
         return $this->hasMany(EnrollmentAccessGrant::class, 'revoked_by');

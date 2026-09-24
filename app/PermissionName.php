@@ -32,4 +32,10 @@ enum PermissionName: string
     case OrdersManage = 'orders.manage';
     case PaymentsView = 'payments.view';
     case PaymentsManage = 'payments.manage';
+    case AssessmentsView = 'assessments.view';
+    case AssessmentsCreate = 'assessments.create';
+    case AssessmentsUpdate = 'assessments.update';
+    case AssessmentsDelete = 'assessments.delete';
+    case AssessmentsPublish = 'assessments.publish';
+    case AssessmentResultsView = 'assessments.results.view';
 }

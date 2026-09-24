@@ -17,6 +17,11 @@ use App\Http\Controllers\Api\V1\Admin\PaymentApprovalController;
 use App\Http\Controllers\Api\V1\Admin\PaymentController as AdminPaymentController;
 use App\Http\Controllers\Api\V1\Admin\PaymentProofController as AdminPaymentProofController;
 use App\Http\Controllers\Api\V1\Admin\PaymentRejectionController;
+use App\Http\Controllers\Api\V1\Admin\QuizAttemptController as AdminQuizAttemptController;
+use App\Http\Controllers\Api\V1\Admin\QuizController as AdminQuizController;
+use App\Http\Controllers\Api\V1\Admin\QuizPublicationController;
+use App\Http\Controllers\Api\V1\Admin\QuizQuestionController;
+use App\Http\Controllers\Api\V1\Admin\QuizQuestionOrderController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\CourseController;
 use App\Http\Controllers\Api\V1\Me\CartController;
@@ -27,6 +32,10 @@ use App\Http\Controllers\Api\V1\Me\LessonProgressController;
 use App\Http\Controllers\Api\V1\Me\OrderController as MeOrderController;
 use App\Http\Controllers\Api\V1\Me\PaymentController as MePaymentController;
 use App\Http\Controllers\Api\V1\Me\PaymentProofController as MePaymentProofController;
+use App\Http\Controllers\Api\V1\Me\QuizAttemptAnswerController;
+use App\Http\Controllers\Api\V1\Me\QuizAttemptController;
+use App\Http\Controllers\Api\V1\Me\QuizAttemptSubmissionController;
+use App\Http\Controllers\Api\V1\Me\QuizController as MeQuizController;
 use App\Http\Controllers\Api\V1\PackageController;
 use Illuminate\Support\Facades\Route;
 
@@ -48,6 +57,14 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::get('orders/{order}', [MeOrderController::class, 'show'])->name('orders.show');
         Route::post('orders/{order}/payments', [MePaymentController::class, 'store'])->middleware('throttle:10,1')->name('orders.payments.store');
         Route::get('payments/{payment}/proof', MePaymentProofController::class)->name('payments.proof.show');
+        Route::get('quizzes', [MeQuizController::class, 'index'])->name('quizzes.index');
+        Route::get('quizzes/{quiz}', [MeQuizController::class, 'show'])->name('quizzes.show');
+        Route::get('quizzes/{quiz}/attempts', [QuizAttemptController::class, 'index'])->name('quizzes.attempts.index');
+        Route::post('quizzes/{quiz}/attempts', [QuizAttemptController::class, 'store'])->name('quizzes.attempts.store');
+        Route::get('quiz-attempts/{attempt}', [QuizAttemptController::class, 'show'])->name('quiz-attempts.show');
+        Route::get('quiz-attempts/{attempt}/result', [QuizAttemptController::class, 'show'])->name('quiz-attempts.result.show');
+        Route::patch('quiz-attempts/{attempt}/answers', QuizAttemptAnswerController::class)->name('quiz-attempts.answers.update');
+        Route::post('quiz-attempts/{attempt}/submit', QuizAttemptSubmissionController::class)->name('quiz-attempts.submit');
 
         Route::get('courses', [MeCourseController::class, 'index'])->name('courses.index');
         Route::get('courses/{course:slug}', [MeCourseController::class, 'show'])->name('courses.show');
@@ -88,6 +105,14 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
 
             Route::post('sections/{section}/lessons/reorder', [CurriculumOrderController::class, 'lessons'])->name('sections.lessons.reorder');
             Route::apiResource('sections.lessons', LessonController::class);
+
+            Route::apiResource('courses.quizzes', AdminQuizController::class);
+            Route::apiResource('quizzes.questions', QuizQuestionController::class);
+            Route::post('quizzes/{quiz}/questions/reorder', QuizQuestionOrderController::class)->name('quizzes.questions.reorder');
+            Route::post('quizzes/{quiz}/publication', [QuizPublicationController::class, 'store'])->name('quizzes.publication.store');
+            Route::delete('quizzes/{quiz}/publication', [QuizPublicationController::class, 'destroy'])->name('quizzes.publication.destroy');
+            Route::get('quizzes/{quiz}/attempts', [AdminQuizAttemptController::class, 'index'])->name('quizzes.attempts.index');
+            Route::get('quizzes/{quiz}/attempts/{attempt}', [AdminQuizAttemptController::class, 'show'])->name('quizzes.attempts.show');
 
             Route::post('lessons/{lesson}/resources/reorder', [CurriculumOrderController::class, 'resources'])->name('lessons.resources.reorder');
             Route::apiResource('lessons.resources', LessonResourceController::class);
