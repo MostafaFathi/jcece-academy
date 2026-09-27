@@ -41,6 +41,11 @@ use App\Http\Controllers\Api\V1\Admin\QuizController as AdminQuizController;
 use App\Http\Controllers\Api\V1\Admin\QuizPublicationController;
 use App\Http\Controllers\Api\V1\Admin\QuizQuestionController;
 use App\Http\Controllers\Api\V1\Admin\QuizQuestionOrderController;
+use App\Http\Controllers\Api\V1\Admin\SupportTicketAssignmentController;
+use App\Http\Controllers\Api\V1\Admin\SupportTicketAttachmentDownloadController as AdminSupportTicketAttachmentDownloadController;
+use App\Http\Controllers\Api\V1\Admin\SupportTicketController as AdminSupportTicketController;
+use App\Http\Controllers\Api\V1\Admin\SupportTicketMessageController as AdminSupportTicketMessageController;
+use App\Http\Controllers\Api\V1\Admin\SupportTicketUpdateController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\CertificateVerificationController;
 use App\Http\Controllers\Api\V1\CourseController;
@@ -68,6 +73,10 @@ use App\Http\Controllers\Api\V1\Me\QuizAttemptAnswerController;
 use App\Http\Controllers\Api\V1\Me\QuizAttemptController;
 use App\Http\Controllers\Api\V1\Me\QuizAttemptSubmissionController;
 use App\Http\Controllers\Api\V1\Me\QuizController as MeQuizController;
+use App\Http\Controllers\Api\V1\Me\SupportTicketAttachmentDownloadController as MeSupportTicketAttachmentDownloadController;
+use App\Http\Controllers\Api\V1\Me\SupportTicketController as MeSupportTicketController;
+use App\Http\Controllers\Api\V1\Me\SupportTicketMessageController as MeSupportTicketMessageController;
+use App\Http\Controllers\Api\V1\Me\SupportTicketReopeningController;
 use App\Http\Controllers\Api\V1\PackageController;
 use Illuminate\Support\Facades\Route;
 
@@ -129,6 +138,13 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::get('courses/{course:slug}/review', [MeCourseReviewController::class, 'show'])->name('courses.review.show');
         Route::post('courses/{course:slug}/reviews', [MeCourseReviewController::class, 'store'])->name('courses.reviews.store');
         Route::patch('reviews/{review}', [MeCourseReviewController::class, 'update'])->name('reviews.update');
+        Route::get('support-tickets', [MeSupportTicketController::class, 'index'])->name('support-tickets.index');
+        Route::post('support-tickets', [MeSupportTicketController::class, 'store'])->name('support-tickets.store');
+        Route::get('support-tickets/{ticket}', [MeSupportTicketController::class, 'show'])->name('support-tickets.show');
+        Route::get('support-tickets/{ticket}/messages', [MeSupportTicketMessageController::class, 'index'])->name('support-tickets.messages.index');
+        Route::post('support-tickets/{ticket}/messages', [MeSupportTicketMessageController::class, 'store'])->name('support-tickets.messages.store');
+        Route::post('support-tickets/{ticket}/reopen', SupportTicketReopeningController::class)->name('support-tickets.reopen');
+        Route::get('support-ticket-attachments/{attachment}/download', MeSupportTicketAttachmentDownloadController::class)->name('support-ticket-attachments.download');
 
         Route::scopeBindings()->group(function (): void {
             Route::patch('courses/{course:slug}/lessons/{lesson}/progress', [LessonProgressController::class, 'update'])->name('courses.lessons.progress.update');
@@ -201,5 +217,12 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::post('course-reviews/{review}/publication', CourseReviewPublicationController::class)->name('course-reviews.publication.store');
         Route::post('course-reviews/{review}/rejection', CourseReviewRejectionController::class)->name('course-reviews.rejection.store');
         Route::post('course-reviews/{review}/hiding', CourseReviewHidingController::class)->name('course-reviews.hiding.store');
+        Route::get('support-tickets', [AdminSupportTicketController::class, 'index'])->name('support-tickets.index');
+        Route::get('support-tickets/{ticket}', [AdminSupportTicketController::class, 'show'])->name('support-tickets.show');
+        Route::patch('support-tickets/{ticket}', SupportTicketUpdateController::class)->name('support-tickets.update');
+        Route::put('support-tickets/{ticket}/assignment', SupportTicketAssignmentController::class)->name('support-tickets.assignment.update');
+        Route::get('support-tickets/{ticket}/messages', [AdminSupportTicketMessageController::class, 'index'])->name('support-tickets.messages.index');
+        Route::post('support-tickets/{ticket}/messages', [AdminSupportTicketMessageController::class, 'store'])->name('support-tickets.messages.store');
+        Route::get('support-ticket-attachments/{attachment}/download', AdminSupportTicketAttachmentDownloadController::class)->name('support-ticket-attachments.download');
     });
 });

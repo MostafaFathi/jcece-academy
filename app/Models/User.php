@@ -103,6 +103,26 @@ class User extends Authenticatable
         return $this->hasMany(CourseReview::class, 'moderated_by');
     }
 
+    public function supportTickets(): HasMany
+    {
+        return $this->hasMany(SupportTicket::class);
+    }
+
+    public function assignedSupportTickets(): HasMany
+    {
+        return $this->hasMany(SupportTicket::class, 'assigned_to');
+    }
+
+    public function supportTicketMessages(): HasMany
+    {
+        return $this->hasMany(SupportTicketMessage::class);
+    }
+
+    public function supportTicketActivities(): HasMany
+    {
+        return $this->hasMany(SupportTicketActivity::class, 'actor_id');
+    }
+
     /**
      * Get the attributes that should be cast.
      *

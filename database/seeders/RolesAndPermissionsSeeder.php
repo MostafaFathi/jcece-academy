@@ -91,6 +91,9 @@ class RolesAndPermissionsSeeder extends Seeder
                 PermissionName::OrdersManage->value,
                 PermissionName::PaymentsView->value,
                 PermissionName::PaymentsManage->value,
+                PermissionName::SupportTicketsView->value,
+                PermissionName::SupportTicketsManage->value,
+                PermissionName::SupportTicketsReply->value,
             ],
             RoleName::Admin->value => array_column(PermissionName::cases(), 'value'),
         ];

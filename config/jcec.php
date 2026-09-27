@@ -19,6 +19,13 @@ return [
         'logo_path' => public_path('assets/images/logo-1.png'),
     ],
 
+    'support' => [
+        'attachment_disk' => env('JCEC_SUPPORT_ATTACHMENT_DISK', 'local'),
+        'attachment_max_kilobytes' => (int) env('JCEC_SUPPORT_ATTACHMENT_MAX_KILOBYTES', 10240),
+        'attachment_max_count' => (int) env('JCEC_SUPPORT_ATTACHMENT_MAX_COUNT', 5),
+        'attachment_mimes' => ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'txt', 'doc', 'docx'],
+    ],
+
     'development_admin' => [
         'name' => env('JCEC_DEV_ADMIN_NAME', 'JCEC Local Admin'),
         'email' => env('JCEC_DEV_ADMIN_EMAIL', 'admin@jcec.test'),

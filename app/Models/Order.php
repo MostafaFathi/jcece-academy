@@ -31,6 +31,11 @@ class Order extends Model
         return $this->hasMany(Payment::class)->latest()->orderByDesc('id');
     }
 
+    public function supportTickets(): HasMany
+    {
+        return $this->hasMany(SupportTicket::class, 'related_order_id');
+    }
+
     /** @return array<string, string> */
     protected function casts(): array
     {

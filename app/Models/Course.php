@@ -98,6 +98,11 @@ class Course extends Model
         return $this->hasMany(CourseReview::class);
     }
 
+    public function supportTickets(): HasMany
+    {
+        return $this->hasMany(SupportTicket::class, 'related_course_id');
+    }
+
     public function publishedReviews(): HasMany
     {
         return $this->hasMany(CourseReview::class)

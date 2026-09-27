@@ -50,4 +50,7 @@ enum PermissionName: string
     case CertificatesRevoke = 'certificates.revoke';
     case ReviewsView = 'reviews.view';
     case ReviewsModerate = 'reviews.moderate';
+    case SupportTicketsView = 'support_tickets.view';
+    case SupportTicketsManage = 'support_tickets.manage';
+    case SupportTicketsReply = 'support_tickets.reply';
 }
