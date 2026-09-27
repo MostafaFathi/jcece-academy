@@ -48,4 +48,6 @@ enum PermissionName: string
     case CertificatesView = 'certificates.view';
     case CertificatesIssue = 'certificates.issue';
     case CertificatesRevoke = 'certificates.revoke';
+    case ReviewsView = 'reviews.view';
+    case ReviewsModerate = 'reviews.moderate';
 }

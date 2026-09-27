@@ -17,6 +17,10 @@ use App\Http\Controllers\Api\V1\Admin\CertificateIssuanceController as AdminCert
 use App\Http\Controllers\Api\V1\Admin\CertificateReissuanceController;
 use App\Http\Controllers\Api\V1\Admin\CertificateRevocationController;
 use App\Http\Controllers\Api\V1\Admin\CourseController as AdminCourseController;
+use App\Http\Controllers\Api\V1\Admin\CourseReviewController as AdminCourseReviewController;
+use App\Http\Controllers\Api\V1\Admin\CourseReviewHidingController;
+use App\Http\Controllers\Api\V1\Admin\CourseReviewPublicationController;
+use App\Http\Controllers\Api\V1\Admin\CourseReviewRejectionController;
 use App\Http\Controllers\Api\V1\Admin\CourseSectionController;
 use App\Http\Controllers\Api\V1\Admin\CurriculumOrderController;
 use App\Http\Controllers\Api\V1\Admin\EnrollmentAccessController;
@@ -40,6 +44,7 @@ use App\Http\Controllers\Api\V1\Admin\QuizQuestionOrderController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\CertificateVerificationController;
 use App\Http\Controllers\Api\V1\CourseController;
+use App\Http\Controllers\Api\V1\CourseReviewController;
 use App\Http\Controllers\Api\V1\Me\AssignmentAttachmentDownloadController as MeAssignmentAttachmentDownloadController;
 use App\Http\Controllers\Api\V1\Me\AssignmentController as MeAssignmentController;
 use App\Http\Controllers\Api\V1\Me\AssignmentSubmissionController;
@@ -54,6 +59,7 @@ use App\Http\Controllers\Api\V1\Me\CertificateEligibilityController as MeCertifi
 use App\Http\Controllers\Api\V1\Me\CertificateIssuanceController as MeCertificateIssuanceController;
 use App\Http\Controllers\Api\V1\Me\CheckoutController;
 use App\Http\Controllers\Api\V1\Me\CourseController as MeCourseController;
+use App\Http\Controllers\Api\V1\Me\CourseReviewController as MeCourseReviewController;
 use App\Http\Controllers\Api\V1\Me\LessonProgressController;
 use App\Http\Controllers\Api\V1\Me\OrderController as MeOrderController;
 use App\Http\Controllers\Api\V1\Me\PaymentController as MePaymentController;
@@ -70,6 +76,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
     Route::get('categories/{category}', [CategoryController::class, 'show'])->name('categories.show');
     Route::get('courses', [CourseController::class, 'index'])->name('courses.index');
     Route::get('courses/{course:slug}', [CourseController::class, 'show'])->name('courses.show');
+    Route::get('courses/{course:slug}/reviews', [CourseReviewController::class, 'index'])->name('courses.reviews.index');
     Route::get('packages', [PackageController::class, 'index'])->name('packages.index');
     Route::get('packages/{package:slug}', [PackageController::class, 'show'])->name('packages.show');
     Route::get('certificates/verify/{token}', CertificateVerificationController::class)
@@ -118,6 +125,10 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::get('certificates/{certificate}/download', MeCertificateDownloadController::class)->name('certificates.download');
         Route::get('courses/{course:slug}/certificate-eligibility', MeCertificateEligibilityController::class)->name('courses.certificates.eligibility');
         Route::post('courses/{course:slug}/certificates', MeCertificateIssuanceController::class)->name('courses.certificates.store');
+        Route::get('reviews', [MeCourseReviewController::class, 'index'])->name('reviews.index');
+        Route::get('courses/{course:slug}/review', [MeCourseReviewController::class, 'show'])->name('courses.review.show');
+        Route::post('courses/{course:slug}/reviews', [MeCourseReviewController::class, 'store'])->name('courses.reviews.store');
+        Route::patch('reviews/{review}', [MeCourseReviewController::class, 'update'])->name('reviews.update');
 
         Route::scopeBindings()->group(function (): void {
             Route::patch('courses/{course:slug}/lessons/{lesson}/progress', [LessonProgressController::class, 'update'])->name('courses.lessons.progress.update');
@@ -185,5 +196,10 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::post('users/{user}/courses/{course}/certificates', AdminCertificateIssuanceController::class)->name('users.courses.certificates.store');
         Route::post('certificates/{certificate}/revoke', CertificateRevocationController::class)->name('certificates.revoke');
         Route::post('certificates/{certificate}/reissue', CertificateReissuanceController::class)->name('certificates.reissue');
+        Route::get('course-reviews', [AdminCourseReviewController::class, 'index'])->name('course-reviews.index');
+        Route::get('course-reviews/{review}', [AdminCourseReviewController::class, 'show'])->name('course-reviews.show');
+        Route::post('course-reviews/{review}/publication', CourseReviewPublicationController::class)->name('course-reviews.publication.store');
+        Route::post('course-reviews/{review}/rejection', CourseReviewRejectionController::class)->name('course-reviews.rejection.store');
+        Route::post('course-reviews/{review}/hiding', CourseReviewHidingController::class)->name('course-reviews.hiding.store');
     });
 });

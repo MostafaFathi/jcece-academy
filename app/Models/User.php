@@ -93,6 +93,16 @@ class User extends Authenticatable
         return $this->hasMany(Certificate::class, 'revoked_by');
     }
 
+    public function courseReviews(): HasMany
+    {
+        return $this->hasMany(CourseReview::class);
+    }
+
+    public function moderatedCourseReviews(): HasMany
+    {
+        return $this->hasMany(CourseReview::class, 'moderated_by');
+    }
+
     /**
      * Get the attributes that should be cast.
      *

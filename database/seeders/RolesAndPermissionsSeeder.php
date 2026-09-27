@@ -76,6 +76,8 @@ class RolesAndPermissionsSeeder extends Seeder
                 PermissionName::CertificatesView->value,
                 PermissionName::CertificatesIssue->value,
                 PermissionName::CertificatesRevoke->value,
+                PermissionName::ReviewsView->value,
+                PermissionName::ReviewsModerate->value,
             ],
             RoleName::SalesSupport->value => [
                 PermissionName::CoursesView->value,

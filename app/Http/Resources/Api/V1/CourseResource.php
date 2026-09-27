@@ -35,6 +35,10 @@ class CourseResource extends JsonResource
             'status' => $this->status->value,
             'is_featured' => $this->is_featured,
             'published_at' => $this->published_at,
+            'rating_summary' => $this->when(
+                array_key_exists('published_reviews_count', $this->resource->getAttributes()),
+                fn (): CourseRatingSummaryResource => new CourseRatingSummaryResource($this->resource),
+            ),
             'category' => new CategoryResource($this->whenLoaded('category')),
             'instructor' => new UserSummaryResource($this->whenLoaded('instructor')),
             'learning_outcomes' => $this->whenLoaded('learningOutcomes', fn () => $this->learningOutcomes->map->only(['id', 'outcome', 'sort_order'])),

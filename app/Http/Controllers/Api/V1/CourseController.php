@@ -22,6 +22,7 @@ class CourseController extends Controller
             ->where('status', CourseStatus::Published)
             ->whereNotNull('published_at')
             ->where('published_at', '<=', now())
+            ->withPublicRatingSummary()
             ->with(['category', 'instructor'])
             ->when($filters['search'] ?? null, fn (Builder $query, string $search) => $query->where(function (Builder $query) use ($search): void {
                 $query->where('title', 'like', "%{$search}%")
@@ -55,6 +56,8 @@ class CourseController extends Controller
             && $course->published_at->isPast(),
             404,
         );
+
+        $course = Course::query()->withPublicRatingSummary()->findOrFail($course->id);
 
         return new CourseResource($course->load([
             'category',
