@@ -14,6 +14,11 @@ return [
         'submission_file_max_count' => (int) env('JCEC_ASSIGNMENT_SUBMISSION_FILE_MAX_COUNT', 5),
     ],
 
+    'certificates' => [
+        'pdf_disk' => env('JCEC_CERTIFICATE_PDF_DISK', 'local'),
+        'logo_path' => public_path('assets/images/logo-1.png'),
+    ],
+
     'development_admin' => [
         'name' => env('JCEC_DEV_ADMIN_NAME', 'JCEC Local Admin'),
         'email' => env('JCEC_DEV_ADMIN_EMAIL', 'admin@jcec.test'),

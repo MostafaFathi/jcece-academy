@@ -10,6 +10,12 @@ use App\Http\Controllers\Api\V1\Admin\AssignmentSubmissionGradeController;
 use App\Http\Controllers\Api\V1\Admin\AssignmentSubmissionGradeCorrectionController;
 use App\Http\Controllers\Api\V1\Admin\AssignmentSubmissionRevisionController;
 use App\Http\Controllers\Api\V1\Admin\CategoryController as AdminCategoryController;
+use App\Http\Controllers\Api\V1\Admin\CertificateController as AdminCertificateController;
+use App\Http\Controllers\Api\V1\Admin\CertificateDownloadController as AdminCertificateDownloadController;
+use App\Http\Controllers\Api\V1\Admin\CertificateEligibilityController as AdminCertificateEligibilityController;
+use App\Http\Controllers\Api\V1\Admin\CertificateIssuanceController as AdminCertificateIssuanceController;
+use App\Http\Controllers\Api\V1\Admin\CertificateReissuanceController;
+use App\Http\Controllers\Api\V1\Admin\CertificateRevocationController;
 use App\Http\Controllers\Api\V1\Admin\CourseController as AdminCourseController;
 use App\Http\Controllers\Api\V1\Admin\CourseSectionController;
 use App\Http\Controllers\Api\V1\Admin\CurriculumOrderController;
@@ -32,6 +38,7 @@ use App\Http\Controllers\Api\V1\Admin\QuizPublicationController;
 use App\Http\Controllers\Api\V1\Admin\QuizQuestionController;
 use App\Http\Controllers\Api\V1\Admin\QuizQuestionOrderController;
 use App\Http\Controllers\Api\V1\CategoryController;
+use App\Http\Controllers\Api\V1\CertificateVerificationController;
 use App\Http\Controllers\Api\V1\CourseController;
 use App\Http\Controllers\Api\V1\Me\AssignmentAttachmentDownloadController as MeAssignmentAttachmentDownloadController;
 use App\Http\Controllers\Api\V1\Me\AssignmentController as MeAssignmentController;
@@ -41,6 +48,10 @@ use App\Http\Controllers\Api\V1\Me\AssignmentSubmissionFileDownloadController as
 use App\Http\Controllers\Api\V1\Me\AssignmentSubmissionFinalizationController;
 use App\Http\Controllers\Api\V1\Me\CartController;
 use App\Http\Controllers\Api\V1\Me\CartItemController;
+use App\Http\Controllers\Api\V1\Me\CertificateController as MeCertificateController;
+use App\Http\Controllers\Api\V1\Me\CertificateDownloadController as MeCertificateDownloadController;
+use App\Http\Controllers\Api\V1\Me\CertificateEligibilityController as MeCertificateEligibilityController;
+use App\Http\Controllers\Api\V1\Me\CertificateIssuanceController as MeCertificateIssuanceController;
 use App\Http\Controllers\Api\V1\Me\CheckoutController;
 use App\Http\Controllers\Api\V1\Me\CourseController as MeCourseController;
 use App\Http\Controllers\Api\V1\Me\LessonProgressController;
@@ -61,6 +72,9 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
     Route::get('courses/{course:slug}', [CourseController::class, 'show'])->name('courses.show');
     Route::get('packages', [PackageController::class, 'index'])->name('packages.index');
     Route::get('packages/{package:slug}', [PackageController::class, 'show'])->name('packages.show');
+    Route::get('certificates/verify/{token}', CertificateVerificationController::class)
+        ->middleware('throttle:30,1')
+        ->name('certificates.verify');
 
     Route::middleware('auth:sanctum')->prefix('me')->name('me.')->group(function (): void {
         Route::get('cart', [CartController::class, 'index'])->name('cart.index');
@@ -99,6 +113,11 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::get('courses/{course:slug}', [MeCourseController::class, 'show'])->name('courses.show');
         Route::get('courses/{course:slug}/learn', [MeCourseController::class, 'learn'])->name('courses.learn');
         Route::get('courses/{course:slug}/progress', [MeCourseController::class, 'progress'])->name('courses.progress');
+        Route::get('certificates', [MeCertificateController::class, 'index'])->name('certificates.index');
+        Route::get('certificates/{certificate}', [MeCertificateController::class, 'show'])->name('certificates.show');
+        Route::get('certificates/{certificate}/download', MeCertificateDownloadController::class)->name('certificates.download');
+        Route::get('courses/{course:slug}/certificate-eligibility', MeCertificateEligibilityController::class)->name('courses.certificates.eligibility');
+        Route::post('courses/{course:slug}/certificates', MeCertificateIssuanceController::class)->name('courses.certificates.store');
 
         Route::scopeBindings()->group(function (): void {
             Route::patch('courses/{course:slug}/lessons/{lesson}/progress', [LessonProgressController::class, 'update'])->name('courses.lessons.progress.update');
@@ -159,5 +178,12 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::post('assignment-submissions/{submission}/grade', AssignmentSubmissionGradeController::class)->name('assignment-submissions.grade');
         Route::post('assignment-submissions/{submission}/revision', AssignmentSubmissionRevisionController::class)->name('assignment-submissions.revision');
         Route::post('assignment-submissions/{submission}/grade-corrections', AssignmentSubmissionGradeCorrectionController::class)->name('assignment-submissions.grade-corrections.store');
+        Route::get('certificates', [AdminCertificateController::class, 'index'])->name('certificates.index');
+        Route::get('certificates/{certificate}', [AdminCertificateController::class, 'show'])->name('certificates.show');
+        Route::get('certificates/{certificate}/download', AdminCertificateDownloadController::class)->name('certificates.download');
+        Route::get('users/{user}/courses/{course}/certificate-eligibility', AdminCertificateEligibilityController::class)->name('users.courses.certificates.eligibility');
+        Route::post('users/{user}/courses/{course}/certificates', AdminCertificateIssuanceController::class)->name('users.courses.certificates.store');
+        Route::post('certificates/{certificate}/revoke', CertificateRevocationController::class)->name('certificates.revoke');
+        Route::post('certificates/{certificate}/reissue', CertificateReissuanceController::class)->name('certificates.reissue');
     });
 });

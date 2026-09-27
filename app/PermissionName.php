@@ -45,4 +45,7 @@ enum PermissionName: string
     case AssignmentsPublish = 'assignments.publish';
     case AssignmentSubmissionsView = 'assignment_submissions.view';
     case AssignmentSubmissionsGrade = 'assignment_submissions.grade';
+    case CertificatesView = 'certificates.view';
+    case CertificatesIssue = 'certificates.issue';
+    case CertificatesRevoke = 'certificates.revoke';
 }

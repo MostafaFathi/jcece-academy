@@ -51,6 +51,11 @@ class Enrollment extends Model
         return $this->hasMany(AssignmentSubmission::class);
     }
 
+    public function certificates(): HasMany
+    {
+        return $this->hasMany(Certificate::class);
+    }
+
     /** @return array<string, string> */
     protected function casts(): array
     {

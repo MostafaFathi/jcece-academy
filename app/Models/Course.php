@@ -85,6 +85,11 @@ class Course extends Model
         return $this->hasMany(Assignment::class);
     }
 
+    public function certificates(): HasMany
+    {
+        return $this->hasMany(Certificate::class);
+    }
+
     public function packageMemberships(): HasMany
     {
         return $this->hasMany(PackageCourse::class);
