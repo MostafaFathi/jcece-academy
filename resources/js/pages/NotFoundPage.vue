@@ -1,0 +1,2 @@
+<script setup>import { useI18n } from 'vue-i18n'; const { t } = useI18n();</script>
+<template><main class="grid min-h-screen place-items-center bg-white p-6 text-center"><div><p class="text-7xl font-black text-brand">404</p><h1 class="mt-4 text-3xl font-black">{{ t('errors.notFoundTitle') }}</h1><p class="mt-3 text-slate-600">{{ t('errors.notFoundText') }}</p><RouterLink to="/" class="mt-7 inline-flex rounded-xl bg-brand px-5 py-3 font-bold text-white">{{ t('common.backHome') }}</RouterLink></div></main></template>

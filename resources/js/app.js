@@ -1,8 +1,25 @@
-import axios from 'axios';
+import { createApp } from 'vue';
+import { createPinia } from 'pinia';
+import App from './App.vue';
+import i18n from './i18n';
+import router from './router';
+import { installUnauthorizedHandler } from './api/client';
+import { useAuthStore } from './stores/auth';
 
-axios.defaults.headers.common.Accept = 'application/json';
-axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
-axios.defaults.withCredentials = true;
-axios.defaults.withXSRFToken = true;
+const app = createApp(App);
+const pinia = createPinia();
 
-export { axios };
+app.use(pinia);
+app.use(i18n);
+app.use(router);
+
+installUnauthorizedHandler(() => {
+    const auth = useAuthStore(pinia);
+    auth.clearSession();
+
+    if (router.currentRoute.value.meta.requiresAuth && router.currentRoute.value.name !== 'login') {
+        router.push({ name: 'login', query: { redirect: router.currentRoute.value.fullPath } });
+    }
+});
+
+app.mount('#app');
