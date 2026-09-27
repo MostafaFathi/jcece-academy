@@ -36,6 +36,8 @@ class RolesAndPermissionsSeeder extends Seeder
                 PermissionName::CategoriesView->value,
                 PermissionName::InstructorsView->value,
                 PermissionName::CurriculumView->value,
+                PermissionName::AssignmentSubmissionsView->value,
+                PermissionName::AssignmentSubmissionsGrade->value,
             ],
             RoleName::ContentManager->value => [
                 PermissionName::CoursesView->value,
@@ -64,6 +66,13 @@ class RolesAndPermissionsSeeder extends Seeder
                 PermissionName::AssessmentsDelete->value,
                 PermissionName::AssessmentsPublish->value,
                 PermissionName::AssessmentResultsView->value,
+                PermissionName::AssignmentsView->value,
+                PermissionName::AssignmentsCreate->value,
+                PermissionName::AssignmentsUpdate->value,
+                PermissionName::AssignmentsDelete->value,
+                PermissionName::AssignmentsPublish->value,
+                PermissionName::AssignmentSubmissionsView->value,
+                PermissionName::AssignmentSubmissionsGrade->value,
             ],
             RoleName::SalesSupport->value => [
                 PermissionName::CoursesView->value,

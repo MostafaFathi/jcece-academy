@@ -1,5 +1,14 @@
 <?php
 
+use App\Http\Controllers\Api\V1\Admin\AssignmentAttachmentController;
+use App\Http\Controllers\Api\V1\Admin\AssignmentAttachmentDownloadController as AdminAssignmentAttachmentDownloadController;
+use App\Http\Controllers\Api\V1\Admin\AssignmentController as AdminAssignmentController;
+use App\Http\Controllers\Api\V1\Admin\AssignmentPublicationController;
+use App\Http\Controllers\Api\V1\Admin\AssignmentSubmissionController as AdminAssignmentSubmissionController;
+use App\Http\Controllers\Api\V1\Admin\AssignmentSubmissionFileDownloadController as AdminAssignmentSubmissionFileDownloadController;
+use App\Http\Controllers\Api\V1\Admin\AssignmentSubmissionGradeController;
+use App\Http\Controllers\Api\V1\Admin\AssignmentSubmissionGradeCorrectionController;
+use App\Http\Controllers\Api\V1\Admin\AssignmentSubmissionRevisionController;
 use App\Http\Controllers\Api\V1\Admin\CategoryController as AdminCategoryController;
 use App\Http\Controllers\Api\V1\Admin\CourseController as AdminCourseController;
 use App\Http\Controllers\Api\V1\Admin\CourseSectionController;
@@ -24,6 +33,12 @@ use App\Http\Controllers\Api\V1\Admin\QuizQuestionController;
 use App\Http\Controllers\Api\V1\Admin\QuizQuestionOrderController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\CourseController;
+use App\Http\Controllers\Api\V1\Me\AssignmentAttachmentDownloadController as MeAssignmentAttachmentDownloadController;
+use App\Http\Controllers\Api\V1\Me\AssignmentController as MeAssignmentController;
+use App\Http\Controllers\Api\V1\Me\AssignmentSubmissionController;
+use App\Http\Controllers\Api\V1\Me\AssignmentSubmissionFileController;
+use App\Http\Controllers\Api\V1\Me\AssignmentSubmissionFileDownloadController as MeAssignmentSubmissionFileDownloadController;
+use App\Http\Controllers\Api\V1\Me\AssignmentSubmissionFinalizationController;
 use App\Http\Controllers\Api\V1\Me\CartController;
 use App\Http\Controllers\Api\V1\Me\CartItemController;
 use App\Http\Controllers\Api\V1\Me\CheckoutController;
@@ -65,6 +80,20 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::get('quiz-attempts/{attempt}/result', [QuizAttemptController::class, 'show'])->name('quiz-attempts.result.show');
         Route::patch('quiz-attempts/{attempt}/answers', QuizAttemptAnswerController::class)->name('quiz-attempts.answers.update');
         Route::post('quiz-attempts/{attempt}/submit', QuizAttemptSubmissionController::class)->name('quiz-attempts.submit');
+        Route::get('assignments', [MeAssignmentController::class, 'index'])->name('assignments.index');
+        Route::get('assignments/{assignment}', [MeAssignmentController::class, 'show'])->name('assignments.show');
+        Route::get('assignment-attachments/{attachment}/download', MeAssignmentAttachmentDownloadController::class)->name('assignment-attachments.download');
+        Route::get('assignments/{assignment}/submissions', [AssignmentSubmissionController::class, 'index'])->name('assignments.submissions.index');
+        Route::post('assignments/{assignment}/submissions', [AssignmentSubmissionController::class, 'store'])->name('assignments.submissions.store');
+        Route::get('assignment-submissions/{submission}', [AssignmentSubmissionController::class, 'show'])->name('assignment-submissions.show');
+        Route::patch('assignment-submissions/{submission}', [AssignmentSubmissionController::class, 'update'])->name('assignment-submissions.update');
+        Route::post('assignment-submissions/{submission}/submit', AssignmentSubmissionFinalizationController::class)->name('assignment-submissions.submit');
+        Route::get('assignment-submission-files/{file}/download', MeAssignmentSubmissionFileDownloadController::class)->name('assignment-submission-files.download');
+
+        Route::scopeBindings()->group(function (): void {
+            Route::post('assignment-submissions/{submission}/files', [AssignmentSubmissionFileController::class, 'store'])->name('assignment-submissions.files.store');
+            Route::delete('assignment-submissions/{submission}/files/{file}', [AssignmentSubmissionFileController::class, 'destroy'])->name('assignment-submissions.files.destroy');
+        });
 
         Route::get('courses', [MeCourseController::class, 'index'])->name('courses.index');
         Route::get('courses/{course:slug}', [MeCourseController::class, 'show'])->name('courses.show');
@@ -114,8 +143,21 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             Route::get('quizzes/{quiz}/attempts', [AdminQuizAttemptController::class, 'index'])->name('quizzes.attempts.index');
             Route::get('quizzes/{quiz}/attempts/{attempt}', [AdminQuizAttemptController::class, 'show'])->name('quizzes.attempts.show');
 
+            Route::apiResource('courses.assignments', AdminAssignmentController::class);
+            Route::post('assignments/{assignment}/publication', [AssignmentPublicationController::class, 'store'])->name('assignments.publication.store');
+            Route::delete('assignments/{assignment}/publication', [AssignmentPublicationController::class, 'destroy'])->name('assignments.publication.destroy');
+            Route::apiResource('assignments.attachments', AssignmentAttachmentController::class)->only(['index', 'store', 'destroy']);
+            Route::get('assignments/{assignment}/submissions', [AdminAssignmentSubmissionController::class, 'index'])->name('assignments.submissions.index');
+            Route::get('assignments/{assignment}/submissions/{submission}', [AdminAssignmentSubmissionController::class, 'show'])->name('assignments.submissions.show');
+
             Route::post('lessons/{lesson}/resources/reorder', [CurriculumOrderController::class, 'resources'])->name('lessons.resources.reorder');
             Route::apiResource('lessons.resources', LessonResourceController::class);
         });
+
+        Route::get('assignment-attachments/{attachment}/download', AdminAssignmentAttachmentDownloadController::class)->name('assignment-attachments.download');
+        Route::get('assignment-submission-files/{file}/download', AdminAssignmentSubmissionFileDownloadController::class)->name('assignment-submission-files.download');
+        Route::post('assignment-submissions/{submission}/grade', AssignmentSubmissionGradeController::class)->name('assignment-submissions.grade');
+        Route::post('assignment-submissions/{submission}/revision', AssignmentSubmissionRevisionController::class)->name('assignment-submissions.revision');
+        Route::post('assignment-submissions/{submission}/grade-corrections', AssignmentSubmissionGradeCorrectionController::class)->name('assignment-submissions.grade-corrections.store');
     });
 });

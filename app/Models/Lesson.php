@@ -37,6 +37,11 @@ class Lesson extends Model
         return $this->hasMany(Quiz::class);
     }
 
+    public function assignments(): HasMany
+    {
+        return $this->hasMany(Assignment::class);
+    }
+
     /** @return array<string, string> */
     protected function casts(): array
     {

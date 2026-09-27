@@ -7,6 +7,13 @@ return [
         'payment_proof_max_kilobytes' => (int) env('JCEC_PAYMENT_PROOF_MAX_KILOBYTES', 5120),
     ],
 
+    'assignments' => [
+        'file_disk' => env('JCEC_ASSIGNMENT_FILE_DISK', 'local'),
+        'attachment_max_kilobytes' => (int) env('JCEC_ASSIGNMENT_ATTACHMENT_MAX_KILOBYTES', 20480),
+        'submission_file_max_kilobytes' => (int) env('JCEC_ASSIGNMENT_SUBMISSION_FILE_MAX_KILOBYTES', 20480),
+        'submission_file_max_count' => (int) env('JCEC_ASSIGNMENT_SUBMISSION_FILE_MAX_COUNT', 5),
+    ],
+
     'development_admin' => [
         'name' => env('JCEC_DEV_ADMIN_NAME', 'JCEC Local Admin'),
         'email' => env('JCEC_DEV_ADMIN_EMAIL', 'admin@jcec.test'),

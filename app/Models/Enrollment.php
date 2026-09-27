@@ -46,6 +46,11 @@ class Enrollment extends Model
         return $this->hasMany(QuizAttempt::class);
     }
 
+    public function assignmentSubmissions(): HasMany
+    {
+        return $this->hasMany(AssignmentSubmission::class);
+    }
+
     /** @return array<string, string> */
     protected function casts(): array
     {

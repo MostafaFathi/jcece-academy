@@ -68,6 +68,16 @@ class User extends Authenticatable
         return $this->hasMany(QuizAttempt::class);
     }
 
+    public function assignmentSubmissions(): HasMany
+    {
+        return $this->hasMany(AssignmentSubmission::class);
+    }
+
+    public function gradedAssignmentSubmissions(): HasMany
+    {
+        return $this->hasMany(AssignmentSubmission::class, 'graded_by');
+    }
+
     public function revokedAccessGrants(): HasMany
     {
         return $this->hasMany(EnrollmentAccessGrant::class, 'revoked_by');

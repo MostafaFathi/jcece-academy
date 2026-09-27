@@ -38,4 +38,11 @@ enum PermissionName: string
     case AssessmentsDelete = 'assessments.delete';
     case AssessmentsPublish = 'assessments.publish';
     case AssessmentResultsView = 'assessments.results.view';
+    case AssignmentsView = 'assignments.view';
+    case AssignmentsCreate = 'assignments.create';
+    case AssignmentsUpdate = 'assignments.update';
+    case AssignmentsDelete = 'assignments.delete';
+    case AssignmentsPublish = 'assignments.publish';
+    case AssignmentSubmissionsView = 'assignment_submissions.view';
+    case AssignmentSubmissionsGrade = 'assignment_submissions.grade';
 }

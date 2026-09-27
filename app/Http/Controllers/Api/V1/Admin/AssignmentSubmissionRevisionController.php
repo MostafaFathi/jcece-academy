@@ -1,0 +1,24 @@
+<?php
+
+namespace App\Http\Controllers\Api\V1\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\Admin\RequestAssignmentRevisionRequest;
+use App\Http\Resources\Api\V1\AdminAssignmentSubmissionResource;
+use App\Models\AssignmentSubmission;
+use App\Services\AssignmentGradingService;
+use Illuminate\Support\Facades\Gate;
+
+class AssignmentSubmissionRevisionController extends Controller
+{
+    public function __invoke(RequestAssignmentRevisionRequest $request, AssignmentSubmission $submission, AssignmentGradingService $grading): AdminAssignmentSubmissionResource
+    {
+        Gate::authorize('grade', $submission);
+
+        return new AdminAssignmentSubmissionResource($grading->requestRevision(
+            $request->user(),
+            $submission,
+            $request->string('feedback')->toString(),
+        ));
+    }
+}
