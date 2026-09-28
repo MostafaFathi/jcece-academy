@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
-import { createAccessGuard, homeRouteFor } from './access';
+import { createAccessGuard } from './access';
 
 const PublicLayout = () => import('../layouts/PublicLayout.vue');
 const AuthLayout = () => import('../layouts/AuthLayout.vue');
@@ -15,7 +15,13 @@ export const routes = [
     {
         path: '/',
         component: PublicLayout,
-        children: [{ path: '', name: 'home', component: () => import('../pages/HomePage.vue'), meta: { title: 'common.home' } }],
+        children: [
+            { path: '', name: 'home', component: () => import('../pages/HomePage.vue'), meta: { title: 'common.home' } },
+            { path: 'courses', name: 'courses.index', component: () => import('../pages/CourseCatalogPage.vue'), meta: { title: 'nav.courses' } },
+            { path: 'courses/:slug', name: 'courses.show', component: () => import('../pages/CourseDetailPage.vue'), props: true, meta: { title: 'nav.courses' } },
+            { path: 'packages', name: 'packages.index', component: () => import('../pages/PackageCatalogPage.vue'), meta: { title: 'nav.packages' } },
+            { path: 'packages/:slug', name: 'packages.show', component: () => import('../pages/PackageDetailPage.vue'), props: true, meta: { title: 'nav.packages' } },
+        ],
     },
     {
         path: '/login',
@@ -60,7 +66,7 @@ export const routes = [
             { path: 'orders', name: 'support.orders', component: UpcomingPage, props: { titleKey: 'nav.orders' }, meta: { requiresAuth: true, permissions: ['orders.view'], title: 'nav.orders' } },
         ],
     },
-    { path: '/dashboard', name: 'dashboard', redirect: () => homeRouteFor(useAuthStore()), meta: { requiresAuth: true } },
+    { path: '/dashboard', name: 'dashboard', component: () => import('../pages/DashboardRedirectPage.vue'), meta: { requiresAuth: true } },
     { path: '/403', name: 'forbidden', component: () => import('../pages/UnauthorizedPage.vue'), meta: { title: 'errors.forbiddenTitle' } },
     { path: '/:pathMatch(.*)*', name: 'not-found', component: () => import('../pages/NotFoundPage.vue'), meta: { title: 'errors.notFoundTitle' } },
 ];

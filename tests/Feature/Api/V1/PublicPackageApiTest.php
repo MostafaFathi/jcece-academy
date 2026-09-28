@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api\V1;
 
+use App\CourseStatus;
 use App\Models\Course;
 use App\Models\Package;
 use App\Models\PackageCourse;
@@ -38,9 +39,15 @@ class PublicPackageApiTest extends TestCase
         ]);
         $secondCourse = Course::factory()->published()->create(['slug' => 'documentation']);
         $deletedCourse = Course::factory()->published()->create(['slug' => 'deleted-course']);
+        $draftCourse = Course::factory()->create(['slug' => 'draft-course']);
+        $hiddenCourse = Course::factory()->published()->create(['slug' => 'hidden-course', 'status' => CourseStatus::Hidden]);
+        $futureCourse = Course::factory()->published()->create(['slug' => 'future-course', 'published_at' => now()->addDay()]);
         PackageCourse::factory()->for($package)->for($firstCourse)->create(['sort_order' => 1]);
         PackageCourse::factory()->for($package)->for($secondCourse)->create(['sort_order' => 0, 'is_required' => false]);
         PackageCourse::factory()->for($package)->for($deletedCourse)->create(['sort_order' => 2]);
+        PackageCourse::factory()->for($package)->for($draftCourse)->create(['sort_order' => 3]);
+        PackageCourse::factory()->for($package)->for($hiddenCourse)->create(['sort_order' => 4]);
+        PackageCourse::factory()->for($package)->for($futureCourse)->create(['sort_order' => 5]);
         $deletedCourse->delete();
 
         $this->getJson('/api/v1/packages/bim-path')
@@ -54,7 +61,10 @@ class PublicPackageApiTest extends TestCase
             ->assertJsonMissingPath('data.courses.1.course.promo_video_url')
             ->assertJsonMissingPath('data.courses.1.course.status')
             ->assertDontSee('private-long-description')
-            ->assertDontSee('secret.test');
+            ->assertDontSee('secret.test')
+            ->assertDontSee('draft-course')
+            ->assertDontSee('hidden-course')
+            ->assertDontSee('future-course');
     }
 
     public function test_show_returns_not_found_for_unpublished_package(): void

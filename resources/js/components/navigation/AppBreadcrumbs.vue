@@ -9,5 +9,5 @@ const crumbs = computed(() => route.matched.filter((item) => item.meta.title).ma
 </script>
 
 <template>
-    <nav v-if="crumbs.length" aria-label="Breadcrumb" class="mb-5 text-sm text-slate-500"><ol class="flex flex-wrap items-center gap-2"><li><RouterLink to="/" class="hover:text-brand">{{ t('common.home') }}</RouterLink></li><li v-for="crumb in crumbs" :key="crumb.path" class="flex items-center gap-2"><span aria-hidden="true">/</span><span class="font-semibold text-slate-700">{{ crumb.label }}</span></li></ol></nav>
+    <nav v-if="crumbs.length" :aria-label="t('common.breadcrumbs')" class="mb-5 text-sm text-slate-500"><ol class="flex flex-wrap items-center gap-2"><li><RouterLink to="/" class="rounded focus-visible:outline-3 focus-visible:outline-brand">{{ t('common.home') }}</RouterLink></li><li v-for="crumb in crumbs" :key="crumb.path" class="flex items-center gap-2"><span aria-hidden="true">/</span><span class="font-semibold text-slate-700">{{ crumb.label }}</span></li></ol></nav>
 </template>

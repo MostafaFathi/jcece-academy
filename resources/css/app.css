@@ -6,7 +6,7 @@
 @source '../js/**/*.{js,vue}';
 
 @theme {
-    --font-sans: Tahoma, Arial, 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+    --font-sans: 'Instrument Sans', Tahoma, Arial, ui-sans-serif, system-ui, sans-serif;
     --color-brand: #6b1d32;
     --color-brand-dark: #4f1425;
     --color-brand-soft: #f7e9ed;
@@ -15,6 +15,16 @@
 
 @layer base {
     html { color-scheme: light; scroll-behavior: smooth; }
+    html[lang='ar'] { --font-sans: Tahoma, Arial, 'Instrument Sans', ui-sans-serif, system-ui, sans-serif; }
     body { min-width: 320px; background: #f8fafc; text-rendering: optimizeLegibility; }
     button, a, input { -webkit-tap-highlight-color: transparent; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
 }

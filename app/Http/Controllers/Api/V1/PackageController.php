@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\CourseStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\ListPackagesRequest;
 use App\Http\Resources\Api\V1\PublicPackageResource;
 use App\Models\Package;
 use App\PackageStatus;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class PackageController extends Controller
@@ -15,11 +17,15 @@ class PackageController extends Controller
     public function index(ListPackagesRequest $request): AnonymousResourceCollection
     {
         $filters = $request->validated();
+        $publishedCourseConstraint = static fn (Builder $query): Builder => $query
+            ->where('status', CourseStatus::Published)
+            ->whereNotNull('published_at')
+            ->where('published_at', '<=', now());
         $packages = Package::query()
             ->where('status', PackageStatus::Published)
             ->whereNotNull('published_at')
             ->where('published_at', '<=', now())
-            ->withCount(['courseMemberships' => fn (Builder $query) => $query->whereHas('course')])
+            ->withCount(['courseMemberships' => fn (Builder $query) => $query->whereHas('course', $publishedCourseConstraint)])
             ->when($filters['search'] ?? null, fn (Builder $query, string $search) => $query->where(function (Builder $query) use ($search): void {
                 $query->where('title', 'like', "%{$search}%")
                     ->orWhere('description', 'like', "%{$search}%");
@@ -46,11 +52,16 @@ class PackageController extends Controller
             404,
         );
 
+        $publishedCourseConstraint = static fn (Builder $query): Builder => $query
+            ->where('status', CourseStatus::Published)
+            ->whereNotNull('published_at')
+            ->where('published_at', '<=', now());
+
         $package->load([
-            'courseMemberships' => fn ($query) => $query->whereHas('course'),
+            'courseMemberships' => fn (HasMany $query): HasMany => $query->whereHas('course', $publishedCourseConstraint),
             'courseMemberships.course',
         ])->loadCount([
-            'courseMemberships' => fn ($query) => $query->whereHas('course'),
+            'courseMemberships' => fn (Builder $query): Builder => $query->whereHas('course', $publishedCourseConstraint),
         ]);
 
         return new PublicPackageResource($package);
