@@ -1,12 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushPromises, mount } from '@vue/test-utils';
+import { createPinia } from 'pinia';
 import HomePage from '../pages/HomePage.vue';
 import i18n, { setLocale } from '../i18n';
 import { fetchCategories } from '../api/categories';
 import { fetchCourses } from '../api/courses';
 import { fetchPackages } from '../api/packages';
 
-vi.mock('vue-router', () => ({ useRoute: () => ({ query: {} }) }));
+vi.mock('vue-router', () => ({ useRoute: () => ({ query: {} }), useRouter: () => ({ push: vi.fn() }) }));
 vi.mock('../api/categories', () => ({ fetchCategories: vi.fn() }));
 vi.mock('../api/courses', () => ({ fetchCourses: vi.fn() }));
 vi.mock('../api/packages', () => ({ fetchPackages: vi.fn() }));
@@ -14,7 +15,7 @@ vi.mock('../api/packages', () => ({ fetchPackages: vi.fn() }));
 const RouterLinkStub = { props: ['to'], template: '<a><slot /></a>' };
 
 function mountPage() {
-    return mount(HomePage, { global: { plugins: [i18n], stubs: { RouterLink: RouterLinkStub } } });
+    return mount(HomePage, { global: { plugins: [i18n, createPinia()], stubs: { RouterLink: RouterLinkStub } } });
 }
 
 describe('homepage', () => {

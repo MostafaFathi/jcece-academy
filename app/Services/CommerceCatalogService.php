@@ -12,6 +12,13 @@ use Illuminate\Validation\ValidationException;
 
 class CommerceCatalogService
 {
+    public function currency(): ?string
+    {
+        $currency = strtoupper((string) config('jcec.commerce.currency'));
+
+        return preg_match('/^[A-Z]{3}$/', $currency) === 1 ? $currency : null;
+    }
+
     public function findPurchasable(PurchasableType $type, int $id, bool $lockForUpdate = false): Course|Package
     {
         /** @var Builder<Course|Package> $query */

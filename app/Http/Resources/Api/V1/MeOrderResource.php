@@ -19,6 +19,7 @@ class MeOrderResource extends JsonResource
             'order_number' => $this->order_number,
             'status' => $this->status->value,
             'currency' => $this->currency,
+            'payment_proof_max_kilobytes' => (int) config('jcec.commerce.payment_proof_max_kilobytes'),
             'subtotal' => $this->subtotal,
             'discount_total' => $this->discount_total,
             'tax_total' => $this->tax_total,

@@ -54,9 +54,9 @@ class OrderCheckoutService
                 throw ValidationException::withMessages(['cart' => 'The cart is empty.']);
             }
 
-            $currency = strtoupper((string) config('jcec.commerce.currency'));
+            $currency = $this->catalog->currency();
 
-            if (preg_match('/^[A-Z]{3}$/', $currency) !== 1) {
+            if ($currency === null) {
                 throw ValidationException::withMessages([
                     'currency' => 'Checkout currency is not configured with a valid 3-character ISO code.',
                 ]);

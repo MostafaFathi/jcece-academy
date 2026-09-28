@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushPromises, mount } from '@vue/test-utils';
+import { createPinia } from 'pinia';
 import PackageCatalogPage from '../pages/PackageCatalogPage.vue';
 import i18n, { setLocale } from '../i18n';
 import { fetchPackages } from '../api/packages';
@@ -12,7 +13,7 @@ const RouterLinkStub = { props: ['to'], template: '<a><slot /></a>' };
 const packageItem = { id: 1, title: 'BIM Career Path', slug: 'bim-path', description: 'A focused learning path', type: 'learning_path', price: '120.00', course_count: 3 };
 
 function mountPage() {
-    return mount(PackageCatalogPage, { global: { plugins: [i18n], stubs: { RouterLink: RouterLinkStub } } });
+    return mount(PackageCatalogPage, { global: { plugins: [i18n, createPinia()], stubs: { RouterLink: RouterLinkStub } } });
 }
 
 describe('package catalog page', () => {

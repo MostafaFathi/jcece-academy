@@ -35,6 +35,10 @@ export const routes = [
         meta: { requiresAuth: true, roles: ['student'] },
         children: [
             { path: '', name: 'student.dashboard', component: DashboardPage, meta: { requiresAuth: true, roles: ['student'], title: 'pages.student' } },
+            { path: 'cart', name: 'student.cart', component: () => import('../pages/CartPage.vue'), meta: { requiresAuth: true, roles: [], title: 'commerce.cart' } },
+            { path: 'checkout', name: 'student.checkout', component: () => import('../pages/CheckoutPage.vue'), meta: { requiresAuth: true, roles: [], title: 'commerce.checkout' } },
+            { path: 'orders', name: 'student.orders.index', component: () => import('../pages/OrdersPage.vue'), meta: { requiresAuth: true, roles: [], title: 'commerce.myOrders' } },
+            { path: 'orders/:id', name: 'student.orders.show', component: () => import('../pages/OrderDetailPage.vue'), props: true, meta: { requiresAuth: true, roles: [], title: 'commerce.orderDetails' } },
             { path: 'learning', name: 'student.learning', component: UpcomingPage, props: { titleKey: 'nav.learning' }, meta: { requiresAuth: true, roles: ['student'], title: 'nav.learning' } },
         ],
     },

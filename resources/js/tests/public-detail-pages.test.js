@@ -8,7 +8,7 @@ import { fetchCourse } from '../api/courses';
 import { fetchPackage } from '../api/packages';
 import { fetchCourseReviews } from '../api/reviews';
 
-vi.mock('vue-router', () => ({ useRoute: () => ({ fullPath: '/courses/bim' }) }));
+vi.mock('vue-router', () => ({ useRoute: () => ({ fullPath: '/courses/bim' }), useRouter: () => ({ push: vi.fn() }) }));
 vi.mock('../api/courses', () => ({ fetchCourse: vi.fn() }));
 vi.mock('../api/packages', () => ({ fetchPackage: vi.fn() }));
 vi.mock('../api/reviews', () => ({ fetchCourseReviews: vi.fn() }));

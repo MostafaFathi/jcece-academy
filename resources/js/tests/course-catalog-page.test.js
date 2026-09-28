@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushPromises, mount } from '@vue/test-utils';
+import { createPinia } from 'pinia';
 import CourseCatalogPage from '../pages/CourseCatalogPage.vue';
 import i18n, { setLocale } from '../i18n';
 import { fetchCategories } from '../api/categories';
@@ -14,7 +15,7 @@ const RouterLinkStub = { template: '<a><slot /></a>' };
 const course = { id: 1, title: 'BIM Essentials', slug: 'bim', short_description: 'Course description', price: '20.00', level: 'beginner', rating_summary: { average_rating: 5, review_count: 1 } };
 
 function mountPage() {
-    return mount(CourseCatalogPage, { global: { plugins: [i18n], stubs: { RouterLink: RouterLinkStub } } });
+    return mount(CourseCatalogPage, { global: { plugins: [i18n, createPinia()], stubs: { RouterLink: RouterLinkStub } } });
 }
 
 describe('course catalog page', () => {

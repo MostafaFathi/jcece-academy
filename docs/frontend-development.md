@@ -36,7 +36,7 @@ Laravel returns the SPA shell for frontend history routes. `/api`, `/sanctum`, `
 
 ## Current boundary
 
-Phase 11 provides the public homepage, course and package catalogs, public detail pages, published course reviews, polished login, localized responsive navigation, and the existing access-aware dashboard shells. The public application integrates these implemented endpoints:
+Phases 10–12A provide the public homepage, course and package catalogs/details, published course reviews, login, localized responsive navigation, dashboard shells, and authenticated cart/checkout/orders/manual-payment/proof pages. The public application integrates these implemented endpoints:
 
 - `GET /api/v1/categories`
 - `GET /api/v1/courses` and `GET /api/v1/courses/{slug}`
@@ -44,8 +44,32 @@ Phase 11 provides the public homepage, course and package catalogs, public detai
 - `GET /api/v1/packages` and `GET /api/v1/packages/{slug}`
 - the existing Sanctum session authentication endpoints
 
-The public catalog persists supported search, filter, sort, and page values in URL query parameters. The API does not currently expose a public currency field, so prices are displayed as numeric amounts without inventing a currency.
+The public catalog persists supported search, filter, sort, and page values in URL query parameters. Catalog/cart prices expose configured backend currency; missing currency is shown explicitly and blocks new checkout. Money rendering preserves decimal strings without floating-point totals.
 
-Public registration, password reset, and email verification endpoints are not implemented, so the frontend does not fabricate those flows. Checkout, orders, the student learning player, protected lesson downloads, and business administration screens remain outside Phase 11.
+Student commerce routes live under `/student/cart`, `/student/checkout`, `/student/orders`, and `/student/orders/:id`, backed by `/api/v1/me/cart`, `/checkout`, `/orders`, order payments, and private proof download. Cart/auth/customer/payment data stays in memory. Only language preference uses localStorage and the non-sensitive checkout UUID uses sessionStorage to recover uncertain requests. See `frontend-api-contract.md` for exact retry, status, ownership, and upload behavior.
+
+Public registration, password reset, and email verification endpoints are not implemented. Gateways, coupons, refunds, the learning player, quizzes/assignments/certificates UI, protected lesson downloads, admin commerce, and unrelated business screens remain outside Phase 12A.
+
+Manual-payment account instructions still need a managed backend/configuration contract. No bank or wallet details are fabricated. A connected browser is required for the end-to-end desktop/mobile RTL smoke test; automated API/component tests do not replace that visual check. In this execution the browser inventory was empty, so the manual smoke test remains outstanding; no live order/payment was created or approved.
 
 Lesson resources still expose `file_path` in the current API without a protected download endpoint. The public frontend never renders that field or creates a download link; this backend contract must be corrected before the student lesson player is implemented.
+
+## Phase 12A implementation report
+
+Paths below are relative to `resources/js/` unless noted otherwise.
+
+| Area | Created files | Modified files |
+|---|---|---|
+| API/state | `api/commerce.js`, `stores/cart.js`, `utils/commerce.js` | None |
+| Pages | `pages/CartPage.vue`, `pages/CheckoutPage.vue`, `pages/OrdersPage.vue`, `pages/OrderDetailPage.vue` | `pages/CourseDetailPage.vue`, `pages/PackageDetailPage.vue` |
+| Components | `components/commerce/AddToCartButton.vue`, `CartSummary.vue`, `MoneyAmount.vue`, `CommerceStatus.vue`, `CommerceError.vue`, `ManualPaymentForm.vue` (all in the same commerce directory) | `components/public/CourseCard.vue`, `PackageCard.vue`, `PublicHeader.vue` |
+| Routing/localization | `i18n/commerce.js` | `router/index.js`, `composables/navigation.js`, `i18n/ar.js`, `i18n/en.js` |
+| Frontend tests | `tests/cart.test.js`, `commerce-api.test.js`, `commerce-pages.test.js`, `commerce-routing.test.js` | `tests/home-page.test.js`, `course-catalog-page.test.js`, `package-catalog-page.test.js`, `public-detail-pages.test.js` |
+| Backend | `tests/Feature/CommerceCurrencyApiTest.php` | Currency-bearing catalog/cart resources, CartItem duration, MeOrder proof limit, shared currency resolution in CommerceCatalogService/OrderCheckoutService |
+| Documentation | None | `docs/frontend-api-contract.md`, this document |
+
+Integrated endpoints are GET/DELETE `/api/v1/me/cart`, POST `/cart/items`, DELETE `/cart/items/{id}`, POST `/checkout`, GET `/orders`, GET `/orders/{id}`, POST `/orders/{id}/payments`, and GET `/payments/{id}/proof` (all short paths are under `/api/v1/me`). No new API endpoints or dependencies were added.
+
+Verification on 2026-09-28: full frontend suite **91 tests passed**; full Laravel suite **339 tests / 1525 assertions passed**; focused currency/cart/checkout/order/payment suite **27 tests / 160 assertions passed**. Vite production build, Pint, `git diff --check`, and the `/api/v1/me` route audit passed. Vite reports the existing optional `fontaine` font-fallback warning; it is non-blocking and no dependency was installed. Browser smoke testing remains blocked by an empty connected-browser inventory, including desktop/mobile visual verification. No real payment was submitted or approved.
+
+Phase 12A stops here. External gateways, coupons, refunds, student learning player, quizzes UI, assignments UI, certificates UI, admin commerce pages, and unrelated business modules were not implemented.

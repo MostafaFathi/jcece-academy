@@ -1,10 +1,10 @@
 # JCEC Academy frontend API contract
 
-Audited against the Laravel application on 2026-09-27. This document describes implemented behavior only. The API prefix is `/api/v1`; the Sanctum CSRF initializer is the framework route `/sanctum/csrf-cookie`.
+Audited against the Laravel application on 2026-09-28 (Phase 12A commerce integration). This document describes implemented behavior only. The API prefix is `/api/v1`; the Sanctum CSRF initializer is the framework route `/sanctum/csrf-cookie`.
 
 ## 1. Client and authentication contract
 
-The first-party Vue application must use Sanctum SPA session cookies, not personal access tokens. The prepared Axios defaults are in `resources/js/app.js`: JSON responses are requested and both `withCredentials` and `withXSRFToken` are enabled.
+The first-party Vue application uses Sanctum SPA session cookies, not personal access tokens. Axios defaults are in `resources/js/api/client.js`: JSON responses are requested and both `withCredentials` and `withXSRFToken` are enabled.
 
 Login sequence:
 
@@ -38,7 +38,7 @@ Only active users may log in. Invalid, inactive, and blocked accounts receive th
 
 ### Local and production settings
 
-- Recommended local model: load the SPA through `http://jcec-academy.local` and make relative API requests. Vite supplies development assets/HMR; the browser still calls the API from the Laravel origin. `SESSION_DOMAIN=null`, `SameSite=Lax`, and the `jcec-academy.local` Sanctum stateful entry are suitable.
+- Recommended local model: load the SPA through `https://jcec-academy.local` and make relative API requests. Vite supplies trusted HTTPS development assets/HMR; the browser still calls the API from the Laravel origin. `SESSION_DOMAIN=null`, `SameSite=Lax`, and the `jcec-academy.local` Sanctum stateful entry are suitable. See `frontend-development.md` for the Laragon certificate configuration.
 - The current default CORS configuration has `supports_credentials=false`. That is harmless for the recommended same-origin model. A standalone `http://localhost:5173` SPA is not supported safely until CORS is published/configured with that exact allowed origin and credentials enabled; wildcard origins must not be combined with credentialed requests.
 - Production should use HTTPS, `SESSION_SECURE_COOKIE=true`, and relative same-origin requests where possible. If the SPA and API use sibling subdomains, set `SESSION_DOMAIN=.example.com`, include the exact SPA host in `SANCTUM_STATEFUL_DOMAINS`, and allow that exact origin with credentialed CORS.
 - All `/api/*` failures are forced to JSON. CSRF protection remains enabled.
@@ -102,15 +102,35 @@ Every `/me` and `/admin` route requires `auth:sanctum`. Policies remain authorit
 
 | Method and URL | Policy / request | Success |
 |---|---|---|
-| `GET /api/v1/me/cart` | current user | `CartResource`. |
+| `GET /api/v1/me/cart` | current user | `CartResource`; 201 when first creating the user's cart, otherwise 200. |
 | `DELETE /api/v1/me/cart` | current user | Cleared `CartResource`. |
-| `POST /api/v1/me/cart/items` | `purchasable_type=course|package`, `purchasable_id` | Updated `CartResource`; unavailable/duplicate/conflicting products are 422. |
+| `POST /api/v1/me/cart/items` | `purchasable_type=course|package`, `purchasable_id` | Updated `CartResource`; unavailable products are 422. The same type/ID is idempotently kept once, not rejected. Course/package overlap is not rejected. |
 | `DELETE /api/v1/me/cart/items/{cartItem}` | owner-scoped cart item | Updated `CartResource`; foreign item is hidden/denied. |
 | `POST /api/v1/me/checkout` | `idempotency_key(UUID), customer_name, customer_email, customer_phone`; optional `notes` | `MeOrderResource`, 201 on first request and 200 on idempotent replay; 10/min. |
 | `GET /api/v1/me/orders` | owner | Paginated `MeOrderResource`, 15/page. |
 | `GET /api/v1/me/orders/{order}` | owner | Order, items, package-course snapshots, payments. |
-| `POST /api/v1/me/orders/{order}/payments` | owner; multipart `method`, optional `transaction_id`, required `payment_proof` PDF/JPEG/PNG max configured 5 MB | `MePaymentResource`, 201; 10/min. |
+| `POST /api/v1/me/orders/{order}/payments` | owner; multipart `method`, optional `transaction_id`, required `payment_proof` PDF/JPEG/PNG; size from `payment_proof_max_kilobytes` on the order (default config 5120 KB) | `MePaymentResource`, 201; 10/min. |
 | `GET /api/v1/me/payments/{payment}/proof` | payment/order owner | Authenticated binary download; never a public URL. |
+
+#### Phase 12A commerce resource contract
+
+`CourseResource`, `PublicPackageResource`, nested public package-course prices, and `CartResource` now add `currency`. It is the uppercase configured `JCEC_COMMERCE_CURRENCY`, using the same validation as checkout. Missing/invalid configuration produces `null`, never a guessed default. Checkout still rejects missing/invalid currency with 422 and preserves the cart. Order/payment currency is the historical snapshot, not the current catalog configuration.
+
+Cart shape: `{data:{id,items,item_count,estimated_total,currency}}`. Money remains fixed two-decimal strings. Each item has `id,purchasable_type,purchasable_id,available,product`; a deleted product can be `null`. Product fields are `id,title,slug,price,thumbnail,access_duration_days`. Null access duration means no configured expiry. The estimated total excludes unavailable products; the UI requires removing unavailable items before a new checkout. There is no quantity/update endpoint. Package composition is not exposed by the cart; the UI does not reconstruct it from the public catalog.
+
+Checkout accepts only required `idempotency_key` UUID, name (255), email (255), phone (50), and nullable order notes (2000). Server prices, currency, discount/tax totals, and access duration are snapshotted; cart items are deleted atomically. Direct purchases use Course duration and package purchases use Package duration. Package order snapshots include historical membership titles, including courses no longer in the public catalog. Idempotent lookup is user-scoped and occurs before the empty-cart check, so retrying the same UUID returns the original order after cart clearing. Neither cart addition nor checkout provisions access.
+
+The order index is owner-scoped, 15/page, and does not load items/payments; detail and checkout responses load `items.package_courses` and `payments`. `MeOrderResource` adds the safe configured integer `payment_proof_max_kilobytes` for upload validation. It exposes no entitlement keys, provisioning reconciliation metadata, or idempotency key. Foreign order/detail and proof requests are 404; payment submission for a foreign order is 403. Backend ownership checks remain authoritative regardless of frontend roles.
+
+Actual order statuses: `pending,awaiting_payment,paid,completed,cancelled,refunded`. Actual payment statuses: `pending_review,paid,rejected`. Payment methods: `bank_transfer,wallet,manual`. Payment `paid` means approved payment, but an order still marked `paid` does not confirm successful provisioning. The provisioning service sets the order to `completed` after all grants succeed atomically; completed records historical provisioning, not necessarily current access (duration may expire or access may later be revoked). No separate student reconciliation state is exposed, so the UI never invents one or infers provisioning from payment approval alone.
+
+Payment payload has no notes, amount, or currency field. Amount/currency come from the full order total. Reference is optional, max 255; proof is required and server MIME/content/size validation is authoritative. Only pending/awaiting-payment orders accept submissions, and a second pending-review payment is blocked with 422. Rejection permits resubmission if the order is pending again. Upload receipt means review pending, not approved access. Safe payment fields include `proof_available,transaction_id,method,amount,currency,status,paid_at,approved_at,rejection_reason,created_at`. Proof bytes use the authenticated blob helper; no storage URL is constructed.
+
+There are no bank/wallet account details or managed payment instructions in the current backend. The UI truthfully directs students to contact the academy before transferring money. A managed, authenticated payment-instructions contract remains a content requirement; no account data was fabricated.
+
+The cart store owns server snapshots, loading/mutation/error flags, and count. Mutations are serialized and stale responses from a prior auth session are ignored. Checkout intent UUID alone is persisted in sessionStorage; customer/cart/order/payment/proof data is not persisted. An uncertain request retains its UUID and original in-memory payload, blocks cart changes, and offers same-intent retry. Across reload only UUID survives: required customer fields must be supplied again, but a committed order is still recovered by UUID. Keys clear on success, logout/account switch, or explicit new intent; an explicit new intent warns to inspect orders first. Upload outcomes without a definitive response require an order refresh before retrying.
+
+Authenticated commerce frontend routes are `/student/cart`, `/student/checkout`, `/student/orders`, and `/student/orders/:id`. They use Phase 10 authentication guards without adding a student-role restriction that the commerce API does not impose. Guests purchasing from a catalog card/detail go to login with a router-generated local detail destination; no guest cart is created. Navigation includes Cart and My Orders. Translated enum labels do not change API enum values.
 
 ### Learning and progress
 
@@ -344,7 +364,7 @@ Known blocker: lesson resource records currently expose the stored `file_path` f
 
 ## 10. Suggested Vue module boundaries (next phase)
 
-No pages or layouts were created in Phase 9. Recommended modules:
+Phase 9 originally proposed the following modules; Phases 10–12A use the existing `router`, `pages`, `i18n`, `api`, `stores`, `layouts`, and `components` directories rather than introducing a new module hierarchy:
 
 ```text
 resources/js/
@@ -361,10 +381,10 @@ resources/js/
 
 Use Composition API and lazy route chunks. Set `document.documentElement.dir` to `rtl` for Arabic and `ltr` for English, with logical CSS properties where possible. Keep Burgundy `#6B1D32` and Yellow `#FFD21E` as design tokens. Plan mobile-first breakpoints for phones, tablets, and desktop; use separate layout shells rather than role conditionals scattered across pages.
 
-Bootstrap is not installed. Tailwind CSS 4 and its Vite plugin are already installed, so the next phase should use the existing Tailwind stack unless the project explicitly approves a dependency change.
+Bootstrap is not installed. Tailwind CSS 4 and its Vite plugin are used by the implemented frontend; dependencies were not changed for Phase 12A.
 
 ## 11. Implemented versus planned
 
-Implemented: all routes inventoried above, cookie-session login/logout/current user, JSON API errors, role/permission exposure, and protected downloads except lesson resources.
+Implemented: all API routes inventoried above, cookie-session login/logout/current user, JSON API errors, role/permission exposure, and protected downloads except lesson resources. Vue foundation/authentication/layouts, public catalog/details/reviews display, and Phase 12A student cart/checkout/orders/manual-payment/proof UI are implemented.
 
-Not implemented/planned: Vue pages/layouts, public registration, password reset, email verification, profile editing, user/instructor administration endpoints, private lesson-file delivery, email/SMS/push notifications, live chat, and external integrations.
+Not implemented/planned: external gateways, coupons, refund actions, learning player, quizzes/assignments/certificates UI, admin commerce UI, unrelated business-module UI, public registration, password reset, email verification, profile editing, user/instructor administration endpoints, private lesson-file delivery, email/SMS/push notifications, live chat, and external integrations.

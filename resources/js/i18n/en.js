@@ -1,4 +1,7 @@
+import { en as commerce } from './commerce';
+
 export default {
+    commerce,
     brand: {
         name: 'JCEC Academy', tagline: 'Learn today… build a better tomorrow', promise: 'Build professional skills that create a real difference in your future.', description: 'An Arabic-first professional learning platform bringing specialized content, assessment, and practical progress into one experience.',
     },

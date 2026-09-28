@@ -40,6 +40,7 @@ class CartItemResource extends JsonResource
                 'title' => $product->title,
                 'slug' => $product->slug,
                 'price' => $product->price,
+                'access_duration_days' => $product->access_duration_days,
                 'thumbnail' => $product->thumbnail,
             ] : null,
         ];

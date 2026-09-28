@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Api\V1;
 
+use App\Services\CommerceCatalogService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -28,6 +29,7 @@ class PublicPackageCourseResource extends JsonResource
                 'language' => $this->course->language,
                 'duration_minutes' => $this->course->duration_minutes,
                 'price' => $this->course->price,
+                'currency' => app(CommerceCatalogService::class)->currency(),
                 'compare_price' => $this->course->compare_price,
             ]),
         ];

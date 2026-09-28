@@ -1,5 +1,7 @@
 export const navigationByArea = {
     student: [
+        { label: 'commerce.cart', route: 'student.cart' },
+        { label: 'commerce.myOrders', route: 'student.orders.index' },
         { label: 'nav.overview', route: 'student.dashboard' },
         { label: 'nav.learning', route: 'student.learning' },
     ],
