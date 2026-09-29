@@ -6,6 +6,7 @@ use App\LessonType;
 use App\Models\Course;
 use App\Models\CourseSection;
 use App\Models\Lesson;
+use App\Models\LessonResource;
 use App\Models\User;
 use App\RoleName;
 use Database\Seeders\RolesAndPermissionsSeeder;
@@ -87,10 +88,52 @@ class CurriculumApiTest extends TestCase
             'type' => 'pdf',
             'file_path' => 'lesson-resources/worksheet.pdf',
         ])->assertCreated()
-            ->assertJsonPath('data.file_path', 'lesson-resources/worksheet.pdf');
+            ->assertJsonPath('data.download_available', true)
+            ->assertJsonMissingPath('data.file_path');
 
         $this->assertDatabaseHas('lessons', ['id' => $lessonId, 'course_section_id' => $section->id]);
         $this->assertDatabaseHas('lesson_resources', ['lesson_id' => $lessonId, 'title' => 'Worksheet']);
+    }
+
+    public function test_every_admin_resource_response_omits_storage_metadata(): void
+    {
+        $this->authenticateAs(RoleName::ContentManager->value);
+        $lesson = Lesson::factory()->published()->create();
+        $resource = LessonResource::factory()->for($lesson)->create(['file_path' => 'lesson-resources/secret.pdf']);
+        $section = $lesson->section;
+
+        $responses = [
+            $this->getJson("/api/v1/admin/lessons/{$lesson->id}/resources")->assertOk(),
+            $this->getJson("/api/v1/admin/lessons/{$lesson->id}/resources/{$resource->id}")->assertOk(),
+            $this->patchJson("/api/v1/admin/lessons/{$lesson->id}/resources/{$resource->id}", ['title' => 'Updated worksheet'])->assertOk(),
+            $this->postJson("/api/v1/admin/lessons/{$lesson->id}/resources/reorder", ['ids' => [$resource->id]])->assertOk(),
+            $this->getJson("/api/v1/admin/sections/{$section->id}/lessons")->assertOk(),
+            $this->getJson("/api/v1/admin/sections/{$section->id}/lessons/{$lesson->id}")->assertOk(),
+            $this->getJson("/api/v1/admin/courses/{$section->course_id}/sections/{$section->id}")->assertOk(),
+        ];
+
+        foreach ($responses as $response) {
+            foreach (['file_path', 'storage_path', 'storage_disk', 'secret.pdf'] as $metadata) {
+                $this->assertStringNotContainsString($metadata, $response->getContent());
+            }
+        }
+    }
+
+    public function test_admin_cannot_write_traversal_paths_or_non_http_resource_urls(): void
+    {
+        $this->authenticateAs(RoleName::ContentManager->value);
+        $lesson = Lesson::factory()->create();
+        $resource = LessonResource::factory()->for($lesson)->create();
+        $payload = ['title' => 'Worksheet', 'type' => 'pdf', 'file_path' => 'lesson-resources/../secret.pdf'];
+
+        $this->postJson("/api/v1/admin/lessons/{$lesson->id}/resources", $payload)
+            ->assertUnprocessable()->assertJsonValidationErrors('file_path');
+        $this->patchJson("/api/v1/admin/lessons/{$lesson->id}/resources/{$resource->id}", $payload)
+            ->assertUnprocessable()->assertJsonValidationErrors('file_path');
+        $this->postJson("/api/v1/admin/lessons/{$lesson->id}/resources", [
+            'title' => 'Unsafe', 'type' => 'link', 'external_url' => 'ftp://example.test/file',
+        ])->assertUnprocessable()->assertJsonValidationErrors('external_url');
+        $this->assertDatabaseCount('lesson_resources', 1);
     }
 
     public function test_section_reorder_assigns_deterministic_zero_based_positions(): void

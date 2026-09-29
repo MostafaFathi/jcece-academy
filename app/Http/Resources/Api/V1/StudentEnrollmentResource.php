@@ -20,7 +20,7 @@ class StudentEnrollmentResource extends JsonResource
     {
         /** @var Enrollment $enrollment */
         $enrollment = $this->resource['enrollment'];
-        /** @var array{has_access: bool, access_expires_at: mixed, is_lifetime: bool} $access */
+        /** @var array{has_access: bool, access_state: string, access_expires_at: mixed, is_lifetime: bool} $access */
         $access = $this->resource['access'];
         /** @var array{completed_lessons: int, total_lessons: int, progress_percentage: float, resume: ?array{lesson: Lesson, progress: ?LessonProgress}} $progress */
         $progress = $this->resource['progress'];
@@ -33,6 +33,7 @@ class StudentEnrollmentResource extends JsonResource
             'completed_at' => $enrollment->completed_at,
             'course' => new StudentCourseResource($enrollment->course),
             'has_access' => $access['has_access'],
+            'access_state' => $access['access_state'],
             'access_expires_at' => $access['access_expires_at'],
             'is_lifetime' => $access['is_lifetime'],
             'completed_lessons' => $progress['completed_lessons'],

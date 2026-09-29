@@ -78,6 +78,7 @@ class PublicCurriculumApiTest extends TestCase
         $this->getJson('/api/v1/courses/preview-content')
             ->assertOk()
             ->assertJsonPath('data.curriculum.0.lessons.0.content', 'Public preview body')
+            ->assertJsonMissingPath('data.curriculum.0.lessons.0.resources')
             ->assertJsonMissing(['file_path' => 'private/preview-handout.pdf']);
     }
 }

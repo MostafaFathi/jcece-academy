@@ -1,6 +1,6 @@
 # JCEC Academy frontend API contract
 
-Audited against the Laravel application on 2026-09-28 (Phase 12A commerce integration). This document describes implemented behavior only. The API prefix is `/api/v1`; the Sanctum CSRF initializer is the framework route `/sanctum/csrf-cookie`.
+Audited against the Laravel application on 2026-09-29 (Phase 12B learning integration). This document describes implemented behavior only. The API prefix is `/api/v1`; the Sanctum CSRF initializer is the framework route `/sanctum/csrf-cookie`.
 
 ## 1. Client and authentication contract
 
@@ -136,12 +136,25 @@ Authenticated commerce frontend routes are `/student/cart`, `/student/checkout`,
 
 | Method and URL | Policy / request | Success |
 |---|---|---|
-| `GET /api/v1/me/courses` | active effective access | Paginated student enrollments, 15/page. |
+| `GET /api/v1/me/courses` | current user; includes inactive access | Paginated owned enrollments with surviving courses, 15/page. |
 | `GET /api/v1/me/courses/{slug}` | active effective access | Enrollment/course access metadata. |
 | `GET /api/v1/me/courses/{slug}/learn` | active effective access | Learning curriculum with lessons, resources, and progress. |
 | `GET /api/v1/me/courses/{slug}/progress` | active effective access | Aggregate course progress. |
 | `PATCH /api/v1/me/courses/{slug}/lessons/{lesson}/progress` | nested lesson + course access; `watched_seconds` and/or `last_position_seconds`, non-negative integers | `StudentLessonProgressResource`. |
 | `POST /api/v1/me/courses/{slug}/lessons/{lesson}/complete` | nested lesson + course access | Completed `StudentLessonProgressResource`. |
+| `GET /api/v1/me/courses/{slug}/lessons/{lesson}/resources/{resource}/download` | authenticated effective course access; scoped course/lesson/resource; published lesson in active section | Streamed private attachment; safe server filename. |
+
+The course identifier is its slug; lessons/resources use IDs. Learning/progress/download endpoints use `CourseAccessService`, without a staff-role bypass. Missing/foreign nested IDs are 404; no access, expired/revoked grants and suspended enrollments are 403; guests are 401. Public previews retain preview content/video fields only and never contain resource records or private file links.
+
+Enrollment responses contain `status,enrolled_at,completed_at,course,has_access,access_state,access_expires_at,is_lifetime,completed_lessons,total_lessons,progress_percentage,resume`. Course summaries now optionally include a safe `instructor` summary when loaded (My Courses and learning detail eagerly load it). `status` describes enrollment, not entitlement. `access_state` is authoritative: `active,expired,suspended,scheduled,revoked,unavailable`. Suspension takes precedence; a currently valid unrevoked grant means active; without one, future unrevoked grants mean scheduled, ended unrevoked grants mean expired, revoked-only grants mean revoked, and no grants mean unavailable. Only `has_access=true` enables continuation. `access_expires_at` is the latest currently valid finite grant expiry; it is null for lifetime or inactive access, not a reconstructed historical expiry. Never derive it from current catalog duration.
+
+The learning response contains `course,enrollment_status,has_access,access_state,access_expires_at,is_lifetime,completed_lessons,total_lessons,progress_percentage,curriculum`. Curriculum contains active sections and published, non-deleted lessons only. Each lesson has actual `video,text,file,link` type, descriptive/content/video fields, safe resource metadata and its enrollment-specific progress. `/progress` returns `{data:{enrollment,lesson_progress}}`; the enrollment contains the same authoritative summary and resume contract as My Courses. Resume identifies the most recently interacted applicable lesson with section, progress status and `last_position_seconds`, otherwise the first applicable lesson; it is null for an empty course.
+
+Progress counts/percentage come exclusively from `CourseProgressService`. No Vue completion calculation exists. `POST .../complete` is idempotent; there is **no incomplete/undo-complete endpoint**. PATCH accepts non-negative integer `watched_seconds` and/or `last_position_seconds`; video position must not exceed a configured duration. The player explicitly saves actual video position only, without converting skipped time into watched time. Mutations are serialized, then `/progress` refreshes both lesson records and the aggregate. My Courses fetches fresh data on re-entry. Quiz/assignment progress and certificate eligibility remain separate.
+
+Frontend routes are `/student/courses` (`student.courses.index`) and `/learn/courses/:slug` (`student.courses.learn`), with `/student/learning` redirecting to My Courses. Both require authentication without an invented student-role restriction. Protected content renders only after learn and progress requests confirm access. Navigation rechecks access through `/progress`; subsequent protected 401/403/404 responses clear course content, progress, video and resources. Network failures do not optimistically mark lessons complete. No protected learning data is persisted in browser storage.
+
+Text/content strings have no trusted rich-text/sanitizer contract and render escaped, preserving whitespace. Native video uses only the actual safe HTTP(S) `video_url`, restores server position and offers explicit save; provider/ID-only lessons display an unavailable message rather than fabricating an embed URL. Link lessons use the actual safe `video_url`; file lessons use the protected resource area. No new video provider or HTML integration was added.
 
 ### Quizzes
 
@@ -250,6 +263,8 @@ Package payload fields: `title,slug,type,price` required on create; optional `de
 | `DELETE /lessons/{lesson}/resources/{resource}` | CurD | 204. |
 | `POST /lessons/{lesson}/resources/reorder` | CurU | ordered distinct `ids[]`. |
 
+Resource input remains metadata/reference management, not file upload: paths must be safe `lesson-resources/{relative-key}` references, at most 255 characters, without traversal, absolute paths, encoded/backslash paths or dot-directory segments. External URLs accept HTTP(S) only. All resource CRUD/reorder responses and nested curriculum resources omit raw file/storage metadata. Clients must not depend on reading the stored path back.
+
 ### Quizzes and assessments
 
 | Endpoints | Permission | Payload / result |
@@ -347,6 +362,7 @@ Build navigation from the `permissions` returned by `/auth/user`, not role-name 
 - Course status: `draft`, `published`, `hidden`, `coming_soon`, `archived`; level: `beginner`, `intermediate`, `advanced`, `all_levels`.
 - Package type: `package`, `learning_path`; package status: `draft`, `published`, `hidden`, `archived`.
 - Lesson type: `video`, `text`, `file`, `link`; progress: `not_started`, `in_progress`, `completed`.
+- Enrollment: `active`, `completed`, `suspended`; effective course access: `active`, `expired`, `suspended`, `scheduled`, `revoked`, `unavailable`.
 - Order: `pending`, `awaiting_payment`, `paid`, `completed`, `cancelled`, `refunded`.
 - Payment method: `bank_transfer`, `wallet`, `manual`; status: `pending_review`, `paid`, `rejected`.
 - Quiz status: `draft`, `published`, `archived`; question type: `single_choice`, `multiple_choice`, `true_false`; attempt: `in_progress`, `submitted`, `expired`.
@@ -358,13 +374,17 @@ Build navigation from the `permissions` returned by `/auth/user`, not role-name 
 
 Use `multipart/form-data` for payment proof, assignment file, and support attachment uploads. Do not manually set the multipart boundary. For downloads, use the configured Axios client with `responseType: 'blob'`, read the filename from `Content-Disposition` where present, create a temporary object URL, trigger the browser download, and revoke the URL. Redirecting `window.location` to a protected download may work same-origin but gives poorer error handling.
 
-Protected implementations currently exist for payment proofs, assignment attachments/submission files, certificate PDFs, and support attachments. They authorize every request and do not return raw private paths.
+Protected implementations exist for lesson resources, payment proofs, assignment attachments/submission files, certificate PDFs, and support attachments. They authorize every request and do not return raw private paths.
 
-Known blocker: lesson resource records currently expose the stored `file_path` field through `LessonResourceResource`, and there is no dedicated protected lesson-resource download endpoint or upload service. Treat `external_url` as a normal link, but do not ship private lesson-file downloads until that backend contract is redesigned. Phase 9 does not silently convert or relocate those existing paths.
+Phase 12B resolves the lesson-resource path leak: the shared allowlisted resource (including admin, nested curriculum and reorder responses) exposes only `id,title,type,download_available,external_url,is_downloadable,sort_order`. The model also hides file/storage fields and its unfiltered external URL on direct JSON serialization. `download_available` means an enabled, safely configured file reference, not a guarantee that legacy bytes have been provisioned. Missing bytes return 404. `external_url` is null for any file-backed record and for unsafe schemes, credentials, storage/private paths, repeated encoded equivalents or signed-storage URLs; safe external references are public references, not private file delivery.
+
+Downloads use the dedicated local `lesson_resources` disk at `storage/app/private/lesson-resources`, with private visibility and URL serving disabled, regardless of the default disk. A stored reference `lesson-resources/worksheet.pdf` maps to private key `worksheet.pdf`. The resolved real path must remain inside that root (including symlink containment). Responses use `attachment; filename=lesson-resource-{id}.{allowlisted-extension-or-bin}`, `application/octet-stream`, `nosniff` and `Cache-Control: private, no-store`. The Vue adapter supplies only scoped IDs to the authenticated blob helper and immediately revokes its temporary object URL.
+
+No lesson upload service or automatic legacy relocation was added. A trusted server/operator must provision existing resource bytes inside the dedicated private root; never copy them into `public`, the public disk or a public symlink. The current seeded worksheet reference has no corresponding private file, so live successful-download testing awaits actual course material. No legacy/public data was moved or deleted. Deployment must prevent public/private symlinks or previously published file copies; application authorization cannot revoke an independently hosted public copy.
 
 ## 10. Suggested Vue module boundaries (next phase)
 
-Phase 9 originally proposed the following modules; Phases 10–12A use the existing `router`, `pages`, `i18n`, `api`, `stores`, `layouts`, and `components` directories rather than introducing a new module hierarchy:
+Phase 9 originally proposed the following modules; Phases 10–12B use the existing `router`, `pages`, `i18n`, `api`, `stores`, `composables`, `layouts`, and `components` directories rather than introducing a new module hierarchy:
 
 ```text
 resources/js/
@@ -385,6 +405,6 @@ Bootstrap is not installed. Tailwind CSS 4 and its Vite plugin are used by the i
 
 ## 11. Implemented versus planned
 
-Implemented: all API routes inventoried above, cookie-session login/logout/current user, JSON API errors, role/permission exposure, and protected downloads except lesson resources. Vue foundation/authentication/layouts, public catalog/details/reviews display, and Phase 12A student cart/checkout/orders/manual-payment/proof UI are implemented.
+Implemented: all API routes inventoried above, cookie-session login/logout/current user, JSON API errors, role/permission exposure, and protected downloads. Vue foundation/authentication/layouts, public catalog/details/reviews display, Phase 12A commerce UI and Phase 12B My Courses/course player/progress/private-resource UI are implemented.
 
-Not implemented/planned: external gateways, coupons, refund actions, learning player, quizzes/assignments/certificates UI, admin commerce UI, unrelated business-module UI, public registration, password reset, email verification, profile editing, user/instructor administration endpoints, private lesson-file delivery, email/SMS/push notifications, live chat, and external integrations.
+Not implemented/planned: external gateways, coupons, refund actions, quizzes/assignments/certificates UI, review management, support-ticket UI, admin business pages, unrelated business-module UI, public registration, password reset, email verification, profile editing, user/instructor administration endpoints, lesson upload UI/service, email/SMS/push notifications, live chat, and external integrations.

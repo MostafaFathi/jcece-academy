@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Api\V1;
 
+use App\Services\LessonResourceFileService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -18,8 +19,8 @@ class LessonResourceResource extends JsonResource
             'id' => $this->id,
             'title' => $this->title,
             'type' => $this->type,
-            'file_path' => $this->file_path,
-            'external_url' => $this->external_url,
+            'download_available' => $this->is_downloadable && LessonResourceFileService::hasSafeFile($this->resource),
+            'external_url' => LessonResourceFileService::safeExternalUrl($this->resource),
             'is_downloadable' => $this->is_downloadable,
             'sort_order' => $this->sort_order,
         ];

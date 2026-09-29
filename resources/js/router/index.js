@@ -39,8 +39,15 @@ export const routes = [
             { path: 'checkout', name: 'student.checkout', component: () => import('../pages/CheckoutPage.vue'), meta: { requiresAuth: true, roles: [], title: 'commerce.checkout' } },
             { path: 'orders', name: 'student.orders.index', component: () => import('../pages/OrdersPage.vue'), meta: { requiresAuth: true, roles: [], title: 'commerce.myOrders' } },
             { path: 'orders/:id', name: 'student.orders.show', component: () => import('../pages/OrderDetailPage.vue'), props: true, meta: { requiresAuth: true, roles: [], title: 'commerce.orderDetails' } },
-            { path: 'learning', name: 'student.learning', component: UpcomingPage, props: { titleKey: 'nav.learning' }, meta: { requiresAuth: true, roles: ['student'], title: 'nav.learning' } },
+            { path: 'courses', name: 'student.courses.index', component: () => import('../pages/MyCoursesPage.vue'), meta: { requiresAuth: true, roles: [], title: 'learning.myCourses' } },
+            { path: 'learning', name: 'student.learning', redirect: { name: 'student.courses.index' } },
         ],
+    },
+    {
+        path: '/learn',
+        component: StudentLayout,
+        meta: { requiresAuth: true, roles: [] },
+        children: [{ path: 'courses/:slug', name: 'student.courses.learn', component: () => import('../pages/CourseLearningPage.vue'), props: true, meta: { requiresAuth: true, roles: [], title: 'learning.continue' } }],
     },
     {
         path: '/admin',

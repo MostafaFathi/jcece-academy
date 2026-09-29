@@ -30,7 +30,8 @@ class LearningApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.curriculum.0.lessons.0.content', $lesson->content)
             ->assertJsonPath('data.curriculum.0.lessons.0.video_id', $lesson->video_id)
-            ->assertJsonPath('data.curriculum.0.lessons.0.resources.0.file_path', 'private/worksheet.pdf');
+            ->assertJsonMissingPath('data.curriculum.0.lessons.0.resources.0.file_path')
+            ->assertJsonPath('data.curriculum.0.lessons.0.resources.0.download_available', false);
     }
 
     public function test_user_without_valid_access_cannot_retrieve_protected_content(): void

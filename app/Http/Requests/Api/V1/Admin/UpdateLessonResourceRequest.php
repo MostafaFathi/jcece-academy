@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Api\V1\Admin;
 
+use App\Services\LessonResourceFileService;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
@@ -26,8 +27,8 @@ class UpdateLessonResourceRequest extends FormRequest
         return [
             'title' => ['sometimes', 'required', 'string', 'max:255'],
             'type' => ['sometimes', 'required', 'string', 'max:50'],
-            'file_path' => ['nullable', 'string', 'max:2048'],
-            'external_url' => ['nullable', 'url', 'max:2048'],
+            'file_path' => ['nullable', 'string', 'max:255', 'regex:'.LessonResourceFileService::PATH_PATTERN],
+            'external_url' => ['nullable', 'url:http,https', 'max:2048'],
             'is_downloadable' => ['sometimes', 'boolean'],
             'sort_order' => ['sometimes', 'integer', 'min:0'],
         ];

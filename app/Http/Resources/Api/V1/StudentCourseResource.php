@@ -17,6 +17,7 @@ class StudentCourseResource extends JsonResource
         return [
             'id' => $this->id,
             'title' => $this->title,
+            'instructor' => new UserSummaryResource($this->whenLoaded('instructor')),
             'slug' => $this->slug,
             'short_description' => $this->short_description,
             'thumbnail' => $this->thumbnail,

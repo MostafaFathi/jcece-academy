@@ -30,6 +30,15 @@ return [
 
     'disks' => [
 
+        'lesson_resources' => [
+            'driver' => 'local',
+            'root' => storage_path('app/private/lesson-resources'),
+            'visibility' => 'private',
+            'serve' => false,
+            'throw' => false,
+            'report' => false,
+        ],
+
         'local' => [
             'driver' => 'local',
             'root' => storage_path('app/private'),

@@ -34,7 +34,7 @@ class LessonResourceController extends Controller
 
         $resource = $lesson->resources()->create($request->validated());
 
-        return (new LessonResourceResource($resource))->response()->setStatusCode(201);
+        return (new LessonResourceResource($resource->refresh()))->response()->setStatusCode(201);
     }
 
     /**

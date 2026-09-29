@@ -25,6 +25,7 @@ class StudentLearningCourseResource extends JsonResource
             'course' => new StudentCourseResource($course),
             'enrollment_status' => $enrollment->status->value,
             'has_access' => $this->resource['access']['has_access'],
+            'access_state' => $this->resource['access']['access_state'],
             'access_expires_at' => $this->resource['access']['access_expires_at'],
             'is_lifetime' => $this->resource['access']['is_lifetime'],
             'completed_lessons' => $this->resource['progress']['completed_lessons'],

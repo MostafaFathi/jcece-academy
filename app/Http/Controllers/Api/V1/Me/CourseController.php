@@ -26,7 +26,7 @@ class CourseController extends Controller
         $user = $request->user();
         $enrollments = $user->enrollments()
             ->whereHas('course')
-            ->with(['course', 'currentAccessGrants'])
+            ->with(['course.instructor', 'currentAccessGrants', 'accessGrants'])
             ->latest('enrolled_at')
             ->latest('id')
             ->paginate(15);
@@ -51,6 +51,7 @@ class CourseController extends Controller
         $user = $request->user();
         $enrollment = $courseAccessService->requireAccess($user, $course);
         $enrollment->setRelation('course', $course);
+        $course->loadMissing('instructor');
 
         return new StudentEnrollmentResource([
             'enrollment' => $enrollment,
@@ -70,6 +71,7 @@ class CourseController extends Controller
         $enrollment = $courseAccessService->requireAccess($user, $course);
 
         $course->load([
+            'instructor',
             'sections' => fn ($query) => $query->where('is_active', true),
             'sections.lessons' => fn ($query) => $query->where('is_published', true),
             'sections.lessons.resources',

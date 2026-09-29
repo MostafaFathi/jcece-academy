@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\AccessGrantSource;
+use App\CourseAccessState;
 use App\EnrollmentStatus;
 use App\Models\Course;
 use App\Models\Enrollment;
@@ -37,12 +38,13 @@ class CourseAccessService
             && $enrollment->accessGrants()->currentlyValid()->exists();
     }
 
-    /** @return array{has_access: bool, access_expires_at: ?CarbonInterface, is_lifetime: bool} */
+    /** @return array{has_access: bool, access_state: string, access_expires_at: ?CarbonInterface, is_lifetime: bool} */
     public function accessMetadata(Enrollment $enrollment): array
     {
         if ($enrollment->status === EnrollmentStatus::Suspended) {
             return [
                 'has_access' => false,
+                'access_state' => CourseAccessState::Suspended->value,
                 'access_expires_at' => null,
                 'is_lifetime' => false,
             ];
@@ -56,9 +58,28 @@ class CourseAccessService
 
         return [
             'has_access' => $hasAccess,
+            'access_state' => ($hasAccess ? CourseAccessState::Active : $this->inactiveAccessState($enrollment))->value,
             'access_expires_at' => $hasAccess && ! $isLifetime ? $validGrants->max('access_expires_at') : null,
             'is_lifetime' => $isLifetime,
         ];
+    }
+
+    private function inactiveAccessState(Enrollment $enrollment): CourseAccessState
+    {
+        $grants = $enrollment->relationLoaded('accessGrants')
+            ? $enrollment->accessGrants
+            : $enrollment->accessGrants()->get();
+        $unrevoked = $grants->whereNull('revoked_at');
+
+        if ($unrevoked->contains(fn (EnrollmentAccessGrant $grant): bool => $grant->access_starts_at->isFuture())) {
+            return CourseAccessState::Scheduled;
+        }
+
+        if ($unrevoked->contains(fn (EnrollmentAccessGrant $grant): bool => $grant->access_expires_at !== null && $grant->access_expires_at->lessThanOrEqualTo(now()))) {
+            return CourseAccessState::Expired;
+        }
+
+        return $grants->isNotEmpty() ? CourseAccessState::Revoked : CourseAccessState::Unavailable;
     }
 
     /** @throws AuthorizationException */

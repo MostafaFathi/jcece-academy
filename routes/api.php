@@ -66,6 +66,7 @@ use App\Http\Controllers\Api\V1\Me\CheckoutController;
 use App\Http\Controllers\Api\V1\Me\CourseController as MeCourseController;
 use App\Http\Controllers\Api\V1\Me\CourseReviewController as MeCourseReviewController;
 use App\Http\Controllers\Api\V1\Me\LessonProgressController;
+use App\Http\Controllers\Api\V1\Me\LessonResourceDownloadController;
 use App\Http\Controllers\Api\V1\Me\OrderController as MeOrderController;
 use App\Http\Controllers\Api\V1\Me\PaymentController as MePaymentController;
 use App\Http\Controllers\Api\V1\Me\PaymentProofController as MePaymentProofController;
@@ -149,6 +150,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::scopeBindings()->group(function (): void {
             Route::patch('courses/{course:slug}/lessons/{lesson}/progress', [LessonProgressController::class, 'update'])->name('courses.lessons.progress.update');
             Route::post('courses/{course:slug}/lessons/{lesson}/complete', [LessonProgressController::class, 'complete'])->name('courses.lessons.complete');
+            Route::get('courses/{course:slug}/lessons/{lesson}/resources/{resource}/download', LessonResourceDownloadController::class)->name('courses.lessons.resources.download');
         });
     });
 
