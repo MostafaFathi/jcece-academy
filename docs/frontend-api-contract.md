@@ -413,6 +413,6 @@ Bootstrap is not installed. Tailwind CSS 4 and its Vite plugin are used by the i
 
 ## 11. Implemented versus planned
 
-Implemented: all API routes inventoried above, cookie-session login/logout/current user, JSON API errors, role/permission exposure, and protected downloads. Vue foundation/authentication/layouts, public catalog/details/reviews display, Phase 12A commerce UI, Phase 12B learning UI, and Phase 12C student quiz/assignment/certificate and public verification UI are implemented.
+Implemented: all API routes inventoried above, cookie-session login/logout/current user, JSON API errors, role/permission exposure, and protected downloads. Vue foundation/authentication/layouts, public catalog/details/reviews display, Phase 12A commerce UI, Phase 12B learning UI, Phase 12C student quiz/assignment/certificate and public verification UI, and Phase 12D contextual student reviews/support tickets UI are implemented.
 
-Not implemented/planned: external gateways, coupons, refund actions, review management, support-ticket UI, instructor grading UI, admin business pages, unrelated business-module UI, public registration, password reset, email verification, profile editing, user/instructor administration endpoints, lesson upload UI/service, email/SMS/push notifications, live chat, and external integrations.
+Not implemented/planned: external gateways, coupons, refund actions, admin review moderation UI, admin support management UI, instructor grading UI, admin business pages, unrelated business-module UI, public registration, password reset, email verification, profile editing, user/instructor administration endpoints, lesson upload UI/service, email/SMS/push notifications, live chat, and external integrations.

@@ -15,6 +15,7 @@ import VideoLesson from '../components/learning/VideoLesson.vue';
 import FileLesson from '../components/learning/FileLesson.vue';
 import LinkLesson from '../components/learning/LinkLesson.vue';
 import CourseAssessments from '../components/learning/CourseAssessments.vue';
+import CourseReviewPanel from '../components/reviews/CourseReviewPanel.vue';
 
 const props = defineProps({ slug: { type: String, required: true } });
 const route = useRoute();
@@ -46,6 +47,7 @@ async function select(id) { videoRenderer.value?.pause?.(); await selectLesson(i
                 </article>
             </div>
             <CourseAssessments :key="slug" :course-id="course.course.id" :slug="slug" :lesson-id="activeLesson?.id ?? null" :completed-lessons="summary?.completed_lessons ?? 0" @access-lost="load(slug, activeLesson?.id)" />
+            <CourseReviewPanel :key="slug" :slug="slug" :has-access="true" />
         </template>
     </div>
 </template>

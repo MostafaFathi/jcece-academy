@@ -5,6 +5,7 @@ export const navigationByArea = {
         { label: 'nav.overview', route: 'student.dashboard' },
         { label: 'learning.myCourses', route: 'student.courses.index' },
         { label: 'assessments.certificates', route: 'student.certificates.index' },
+        { label: 'support.heading', route: 'student.support.index' },
     ],
     admin: [
         { label: 'nav.overview', route: 'admin.dashboard' },

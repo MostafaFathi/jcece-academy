@@ -11,6 +11,7 @@ import PaginationNav from '../components/ui/PaginationNav.vue';
 import MediaFrame from '../components/public/MediaFrame.vue';
 import ProgressSummary from '../components/learning/ProgressSummary.vue';
 import LearningError from '../components/learning/LearningError.vue';
+import CourseReviewPanel from '../components/reviews/CourseReviewPanel.vue';
 
 const { t, locale } = useI18n();
 const courses = ref([]);
@@ -45,6 +46,7 @@ onMounted(() => load());
                     <ProgressSummary :summary="enrollment" />
                     <div class="border-t border-slate-100 pt-4 text-sm"><p v-if="enrollment.is_lifetime" class="font-bold text-brand">{{ t('learning.lifetime') }}</p><p v-else-if="enrollment.access_expires_at" class="text-slate-600">{{ t('learning.expires', { date: formatDate(enrollment.access_expires_at, locale) }) }}</p><p v-if="enrollment.has_access && enrollment.resume" class="mt-2 break-words text-slate-500">{{ t('learning.resume', { lesson: enrollment.resume.lesson.title }) }}</p></div>
                     <RouterLink v-if="enrollment.has_access" :to="{ name: 'student.courses.learn', params: { slug: enrollment.course.slug }, query: enrollment.resume ? { lesson: enrollment.resume.lesson.id } : {} }" class="inline-flex min-h-11 items-center gap-3 rounded-xl bg-brand px-5 py-3 text-sm font-bold text-white hover:bg-brand-dark">{{ t('learning.continue') }}<span aria-hidden="true">{{ locale === 'ar' ? '←' : '→' }}</span></RouterLink>
+                    <CourseReviewPanel :slug="enrollment.course.slug" :has-access="enrollment.has_access" />
                 </div>
             </article>
         </div>

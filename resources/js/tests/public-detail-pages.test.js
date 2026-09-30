@@ -36,6 +36,18 @@ describe('public detail pages', () => {
         expect(wrapper.html()).not.toContain('private/lesson.pdf');
     });
 
+    it('uses the backend aggregate when a pending review is absent from public results', async () => {
+        fetchCourse.mockResolvedValue({ id: 1, slug: 'bim', title: 'BIM Essentials', price: '20.00', rating_summary: { average_rating: null, review_count: 0 }, curriculum: [] });
+        fetchCourseReviews.mockResolvedValue({ items: [], meta: { current_page: 1, last_page: 1 } });
+        const wrapper = mount(CourseDetailPage, { props: { slug: 'bim' }, global: global() });
+        await flushPromises();
+        expect(wrapper.text()).toContain('No published reviews yet.');
+        expect(wrapper.text()).toContain('0 published reviews');
+        expect(wrapper.text()).not.toContain('Pending approval');
+        expect(fetchCourseReviews).toHaveBeenCalledWith('bim', { page: 1, per_page: 6 });
+        wrapper.unmount();
+    });
+
     it('renders package details and included published courses', async () => {
         fetchPackage.mockResolvedValue({ id: 1, slug: 'career-path', title: 'Career Path', description: 'A focused path', type: 'learning_path', price: '100.00', is_lifetime: false, access_duration_days: 180, is_sequential: true, course_count: 1, courses: [{ id: 10, is_required: true, course: { id: 2, title: 'Core Course', slug: 'core', level: 'beginner', price: '50.00' } }] });
         const wrapper = mount(PackageDetailPage, { props: { slug: 'career-path' }, global: global() });
