@@ -1,9 +1,11 @@
 import { en as commerce } from './commerce';
 import { en as learning } from './learning';
+import { en as assessments } from './assessments';
 
 export default {
     commerce,
     learning,
+    assessments,
     brand: {
         name: 'JCEC Academy', tagline: 'Learn today… build a better tomorrow', promise: 'Build professional skills that create a real difference in your future.', description: 'An Arabic-first professional learning platform bringing specialized content, assessment, and practical progress into one experience.',
     },

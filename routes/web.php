@@ -11,6 +11,8 @@ Route::prefix('api/v1/auth')->name('api.v1.auth.')->group(function (): void {
     });
 });
 
+Route::view('/certificates/verify/{token}', 'app')->name('certificates.verify.page');
+
 Route::view('/{path?}', 'app')
     ->where('path', '^(?!(?:api|sanctum|up|storage|assets|build)(?:/|$)).*$')
     ->name('spa');

@@ -16,6 +16,7 @@ class CertificateResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'course_id' => $this->course_id,
             'certificate_number' => $this->certificate_number,
             'student_name' => $this->student_name_snapshot,
             'course_title' => $this->course_title_snapshot,
@@ -29,7 +30,7 @@ class CertificateResource extends JsonResource
                 'id' => $this->revokedBy->id,
                 'name' => $this->revokedBy->name,
             ]),
-            'verification_url' => route('api.v1.certificates.verify', ['token' => $this->verification_token]),
+            'verification_url' => route('certificates.verify.page', ['token' => $this->verification_token]),
             'download_url' => $this->when($request->user() !== null, fn (): string => $request->user()->id === $this->user_id
                 ? route('api.v1.me.certificates.download', $this->resource)
                 : route('api.v1.admin.certificates.download', $this->resource)),

@@ -4,6 +4,7 @@ export const navigationByArea = {
         { label: 'commerce.myOrders', route: 'student.orders.index' },
         { label: 'nav.overview', route: 'student.dashboard' },
         { label: 'learning.myCourses', route: 'student.courses.index' },
+        { label: 'assessments.certificates', route: 'student.certificates.index' },
     ],
     admin: [
         { label: 'nav.overview', route: 'admin.dashboard' },

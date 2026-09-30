@@ -14,6 +14,7 @@ import TextLesson from '../components/learning/TextLesson.vue';
 import VideoLesson from '../components/learning/VideoLesson.vue';
 import FileLesson from '../components/learning/FileLesson.vue';
 import LinkLesson from '../components/learning/LinkLesson.vue';
+import CourseAssessments from '../components/learning/CourseAssessments.vue';
 
 const props = defineProps({ slug: { type: String, required: true } });
 const route = useRoute();
@@ -44,6 +45,7 @@ async function select(id) { videoRenderer.value?.pause?.(); await selectLesson(i
                     <div class="flex flex-wrap items-center justify-between gap-4 border-t border-slate-100 pt-6"><BaseButton data-testid="complete-lesson" :loading="busy" :disabled="activeLesson.progress?.status === 'completed'" @click="complete">{{ t(activeLesson.progress?.status === 'completed' ? 'learning.completed' : 'learning.complete') }}</BaseButton><nav class="flex flex-wrap gap-2" :aria-label="t('learning.curriculum')"><BaseButton variant="secondary" data-testid="previous-lesson" :disabled="busy || activeIndex <= 0" @click="select(lessons[activeIndex - 1].id)"><span aria-hidden="true">{{ locale === 'ar' ? '→' : '←' }}</span>{{ t('learning.previousLesson') }}</BaseButton><BaseButton variant="secondary" data-testid="next-lesson" :disabled="busy || activeIndex >= lessons.length - 1" @click="select(lessons[activeIndex + 1].id)">{{ t('learning.nextLesson') }}<span aria-hidden="true">{{ locale === 'ar' ? '←' : '→' }}</span></BaseButton></nav></div>
                 </article>
             </div>
+            <CourseAssessments :key="slug" :course-id="course.course.id" :slug="slug" :lesson-id="activeLesson?.id ?? null" :completed-lessons="summary?.completed_lessons ?? 0" @access-lost="load(slug, activeLesson?.id)" />
         </template>
     </div>
 </template>

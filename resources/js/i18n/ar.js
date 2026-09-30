@@ -1,9 +1,11 @@
 import { ar as commerce } from './commerce';
 import { ar as learning } from './learning';
+import { ar as assessments } from './assessments';
 
 export default {
     commerce,
     learning,
+    assessments,
     brand: {
         name: 'أكاديمية الجزيرة',
         tagline: 'نتعلّم اليوم... لنَبني مستقبلًا أفضل',

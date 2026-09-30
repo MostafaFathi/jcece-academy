@@ -21,6 +21,7 @@ export const routes = [
             { path: 'courses/:slug', name: 'courses.show', component: () => import('../pages/CourseDetailPage.vue'), props: true, meta: { title: 'nav.courses' } },
             { path: 'packages', name: 'packages.index', component: () => import('../pages/PackageCatalogPage.vue'), meta: { title: 'nav.packages' } },
             { path: 'packages/:slug', name: 'packages.show', component: () => import('../pages/PackageDetailPage.vue'), props: true, meta: { title: 'nav.packages' } },
+            { path: 'certificates/verify/:token', name: 'certificates.verify', component: () => import('../pages/CertificateVerificationPage.vue'), props: true, meta: { title: 'assessments.verify' } },
         ],
     },
     {
@@ -40,6 +41,9 @@ export const routes = [
             { path: 'orders', name: 'student.orders.index', component: () => import('../pages/OrdersPage.vue'), meta: { requiresAuth: true, roles: [], title: 'commerce.myOrders' } },
             { path: 'orders/:id', name: 'student.orders.show', component: () => import('../pages/OrderDetailPage.vue'), props: true, meta: { requiresAuth: true, roles: [], title: 'commerce.orderDetails' } },
             { path: 'courses', name: 'student.courses.index', component: () => import('../pages/MyCoursesPage.vue'), meta: { requiresAuth: true, roles: [], title: 'learning.myCourses' } },
+            { path: 'quizzes/:id', name: 'student.quizzes.show', component: () => import('../pages/QuizPage.vue'), props: true, meta: { requiresAuth: true, roles: [], title: 'assessments.quiz' } },
+            { path: 'assignments/:id', name: 'student.assignments.show', component: () => import('../pages/AssignmentPage.vue'), props: true, meta: { requiresAuth: true, roles: [], title: 'assessments.assignment' } },
+            { path: 'certificates', name: 'student.certificates.index', component: () => import('../pages/CertificatesPage.vue'), meta: { requiresAuth: true, roles: [], title: 'assessments.certificates' } },
             { path: 'learning', name: 'student.learning', redirect: { name: 'student.courses.index' } },
         ],
     },

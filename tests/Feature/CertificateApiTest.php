@@ -45,6 +45,7 @@ class CertificateApiTest extends TestCase
         $this->getJson("/api/v1/me/courses/{$course->slug}/certificate-eligibility")
             ->assertOk()
             ->assertJsonPath('data.eligible', true)
+            ->assertJsonPath('data.certificate_status', null)
             ->assertJsonPath('data.progress.progress_percentage', 100);
 
         $first = $this->postJson("/api/v1/me/courses/{$course->slug}/certificates")
@@ -57,8 +58,14 @@ class CertificateApiTest extends TestCase
             ->json('data.id');
 
         $this->assertSame($certificateId, $secondId);
+        $this->getJson("/api/v1/me/courses/{$course->slug}/certificate-eligibility")
+            ->assertOk()
+            ->assertJsonPath('data.certificate_status', 'issued');
         $this->assertDatabaseCount('certificates', 1);
         $this->getJson('/api/v1/me/certificates')->assertOk()->assertJsonCount(1, 'data');
+        $this->getJson("/api/v1/me/certificates/{$certificateId}")
+            ->assertJsonPath('data.course_id', $course->id)
+            ->assertJsonPath('data.verification_url', route('certificates.verify.page', ['token' => Certificate::findOrFail($certificateId)->verification_token]));
         $this->getJson("/api/v1/me/certificates/{$certificateId}")->assertOk();
         $this->get("/api/v1/me/certificates/{$certificateId}/download")
             ->assertOk()
@@ -178,6 +185,44 @@ class CertificateApiTest extends TestCase
         $this->getJson('/api/v1/certificates/verify/not-a-real-token')
             ->assertNotFound()
             ->assertJsonPath('data.status', 'unknown');
+    }
+
+    public function test_old_api_qr_url_redirects_html_browsers_to_spa_but_preserves_json_contract(): void
+    {
+        [$user, $course] = $this->eligibleCourse();
+        Sanctum::actingAs($user);
+        $certificate = Certificate::findOrFail($this->postJson("/api/v1/me/courses/{$course->slug}/certificates")->json('data.id'));
+        $url = "/api/v1/certificates/verify/{$certificate->verification_token}";
+
+        $this->get($url, ['Accept' => 'text/html'])
+            ->assertRedirect(route('certificates.verify.page', ['token' => $certificate->verification_token]));
+        $this->get("/certificates/verify/{$certificate->verification_token}")->assertOk();
+        $this->getJson($url)->assertOk()->assertJsonPath('data.status', 'issued');
+        $this->get('/api/v1/certificates/verify/unknown', ['Accept' => 'text/html'])
+            ->assertRedirect(route('certificates.verify.page', ['token' => 'unknown']));
+        $this->getJson('/api/v1/certificates/verify/unknown')->assertNotFound();
+    }
+
+    public function test_new_pdf_receives_public_spa_url_and_token_without_private_data(): void
+    {
+        [$user, $course] = $this->eligibleCourse();
+        $generator = new class implements CertificatePdfGenerator
+        {
+            public ?string $verificationUrl = null;
+
+            public function generate(Certificate $certificate, string $verificationUrl): string
+            {
+                $this->verificationUrl = $verificationUrl;
+
+                return '%PDF-1.4 generated certificate';
+            }
+        };
+        $this->app->instance(CertificatePdfGenerator::class, $generator);
+        Sanctum::actingAs($user);
+
+        $certificate = Certificate::findOrFail($this->postJson("/api/v1/me/courses/{$course->slug}/certificates")->json('data.id'));
+
+        $this->assertSame(route('certificates.verify.page', ['token' => $certificate->verification_token]), $generator->verificationUrl);
     }
 
     public function test_database_unique_key_protects_against_concurrent_active_duplicates(): void

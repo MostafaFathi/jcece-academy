@@ -1,6 +1,6 @@
 # JCEC Academy frontend API contract
 
-Audited against the Laravel application on 2026-09-29 (Phase 12B learning integration). This document describes implemented behavior only. The API prefix is `/api/v1`; the Sanctum CSRF initializer is the framework route `/sanctum/csrf-cookie`.
+Audited against the Laravel application on 2026-09-30 (Phase 12C assessment and certificate integration). This document describes implemented behavior only. The API prefix is `/api/v1`; the Sanctum CSRF initializer is the framework route `/sanctum/csrf-cookie`.
 
 ## 1. Client and authentication contract
 
@@ -90,7 +90,7 @@ Every `/me` and `/admin` route requires `auth:sanctum`. Policies remain authorit
 | `GET /api/v1/courses/{slug}/reviews` | Public | `per_page(1..100)` | Published reviews only, paginated default 15. |
 | `GET /api/v1/packages` | Public | `search, type, sort, per_page(1..100)` | Paginated published packages, default 15. |
 | `GET /api/v1/packages/{slug}` | Public | slug | Public package with course memberships. |
-| `GET /api/v1/certificates/verify/{token}` | Public, 30/min | opaque verification token | Public verification resource; no private PDF path. |
+| `GET /api/v1/certificates/verify/{token}` | Public, 30/min | opaque verification token; JSON clients send `Accept: application/json` | Public verification resource; unknown token is `{data:{status:"unknown"}}` with 404. HTML browsers redirect to the public SPA. No private PDF path. |
 | `GET /sanctum/csrf-cookie` | Public | credentials enabled | `204`, sets `XSRF-TOKEN`. |
 | `POST /api/v1/auth/login` | Public, 5/min, CSRF | `email,password`; optional `remember` | `AuthenticatedUserResource`; session regenerated. |
 | `GET /api/v1/auth/user` | Authenticated | none | Current profile, roles, effective permissions, optional instructor profile. |
@@ -169,6 +169,8 @@ Text/content strings have no trusted rich-text/sanitizer contract and render esc
 | `PATCH /api/v1/me/quiz-attempts/{attempt}/answers` | owner; `answers[]: {question_id, option_ids[]}` | Updated attempt. |
 | `POST /api/v1/me/quiz-attempts/{attempt}/submit` | owner; in-progress and not expired | Submitted/scored attempt. |
 
+Phase 12C uses the published, currently available student list and filters exposed `course_id`/`lesson_id` for the learning player. Future/closed quizzes are omitted by this API; the UI does not invent a status for undiscoverable records. Starting an attempt returns an existing active attempt idempotently or creates a snapshot. The attempt resource supplies `started_at`, `expires_at`, status, selected option IDs and question/option snapshots. Saving sends exact option-ID sets; grading is server-side. Score/percentage/passed/earned points are omitted unless submitted and results enabled. Correct option IDs/explanations are omitted unless submitted and answer review enabled. The UI checks field presence and keeps unsent selections only in memory. Its countdown derives from server `expires_at` but does not decide server acceptance.
+
 ### Assignments
 
 | Method and URL | Policy / request | Success |
@@ -185,6 +187,8 @@ Text/content strings have no trusted rich-text/sanitizer contract and render esc
 | `GET /api/v1/me/assignment-submission-files/{file}/download` | owner | Protected binary download. |
 | `POST /api/v1/me/assignment-submissions/{submission}/submit` | owner/draft; required content/type rules | Finalized submission. |
 
+The assignment list is limited to published, available, accessible records; each includes `course_id` and optional `lesson_id`. Draft creation returns an active draft or creates the next attempt. PATCH saves text, multipart POST uploads `files[]`, and finalization is a distinct POST. `text`, `file`, and `text_and_file` requirements remain server-enforced. A revision-requested historical attempt stays read-only; a new draft receives a new number subject to backend limits/deadlines. Attachment and submission-file resources expose safe metadata only; bytes use authenticated downloads, never storage paths. Final grades and feedback are conditional on backend status.
+
 ### Certificates, reviews, and support
 
 | Method and URL | Policy / request | Success |
@@ -192,7 +196,7 @@ Text/content strings have no trusted rich-text/sanitizer contract and render esc
 | `GET /api/v1/me/certificates` | owner | Paginated certificates, framework default 15. |
 | `GET /api/v1/me/certificates/{certificate}` | owner | Certificate resource. |
 | `GET /api/v1/me/certificates/{certificate}/download` | owner, issued PDF exists | Protected PDF download. |
-| `GET /api/v1/me/courses/{slug}/certificate-eligibility` | course access | `{data:{eligible,reasons,...}}`. |
+| `GET /api/v1/me/courses/{slug}/certificate-eligibility` | current user | `{data:{eligible,reasons,progress,certificate_status}}`; status is the latest owned certificate's `issued`/`revoked` value or null. |
 | `POST /api/v1/me/courses/{slug}/certificates` | eligible owner | Issued/idempotent certificate resource. |
 | `GET /api/v1/me/reviews` | owner | Paginated reviews, default 15. |
 | `GET /api/v1/me/courses/{slug}/review` | owner + course | Own review or 404. |
@@ -205,6 +209,10 @@ Text/content strings have no trusted rich-text/sanitizer contract and render esc
 | `POST /api/v1/me/support-tickets/{ticket}/messages` | owner; `body`, optional multipart `attachments[]` | Public reply, 201; closed tickets require reopen. |
 | `POST /api/v1/me/support-tickets/{ticket}/reopen` | owner; workflow must permit `→ open` | Reopened ticket. |
 | `GET /api/v1/me/support-ticket-attachments/{attachment}/download` | owner + public message only | Protected binary download; foreign/internal files return 404. |
+
+Certificate owner resources include a safe `course_id` and a human-readable SPA `verification_url`; snapshot names/title/number/issue/revocation fields remain historical. `pdf_path` and `pdf_disk` are never exposed. The student list includes revoked records, and owner PDF download remains backend-authorized. Eligibility reasons are authoritative, not inferred from lesson progress. Issuance is idempotent for an existing issued certificate; revoked certificates require administrative reissue.
+
+New PDFs encode `/certificates/verify/{token}` in the server-generated QR, served by the public SPA and backed by the JSON verification endpoint. Existing PDFs encode `/api/v1/certificates/verify/{token}`: HTML browser requests redirect to that SPA page, while JSON clients retain the original API response and 404 unknown-token behavior. The public page displays only `status`, `certificate_number`, `student_name`, `course_title`, and `issued_at`, and treats unknown tokens as a normal state.
 
 ## 6. Staff and administration inventory
 
@@ -405,6 +413,6 @@ Bootstrap is not installed. Tailwind CSS 4 and its Vite plugin are used by the i
 
 ## 11. Implemented versus planned
 
-Implemented: all API routes inventoried above, cookie-session login/logout/current user, JSON API errors, role/permission exposure, and protected downloads. Vue foundation/authentication/layouts, public catalog/details/reviews display, Phase 12A commerce UI and Phase 12B My Courses/course player/progress/private-resource UI are implemented.
+Implemented: all API routes inventoried above, cookie-session login/logout/current user, JSON API errors, role/permission exposure, and protected downloads. Vue foundation/authentication/layouts, public catalog/details/reviews display, Phase 12A commerce UI, Phase 12B learning UI, and Phase 12C student quiz/assignment/certificate and public verification UI are implemented.
 
-Not implemented/planned: external gateways, coupons, refund actions, quizzes/assignments/certificates UI, review management, support-ticket UI, admin business pages, unrelated business-module UI, public registration, password reset, email verification, profile editing, user/instructor administration endpoints, lesson upload UI/service, email/SMS/push notifications, live chat, and external integrations.
+Not implemented/planned: external gateways, coupons, refund actions, review management, support-ticket UI, instructor grading UI, admin business pages, unrelated business-module UI, public registration, password reset, email verification, profile editing, user/instructor administration endpoints, lesson upload UI/service, email/SMS/push notifications, live chat, and external integrations.

@@ -36,7 +36,7 @@ Laravel returns the SPA shell for frontend history routes. `/api`, `/sanctum`, `
 
 ## Current boundary
 
-Phases 10–12B provide the public homepage, course and package catalogs/details, published course reviews, login, localized responsive navigation, dashboard shells, authenticated commerce pages, My Courses and the course learning player. The public application integrates these implemented endpoints:
+Phases 10–12C provide the public homepage, course and package catalogs/details, published course reviews, login, localized responsive navigation, dashboard shells, authenticated commerce pages, My Courses, the course learning player, student quizzes/assignments/certificates, and public certificate verification. The public application integrates these implemented endpoints:
 
 - `GET /api/v1/categories`
 - `GET /api/v1/courses` and `GET /api/v1/courses/{slug}`
@@ -48,7 +48,7 @@ The public catalog persists supported search, filter, sort, and page values in U
 
 Student commerce routes live under `/student/cart`, `/student/checkout`, `/student/orders`, and `/student/orders/:id`, backed by `/api/v1/me/cart`, `/checkout`, `/orders`, order payments, and private proof download. Cart/auth/customer/payment data stays in memory. Only language preference uses localStorage and the non-sensitive checkout UUID uses sessionStorage to recover uncertain requests. See `frontend-api-contract.md` for exact retry, status, ownership, and upload behavior.
 
-Public registration, password reset, and email verification endpoints are not implemented. Gateways, coupons, refunds, quizzes/assignments/certificates UI, review management, support-ticket UI, admin business pages, and unrelated business screens remain outside Phase 12B.
+Public registration, password reset, and email verification endpoints are not implemented. Gateways, coupons, refunds, review management, support-ticket UI, instructor grading UI, admin business pages, and unrelated business screens remain outside Phase 12C.
 
 Manual-payment account instructions still need a managed backend/configuration contract. No bank or wallet details are fabricated. Automated API/component tests do not replace desktop/mobile RTL smoke testing. Historical Phase 12A browser results are recorded below; no live order/payment was created or approved.
 
@@ -107,3 +107,19 @@ Browser smoke testing used the connected in-app browser and existing seeded Samp
 Remaining content/manual checks: successful download of an actual provisioned private worksheet; live expired/suspended/foreign-user resource checks with suitable disposable accounts; native video playback/position saving with an actual playable video URL (provider-ID-only data is intentionally not embedded). These are covered by automated API/component tests where applicable, but were not claimed as live browser passes. No private/public files were moved or deleted, and no live grants were changed. Trusted file provisioning remains required; the seeded resource reference has no bytes in the private root. Previously hosted public copies must be removed or restricted by the operator if they exist; none were found in the inspected lesson-resource locations.
 
 Phase 12B stops here. Quiz attempt UI, assignment submission UI, certificate UI, reviews management, support-ticket UI, admin business pages, external integrations, new commerce functionality and unrelated modules were **not implemented**.
+
+## Phase 12C implementation report
+
+Completed on 2026-09-30 without dependency changes or migrations. The existing brand tokens, responsive Tailwind utilities and Arabic RTL/English LTR shells were reused. Student navigation now includes Certificates; quizzes and assignments appear contextually in the course player by exposed course/lesson IDs, separate from `LessonProgress`.
+
+New frontend files: `api/assessments.js`, `i18n/assessments.js`, `pages/QuizPage.vue`, `AssignmentPage.vue`, `CertificatesPage.vue`, `CertificateVerificationPage.vue`, `components/learning/CourseAssessments.vue`, and tests `assessments-api.test.js`/`assessments-pages.test.js`. Existing router, navigation, learning page, locales and routing tests were updated. Routes are `/student/quizzes/:id`, `/student/assignments/:id`, `/student/certificates` (session-protected) and `/certificates/verify/:token` (public).
+
+Quiz UI integrates the actual list/detail/attempt-list/start/show/result/answer-save/submit endpoints. Only actual single-choice, multiple-choice and true/false questions render. Option selections stay in memory, save as exact ID sets, and final submission requires confirmation. Client countdown uses server `expires_at` for display, never for authoritative rejection. Score/correct answers/explanation render only when present in the conditional server resource; hidden results are not reconstructed in Vue. The backend remains responsible for access, window, limit, expiry and grading.
+
+Assignment UI integrates list/detail/submission-list/start/show/text-save/multipart-file-upload/file-delete/final-submit, plus authenticated attachment and submission-file downloads. Save Draft and Submit are separate; final submission requires confirmation. A revision-requested attempt stays read-only and a new draft is explicitly created as a new attempt. Grade, feedback, deadlines and limits come from the API; no staff grading controls or storage paths are exposed.
+
+Certificate UI integrates owner list/detail contract, eligibility, idempotent issuance and authenticated PDF download. The eligibility response now adds the student's latest `certificate_status` (`issued`, `revoked`, or null), while owner resources add safe `course_id`; Vue does not infer eligibility from course progress. Revoked history remains visible. Public verification consumes the existing JSON API and displays only the public resource fields, with a normal unknown-token state. New server-generated QR PDFs and certificate resource URLs target the SPA `/certificates/verify/{token}`. Old QR PDFs targeting the API route still work: HTML browsers redirect to SPA; JSON API clients retain the previous response/404 contract. No client-generated PDF or QR exists.
+
+Verification: the full frontend suite passed **180 tests**; the full Laravel suite passed **380 tests / 1677 assertions**. The Vite production build, focused certificate API suite, Pint, route audit and `git diff --check` passed. Browser smoke confirmed the unknown-token public verification page in Arabic RTL at mobile width and the old API QR URL's HTML redirect to it. The expired sample session was renewed with the seeded development account. Its enrolled course loaded the assessments section, correctly showed no currently published assessments, and displayed backend certificate ineligibility with the incomplete-lessons reason. Student Certificates showed the empty historical state; Arabic RTL and English LTR mobile layouts were visually checked, then Arabic was restored. Live quiz/assignment workflows, valid/revoked certificate pages, issuance, PDF downloads and desktop layout remain pending because the connected sample account has no published assessments or issued/eligible certificate. Automated tests exercise their contracts. No live quiz attempt, assignment submission or certificate was created by the browser check.
+
+Phase 12C stops here. Course Reviews UI, Support Ticket UI, instructor grading UI, admin business-management pages, external payment gateways and unrelated modules were **not implemented**.

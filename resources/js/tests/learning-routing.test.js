@@ -18,6 +18,21 @@ describe('learning route boundaries', () => {
         expect(router.resolve('/learn/courses/bim').params.slug).toBe('bim');
         expect(router.resolve('/student/learning').matched.at(-1).redirect).toEqual({ name: 'student.courses.index' });
         expect(navigationByArea.student.map((item) => item.route)).toEqual(expect.arrayContaining(['student.courses.index', 'student.cart', 'student.orders.index']));
-        expect(navigationByArea.student.map((item) => item.route).join(' ')).not.toMatch(/quiz|assignment|certificate/);
+        expect(navigationByArea.student.map((item) => item.route)).toContain('student.certificates.index');
+        expect(navigationByArea.student.map((item) => item.route).join(' ')).not.toMatch(/quiz|assignment/);
+    });
+    it.each(['/student/quizzes/3', '/student/assignments/8', '/student/certificates'])('protects Phase 12C student route %s', async (path) => {
+        const route = router.resolve(path);
+        expect(route.meta.requiresAuth).toBe(true);
+        expect(route.meta.roles).toEqual([]);
+        const auth = { initialize: vi.fn().mockResolvedValue(null), isAuthenticated: false, hasAnyRole: () => false };
+        expect(await createAccessGuard(auth)(route)).toEqual({ name: 'login', query: { redirect: path } });
+        auth.isAuthenticated = true;
+        expect(await createAccessGuard(auth)(route)).toBe(true);
+    });
+    it('keeps certificate verification public', () => {
+        const route = router.resolve('/certificates/verify/opaque');
+        expect(route.name).toBe('certificates.verify');
+        expect(route.meta.requiresAuth).not.toBe(true);
     });
 });

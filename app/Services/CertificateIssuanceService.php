@@ -89,7 +89,7 @@ class CertificateIssuanceService
                     'completed_at' => $this->completionDate($enrollment),
                     'status' => CertificateStatus::Issued,
                 ]);
-                $verificationUrl = route('api.v1.certificates.verify', ['token' => $certificate->verification_token]);
+                $verificationUrl = route('certificates.verify.page', ['token' => $certificate->verification_token]);
                 $pdf = $this->pdfGenerator->generate($certificate, $verificationUrl);
                 $disk = (string) config('jcec.certificates.pdf_disk', 'local');
                 $path = "certificates/{$certificate->certificate_number}.pdf";
