@@ -9,7 +9,8 @@ export const navigationByArea = {
     ],
     admin: [
         { label: 'nav.overview', route: 'admin.dashboard' },
-        { label: 'nav.content', route: 'admin.content', anyPermission: ['courses.view', 'categories.view'] },
+        { label: 'admin.categories', route: 'admin.categories.index', permissions: ['categories.view'] },
+        { label: 'admin.courses', route: 'admin.courses.index', permissions: ['courses.view'] },
     ],
     instructor: [
         { label: 'nav.overview', route: 'instructor.dashboard' },

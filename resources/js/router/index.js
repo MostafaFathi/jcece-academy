@@ -61,8 +61,13 @@ export const routes = [
         component: AdminLayout,
         meta: { requiresAuth: true, anyPermission: ['courses.view', 'users.view', 'categories.view'] },
         children: [
-            { path: '', name: 'admin.dashboard', component: DashboardPage, meta: { requiresAuth: true, anyPermission: ['courses.view', 'users.view', 'categories.view'], title: 'pages.admin' } },
-            { path: 'content', name: 'admin.content', component: UpcomingPage, props: { titleKey: 'nav.content' }, meta: { requiresAuth: true, anyPermission: ['courses.view', 'categories.view'], title: 'nav.content' } },
+            { path: '', name: 'admin.dashboard', component: () => import('../pages/AdminDashboardPage.vue'), meta: { requiresAuth: true, anyPermission: ['courses.view', 'users.view', 'categories.view'], title: 'admin.dashboard' } },
+            { path: 'categories', name: 'admin.categories.index', component: () => import('../pages/AdminCategoriesPage.vue'), meta: { requiresAuth: true, permissions: ['categories.view'], title: 'admin.categories' } },
+            { path: 'categories/new', name: 'admin.categories.create', component: () => import('../pages/AdminCategoryFormPage.vue'), meta: { requiresAuth: true, permissions: ['categories.create'], title: 'admin.addCategory' } },
+            { path: 'categories/:id/edit', name: 'admin.categories.edit', component: () => import('../pages/AdminCategoryFormPage.vue'), meta: { requiresAuth: true, permissions: ['categories.update'], title: 'admin.editCategory' } },
+            { path: 'courses', name: 'admin.courses.index', component: () => import('../pages/AdminCoursesPage.vue'), meta: { requiresAuth: true, permissions: ['courses.view'], title: 'admin.courses' } },
+            { path: 'courses/:id/edit', name: 'admin.courses.edit', component: () => import('../pages/AdminCourseFormPage.vue'), meta: { requiresAuth: true, permissions: ['courses.update'], title: 'admin.editCourse' } },
+            { path: 'content', name: 'admin.content', redirect: { name: 'admin.courses.index' }, meta: { requiresAuth: true, permissions: ['courses.view'] } },
         ],
     },
     {

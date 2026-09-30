@@ -227,6 +227,8 @@ Role-specific grouping of the implemented routes:
 
 ### Catalog and content management
 
+Phase 13A audit: there is no admin dashboard summary endpoint and no user or instructor-directory/profile management CRUD endpoint. The existing `/users/{user}/...` admin routes only grant course access or handle certificate eligibility/issuance; `users.view/update` and `instructors.view/update` permissions do not themselves expose listing or forms. Admin course creation requires a valid instructor ID, but no authorized paginated instructor selector is available, so the Phase 13A Vue UI exposes metadata editing only and does not guess IDs. Dashboard counts use the `meta.total` of small paginated category/course requests. Category update currently blocks only self-parenting, not ancestry cycles; the Vue edit form permits keeping the current parent or moving to the top level, but not arbitrary reparenting. Backend authorization and validation remain authoritative.
+
 | Endpoints | Permission | Payload / result |
 |---|---|---|
 | `GET /categories`, `GET /categories/{id}` | CatV | Paginated index 25; category detail. |

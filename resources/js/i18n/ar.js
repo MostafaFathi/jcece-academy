@@ -2,12 +2,14 @@ import { ar as commerce } from './commerce';
 import { ar as learning } from './learning';
 import { ar as assessments } from './assessments';
 import { ar as reviewsSupport } from './reviews-support';
+import { ar as admin } from './admin';
 
 export default {
     commerce,
     learning,
     assessments,
     ...reviewsSupport,
+    admin,
     brand: {
         name: 'أكاديمية الجزيرة',
         tagline: 'نتعلّم اليوم... لنَبني مستقبلًا أفضل',
