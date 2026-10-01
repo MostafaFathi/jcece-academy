@@ -5,6 +5,7 @@ namespace Tests\Feature\Api\V1\Admin;
 use App\CourseLevel;
 use App\CourseStatus;
 use App\Models\Category;
+use App\Models\Course;
 use App\Models\User;
 use App\RoleName;
 use Database\Seeders\RolesAndPermissionsSeeder;
@@ -66,6 +67,33 @@ class CourseApiTest extends TestCase
             ->assertForbidden();
 
         $this->assertDatabaseMissing('courses', ['slug' => 'new-course']);
+    }
+
+    public function test_instructor_can_create_and_edit_only_courses_assigned_to_themselves(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+        $instructor = User::factory()->create();
+        $instructor->assignRole(RoleName::Instructor->value);
+        $otherInstructor = User::factory()->create();
+        $otherInstructor->assignRole(RoleName::Instructor->value);
+        $category = Category::factory()->create();
+        $otherCourse = Course::factory()->for($category)->for($otherInstructor, 'instructor')->create();
+        Sanctum::actingAs($instructor);
+
+        $this->postJson('/api/v1/admin/courses', $this->validPayload($category, $otherInstructor))
+            ->assertForbidden();
+        $this->postJson('/api/v1/admin/courses', $this->validPayload($category, $instructor))
+            ->assertCreated()->assertJsonPath('data.instructor.id', $instructor->id);
+        $this->patchJson("/api/v1/admin/courses/{$otherCourse->id}", ['title' => 'Forbidden title'])
+            ->assertForbidden();
+        $this->assertSame($otherCourse->title, $otherCourse->fresh()->title);
+
+        $ownCourse = Course::factory()->for($category)->for($instructor, 'instructor')->create();
+        $this->patchJson("/api/v1/admin/courses/{$ownCourse->id}", ['title' => 'Owned title'])
+            ->assertOk()->assertJsonPath('data.title', 'Owned title');
+        $this->patchJson("/api/v1/admin/courses/{$ownCourse->id}", ['instructor_id' => $otherInstructor->id])
+            ->assertForbidden();
+        $this->assertSame($instructor->id, $ownCourse->fresh()->instructor_id);
     }
 
     public function test_course_create_returns_422_for_invalid_payload(): void

@@ -5,6 +5,7 @@ namespace App\Policies;
 use App\Models\Course;
 use App\Models\User;
 use App\PermissionName;
+use App\RoleName;
 
 class CoursePolicy
 {
@@ -43,7 +44,8 @@ class CoursePolicy
      */
     public function update(User $user, Course $course): bool
     {
-        return $user->can(PermissionName::CoursesUpdate->value);
+        return $user->can(PermissionName::CoursesUpdate->value)
+            && (! $this->isInstructorOnly($user) || $course->instructor_id === $user->id);
     }
 
     /**
@@ -59,7 +61,7 @@ class CoursePolicy
      */
     public function restore(User $user, Course $course): bool
     {
-        return $user->can(PermissionName::CoursesUpdate->value);
+        return $this->update($user, $course);
     }
 
     /**
@@ -73,5 +75,17 @@ class CoursePolicy
     public function publish(User $user, Course $course): bool
     {
         return $user->can(PermissionName::CoursesPublish->value);
+    }
+
+    public function assignInstructor(User $user, int $instructorId): bool
+    {
+        return ($user->can(PermissionName::CoursesCreate->value) || $user->can(PermissionName::CoursesUpdate->value))
+            && (! $this->isInstructorOnly($user) || $instructorId === $user->id);
+    }
+
+    private function isInstructorOnly(User $user): bool
+    {
+        return $user->hasRole(RoleName::Instructor->value)
+            && ! $user->hasAnyRole([RoleName::ContentManager->value, RoleName::Admin->value]);
     }
 }

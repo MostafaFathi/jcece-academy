@@ -45,6 +45,24 @@ class CurriculumApiTest extends TestCase
         $this->assertDatabaseMissing('course_sections', ['title' => 'Forbidden']);
     }
 
+    public function test_instructor_cannot_mutate_another_instructors_curriculum_by_direct_url(): void
+    {
+        $this->authenticateAs(RoleName::Instructor->value);
+        $course = Course::factory()->create();
+        $section = CourseSection::factory()->for($course)->create();
+        $lesson = Lesson::factory()->for($section, 'section')->create();
+
+        $this->postJson("/api/v1/admin/courses/{$course->id}/sections", ['title' => 'Injected'])
+            ->assertForbidden();
+        $this->patchJson("/api/v1/admin/sections/{$section->id}/lessons/{$lesson->id}", ['title' => 'Injected'])
+            ->assertForbidden();
+        $this->deleteJson("/api/v1/admin/sections/{$section->id}/lessons/{$lesson->id}")
+            ->assertForbidden();
+
+        $this->assertDatabaseMissing('course_sections', ['course_id' => $course->id, 'title' => 'Injected']);
+        $this->assertDatabaseHas('lessons', ['id' => $lesson->id, 'title' => $lesson->title]);
+    }
+
     public function test_section_ownership_is_enforced_by_scoped_binding(): void
     {
         $this->authenticateAs(RoleName::Admin->value);

@@ -6,6 +6,7 @@ use App\CourseStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Course;
+use App\Models\Package;
 use App\Models\User;
 use App\PermissionName;
 use App\RoleName;
@@ -24,7 +25,8 @@ class DashboardSummaryController extends Controller
         $canViewCourses = $actor->can(PermissionName::CoursesView->value);
         $canViewUsers = $actor->can(PermissionName::UsersView->value);
         $canViewInstructors = $actor->can(PermissionName::InstructorsView->value);
-        abort_unless($canViewCategories || $canViewCourses || $canViewUsers || $canViewInstructors, 403);
+        $canViewPackages = $actor->can(PermissionName::PackagesView->value);
+        abort_unless($canViewCategories || $canViewCourses || $canViewUsers || $canViewInstructors || $canViewPackages, 403);
 
         $summary = [];
         if ($canViewCategories) {
@@ -41,6 +43,9 @@ class DashboardSummaryController extends Controller
         }
         if ($canViewInstructors) {
             $summary['total_instructors'] = User::query()->role(RoleName::Instructor->value)->count();
+        }
+        if ($canViewPackages) {
+            $summary['total_packages'] = Package::query()->count();
         }
 
         return response()->json(['data' => $summary]);

@@ -36,7 +36,7 @@ class AdminInstructorOptionApiTest extends TestCase
             ->assertJsonMissingPath('data.0.password')->assertJsonMissingPath('data.0.roles');
     }
 
-    public function test_role_only_instructor_is_selectable_because_course_validation_accepts_the_role(): void
+    public function test_instructor_directory_is_scoped_to_the_authenticated_instructor(): void
     {
         $this->seed(RolesAndPermissionsSeeder::class);
         $editor = User::factory()->create();
@@ -46,7 +46,9 @@ class AdminInstructorOptionApiTest extends TestCase
         Sanctum::actingAs($editor);
 
         $this->getJson('/api/v1/admin/instructor-options?search=Role%20Only')
-            ->assertOk()->assertJsonPath('meta.total', 1)->assertJsonPath('data.0.id', $roleOnly->id)
+            ->assertOk()->assertJsonPath('meta.total', 0);
+        $this->getJson('/api/v1/admin/instructor-options?search='.$editor->name)
+            ->assertOk()->assertJsonPath('meta.total', 1)->assertJsonPath('data.0.id', $editor->id)
             ->assertJsonPath('data.0.job_title', null);
     }
 

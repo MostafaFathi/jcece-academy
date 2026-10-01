@@ -3,6 +3,7 @@ import { ar as learning } from './learning';
 import { ar as assessments } from './assessments';
 import { ar as reviewsSupport } from './reviews-support';
 import { ar as admin } from './admin';
+import { ar as adminContent } from './admin-content';
 
 export default {
     commerce,
@@ -10,6 +11,7 @@ export default {
     assessments,
     ...reviewsSupport,
     admin,
+    curriculum: adminContent.curriculum,
     brand: {
         name: 'أكاديمية الجزيرة',
         tagline: 'نتعلّم اليوم... لنَبني مستقبلًا أفضل',
@@ -35,6 +37,7 @@ export default {
         overview: 'نظرة عامة', curriculum: 'محتوى الدورة', outcomes: 'ماذا ستتعلم', requirements: 'متطلبات الدورة', audience: 'لمن هذه الدورة', tools: 'الأدوات المطلوبة', instructor: 'مدرب الدورة', reviews: 'آراء المتعلمين', reviewCount: '{count} مراجعة منشورة', noReviews: 'لا توجد مراجعات منشورة بعد.', lessons: '{count} درس', preview: 'معاينة متاحة', lesson: 'درس', certificate: 'شهادة إتمام', discussions: 'نقاشات الدورة', accessDays: 'وصول لمدة {count} يوم', accessUnspecified: 'مدة الوصول غير محددة', signInCta: 'سجّل الدخول للمتابعة', purchaseSoon: 'الشراء سيتوفر قريبًا', published: 'دورة منشورة', detailError: 'تعذر تحميل تفاصيل الدورة.', notFound: 'لم يتم العثور على الدورة المطلوبة.', backToCourses: 'العودة إلى الدورات', ratingDistribution: 'توزيع التقييمات',
     },
     packages: {
+        ...adminContent.packages,
         included: 'الدورات المشمولة', overview: 'عن الباقة', required: 'أساسية', optional: 'اختيارية', sequential: 'مسار متسلسل', flexible: 'باقة مرنة', lifetime: 'وصول دائم للباقة', accessDays: 'وصول للباقة لمدة {count} يوم', signInCta: 'سجّل الدخول للمتابعة', purchaseSoon: 'شراء الباقة سيتوفر قريبًا', detailError: 'تعذر تحميل تفاصيل الباقة.', notFound: 'لم يتم العثور على الباقة المطلوبة.', backToPackages: 'العودة إلى الباقات', noCourses: 'لا توجد دورات منشورة ضمن هذه الباقة حاليًا.', courseAccessNote: 'مدة الوصول المعروضة تخص الباقة؛ قد تختلف تفاصيل الوصول الفردية للدورات.',
     },
     labels: {

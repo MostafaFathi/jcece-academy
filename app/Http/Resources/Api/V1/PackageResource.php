@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Api\V1;
 
+use App\Services\CommerceCatalogService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -22,6 +23,7 @@ class PackageResource extends JsonResource
             'thumbnail' => $this->thumbnail,
             'type' => $this->type->value,
             'price' => $this->price,
+            'currency' => app(CommerceCatalogService::class)->currency(),
             'compare_price' => $this->compare_price,
             'access_duration_days' => $this->access_duration_days,
             'is_lifetime' => $this->access_duration_days === null,

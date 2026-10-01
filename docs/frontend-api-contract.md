@@ -220,7 +220,7 @@ All URLs below are under `/api/v1/admin` and require both a session and the stat
 
 Role-specific grouping of the implemented routes:
 
-- Instructor: category read; course list/detail/create/update; curriculum section/lesson/resource read; assigned-course submission list/detail/file download/grade/revision/correction. The current course create/update policy is permission-based and not instructor-assignment-scoped.
+- Instructor: category read; course list/detail/create/update, with course edits and instructor assignment restricted to self-owned courses; curriculum section/lesson/resource read (no curriculum mutation permission); assigned-course submission list/detail/file download/grade/revision/correction. Curriculum read itself is permission-based, not owner-filtered.
 - Content management: category/course/package CRUD, memberships and ordering, curriculum CRUD/ordering, quiz and assignment authoring/publication, assessment results, grading, certificates, and review moderation.
 - Sales support: enrollment grants/revocation, order inspection/status/provisioning, payment inspection/review/proofs, and support ticket handling.
 - Administration: every route in this section through the Admin role's complete permission set.
@@ -231,14 +231,14 @@ Phase 13A.1 closes the prior admin contract gaps. User and instructor management
 
 | Endpoints | Permission | Payload / result |
 |---|---|---|
-| `GET /dashboard-summary` | Any permitted metric | One small response with only authorized `total_categories`, `total_courses`, `published_courses`, `draft_courses`, `total_users`, `total_students`, `total_instructors`. |
+| `GET /dashboard-summary` | Any permitted metric | One small response with only authorized `total_categories`, `total_courses`, `published_courses`, `draft_courses`, `total_packages`, `total_users`, `total_students`, `total_instructors`. |
 | `GET /users`, `GET /users/{id}` | `users.view` | Paginated index (default 25, max 100), `search`, `role`, `status`, `page`; safe `id,name,email,status,roles,created_at,updated_at`. |
 | `POST /users` | `users.manage` | Required `name,email,password,password_confirmation,roles[]` (real role names except `instructor`); optional status; 201. |
 | `PUT/PATCH /users/{id}` | `users.update` or `users.manage` | Basic name/email; password/status/roles require `users.manage`. Empty password is ignored; self-removal of Admin role or self-deactivation is rejected. |
 | `GET /instructors`, `GET /instructors/{id}` | `instructors.view` | Role-filtered paginated index (default 25, max 100), `search`, `page`; safe account/profile fields. Email is returned only to `instructors.manage`. |
 | `POST /instructors` | `instructors.manage` | Atomically creates User, instructor role and InstructorProfile; required `name,email,password,password_confirmation`; actual optional profile fields listed below; 201. |
 | `PUT/PATCH /instructors/{id}` | `instructors.update` or `instructors.manage` | Profile changes allowed with `instructors.update`; name/email/status/password require `instructors.manage`. Empty password leaves hash unchanged. |
-| `GET /instructor-options` | `courses.create` or `courses.update` | Minimal paginated/searchable options: `id,name,job_title`, default 25/max 100; only users with instructor role. |
+| `GET /instructor-options` | `courses.create` or `courses.update` | Minimal paginated/searchable options: `id,name,job_title`, default 25/max 100; only users with instructor role. Instructor-only callers receive only themselves. |
 
 Instructor profile fields: `job_title`, `short_bio`, `bio`, `years_experience`, `specialties[]`, `linkedin_url`, `facebook_url`, `instagram_url`, `website_url`, `is_featured`. Existing users are not silently converted into instructors: only new account creation is supported here. No user/instructor delete endpoint was added. User and instructor resources never expose password hashes, tokens or authentication metadata. Existing `/auth/user` response remains unchanged.
 
@@ -264,7 +264,7 @@ Instructor profile fields: `job_title`, `short_bio`, `bio`, `years_experience`, 
 
 Course payload fields: `category_id,instructor_id,title,slug,level` required on create; optional `short_description,description,thumbnail,promo_video_url,language,duration_minutes,access_duration_days,price,compare_price,discount_starts_at,discount_ends_at,certificate_enabled,discussion_enabled,status,is_featured,published_at,learning_outcomes[],requirements[],target_audiences[],required_tools[]`.
 
-Package payload fields: `title,slug,type,price` required on create; optional `description,thumbnail,compare_price,access_duration_days,is_sequential,status,published_at`.
+Package payload fields: `title,slug,type,price` required on create; optional `description,thumbnail,compare_price,access_duration_days,is_sequential,status,published_at`. Admin package responses now include configured `currency`; list items include `course_count` via `withCount`, avoiding per-package detail requests. Index supports `search,type,sort,per_page,page`, but not a `status` filter. `access_duration_days=null` is lifetime; positive integers override duration. Creation/membership validation accepts any non-deleted course, while public package output filters out draft, hidden and future-unavailable courses. Membership mutations do not rewrite historical order-item snapshots or access grants.
 
 ### Curriculum
 
@@ -287,6 +287,8 @@ Package payload fields: `title,slug,type,price` required on create; optional `de
 | `POST /lessons/{lesson}/resources/reorder` | CurU | ordered distinct `ids[]`. |
 
 Resource input remains metadata/reference management, not file upload: paths must be safe `lesson-resources/{relative-key}` references, at most 255 characters, without traversal, absolute paths, encoded/backslash paths or dot-directory segments. External URLs accept HTTP(S) only. All resource CRUD/reorder responses and nested curriculum resources omit raw file/storage metadata. Clients must not depend on reading the stored path back.
+
+Phase 13B uses the section index with eager-loaded lessons/resources for the builder. Section deletion cascades its lessons/resources in the database; the UI requires confirmation and notes that learning records may be affected. Lesson deletion is soft. Lesson types are `text,video,file,link`; text is plain and escaped in the student player. `is_preview` and `is_published` are separate lesson flags and do not override course publication rules. All section/lesson/resource reorder operations require an exact permutation of current child IDs and return server order; cross-section moves are unsupported. Package reorder uses **membership IDs**, not course IDs. Admin resource creation can reference an already-provisioned private file but has no multipart upload endpoint or admin download endpoint; the Phase 13B browser UI deliberately creates links only and never submits a local path. The student protected download endpoint remains under `/api/v1/me` and requires effective access. A real Lesson Resource upload browser comparison with the Support `Path must not be empty` issue is therefore unavailable until a safe upload contract exists.
 
 ### Quizzes and assessments
 
@@ -371,12 +373,12 @@ Resource input remains metadata/reference management, not file upload: paths mus
 | Role | Navigation/capabilities to expose |
 |---|---|
 | `student` | Public catalog plus owned learning, cart, checkout, orders/payments, quizzes, assignments, certificates, reviews, and support tickets. |
-| `instructor` | Course list/create/update currently allowed by permissions; curriculum read; assigned-course assignment submission review/grade. No global quiz, certificate, review, commerce, or support management. |
+| `instructor` | Course list/create; edit only self-owned courses and assign only self as instructor; curriculum read (no writes); assigned-course assignment submission review/grade. No global quiz, certificate, review, commerce, or support management. |
 | `content_manager` | Catalog, categories, packages, curriculum, quizzes, assignments, certificates, and review moderation. No commerce/support permissions by default. |
 | `sales_support` | User/instructor lookup permissions, enrollment management, orders, payments, and support tickets. |
 | `admin` | All effective permissions. |
 
-Build navigation from the `permissions` returned by `/auth/user`, not role-name assumptions. Important current limitation: instructor course update/create permissions are global at the policy layer; there is no assigned-course restriction for course editing. Do not imply a narrower frontend security boundary.
+Build navigation from the `permissions` returned by `/auth/user`, not role-name assumptions. Phase 13B tightened the course policy: an Instructor without an Admin/Content Manager role can update only their assigned course and set only their own `instructor_id`. Course/curriculum read remains permission-based; direct URL mutations remain subject to backend policies.
 
 ## 8. Enum values
 

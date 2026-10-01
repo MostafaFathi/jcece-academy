@@ -3,6 +3,7 @@ import { en as learning } from './learning';
 import { en as assessments } from './assessments';
 import { en as reviewsSupport } from './reviews-support';
 import { en as admin } from './admin';
+import { en as adminContent } from './admin-content';
 
 export default {
     commerce,
@@ -10,6 +11,7 @@ export default {
     assessments,
     ...reviewsSupport,
     admin,
+    curriculum: adminContent.curriculum,
     brand: {
         name: 'JCEC Academy', tagline: 'Learn today… build a better tomorrow', promise: 'Build professional skills that create a real difference in your future.', description: 'An Arabic-first professional learning platform bringing specialized content, assessment, and practical progress into one experience.',
     },
@@ -30,6 +32,7 @@ export default {
         overview: 'Overview', curriculum: 'Course curriculum', outcomes: 'What you will learn', requirements: 'Requirements', audience: 'Who this course is for', tools: 'Required tools', instructor: 'Course instructor', reviews: 'Learner reviews', reviewCount: '{count} published reviews', noReviews: 'No published reviews yet.', lessons: '{count} lessons', preview: 'Preview available', lesson: 'Lesson', certificate: 'Completion certificate', discussions: 'Course discussions', accessDays: '{count} days of access', accessUnspecified: 'Access period not specified', signInCta: 'Sign in to continue', purchaseSoon: 'Purchase coming soon', published: 'Published course', detailError: 'Course details could not be loaded.', notFound: 'The requested course was not found.', backToCourses: 'Back to courses', ratingDistribution: 'Rating distribution',
     },
     packages: {
+        ...adminContent.packages,
         included: 'Included courses', overview: 'About this package', required: 'Required', optional: 'Optional', sequential: 'Sequential learning path', flexible: 'Flexible package', lifetime: 'Lifetime package access', accessDays: 'Package access for {count} days', signInCta: 'Sign in to continue', purchaseSoon: 'Package purchase coming soon', detailError: 'Package details could not be loaded.', notFound: 'The requested package was not found.', backToPackages: 'Back to packages', noCourses: 'No published courses are currently included in this package.', courseAccessNote: 'The displayed access period belongs to the package; individual course access details may differ.',
     },
     labels: {

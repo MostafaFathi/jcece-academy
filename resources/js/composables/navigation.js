@@ -11,6 +11,7 @@ export const navigationByArea = {
         { label: 'nav.overview', route: 'admin.dashboard' },
         { label: 'admin.categories', route: 'admin.categories.index', permissions: ['categories.view'] },
         { label: 'admin.courses', route: 'admin.courses.index', permissions: ['courses.view'] },
+        { label: 'packages.adminHeading', route: 'admin.packages.index', permissions: ['packages.view'] },
         { label: 'admin.users', route: 'admin.users.index', permissions: ['users.view'] },
         { label: 'admin.instructors', route: 'admin.instructors.index', permissions: ['instructors.view'] },
     ],

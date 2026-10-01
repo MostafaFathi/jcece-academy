@@ -24,6 +24,9 @@ class InstructorOptionController extends Controller
         $instructors = User::query()->role(RoleName::Instructor->value)
             ->select(['id', 'name'])
             ->with('instructorProfile:id,user_id,job_title')
+            ->when($request->user()->hasRole(RoleName::Instructor->value)
+                && ! $request->user()->hasAnyRole([RoleName::ContentManager->value, RoleName::Admin->value]),
+                fn (Builder $query): Builder => $query->whereKey($request->user()->id))
             ->when($search, fn (Builder $query, string $search) => $query->where('name', 'like', "%{$search}%"))
             ->orderBy('name')->orderBy('id');
 

@@ -10,9 +10,9 @@ import AdminCoursesPage from '../pages/AdminCoursesPage.vue';
 import AdminCourseFormPage from '../pages/AdminCourseFormPage.vue';
 import AppShellLayout from '../layouts/AppShellLayout.vue';
 
-const state = vi.hoisted(() => ({ route: { params: {}, query: {} }, push: vi.fn(), permissions: [] }));
+const state = vi.hoisted(() => ({ route: { params: {}, query: {} }, push: vi.fn(), permissions: [], roles: [], user: { id: 8 } }));
 vi.mock('vue-router', async (original) => ({ ...(await original()), useRoute: () => state.route, useRouter: () => ({ push: state.push }) }));
-vi.mock('../stores/auth', () => ({ useAuthStore: () => ({ can: (permission) => state.permissions.includes(permission) }) }));
+vi.mock('../stores/auth', () => ({ useAuthStore: () => ({ user: state.user, can: (permission) => state.permissions.includes(permission), hasRole: (role) => state.roles.includes(role), hasAnyRole: (roles) => roles.some((role) => state.roles.includes(role)) }) }));
 vi.mock('../api/admin', () => Object.fromEntries(['fetchAdminCategories', 'fetchAdminCategory', 'createAdminCategory', 'updateAdminCategory', 'deleteAdminCategory', 'fetchAdminCourses', 'fetchAdminCourse', 'createAdminCourse', 'updateAdminCourse', 'deleteAdminCourse', 'fetchAdminDashboardSummary'].map((name) => [name, vi.fn()])));
 vi.mock('../api/instructor-options', () => ({ fetchInstructorOptions: vi.fn() }));
 
@@ -21,7 +21,7 @@ const course = { id: 7, title: 'Safety course', slug: 'safety-course', category:
 function render(component, props = {}) { return mount(component, { props, global: { plugins: [i18n], stubs: { RouterLink: { props: ['to'], template: '<a><slot /></a>' } } } }); }
 function deferred() { let resolve; const promise = new Promise((yes) => { resolve = yes; }); return { promise, resolve }; }
 beforeEach(() => {
-    vi.resetAllMocks(); setLocale('en'); state.route = { params: {}, query: {} }; state.permissions = ['categories.view', 'categories.create', 'categories.update', 'categories.delete', 'courses.view', 'courses.update', 'courses.delete', 'courses.publish'];
+    vi.resetAllMocks(); setLocale('en'); state.route = { params: {}, query: {} }; state.roles = []; state.user = { id: 8 }; state.permissions = ['categories.view', 'categories.create', 'categories.update', 'categories.delete', 'courses.view', 'courses.update', 'courses.delete', 'courses.publish'];
     api.fetchAdminCategories.mockResolvedValue({ items: [category], meta: { current_page: 1, last_page: 1, total: 1 } });
     api.fetchAdminCategory.mockResolvedValue(category);
     api.fetchAdminCourses.mockResolvedValue({ items: [course], meta: { current_page: 1, last_page: 1, total: 1 } });
@@ -192,5 +192,12 @@ describe('admin forms', () => {
         await wrapper.get('form').trigger('submit'); await wrapper.get('form').trigger('submit');
         expect(api.updateAdminCourse).toHaveBeenCalledTimes(1);
         pending.resolve(course); await flushPromises(); wrapper.unmount();
+    });
+    it('does not render a foreign instructor course edit form from a direct URL', async () => {
+        state.route.params.id = 7; state.roles = ['instructor']; state.user = { id: 99 };
+        const wrapper = render(AdminCourseFormPage); await flushPromises();
+        expect(wrapper.text()).toContain('do not have permission');
+        expect(wrapper.find('#course-title').exists()).toBe(false);
+        expect(api.updateAdminCourse).not.toHaveBeenCalled(); wrapper.unmount();
     });
 });

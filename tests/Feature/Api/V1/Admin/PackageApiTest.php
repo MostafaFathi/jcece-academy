@@ -52,6 +52,24 @@ class PackageApiTest extends TestCase
         $this->assertSoftDeleted($package);
     }
 
+    public function test_admin_package_list_and_detail_expose_configured_currency_and_count(): void
+    {
+        $this->actingAsRole(RoleName::Admin);
+        config()->set('jcec.commerce.currency', 'ils');
+        $package = Package::factory()->create(['price' => '199.50']);
+
+        $this->getJson('/api/v1/admin/packages')
+            ->assertOk()
+            ->assertJsonPath('data.0.currency', 'ILS')
+            ->assertJsonPath('data.0.price', '199.50')
+            ->assertJsonPath('data.0.course_count', 0);
+
+        $this->getJson("/api/v1/admin/packages/{$package->id}")
+            ->assertOk()
+            ->assertJsonPath('data.currency', 'ILS')
+            ->assertJsonPath('data.course_count', 0);
+    }
+
     public function test_student_cannot_manage_packages(): void
     {
         $this->actingAsRole(RoleName::Student);
