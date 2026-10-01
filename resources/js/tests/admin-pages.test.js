@@ -56,6 +56,12 @@ describe('admin dashboard and lists', () => {
         await wrapper.get('form').trigger('submit');
         expect(state.push).toHaveBeenCalledWith({ name: 'admin.courses.index', query: { search: 'safety', status: 'draft' } }); wrapper.unmount();
     });
+    it('shows course list empty and retry states without client-side totals', async () => {
+        api.fetchAdminCourses.mockResolvedValueOnce({ items: [], meta: { total: 0 } });
+        const empty = render(AdminCoursesPage); await flushPromises(); expect(empty.text()).toContain('No courses match'); empty.unmount();
+        api.fetchAdminCourses.mockRejectedValueOnce({ status: 500 });
+        const failed = render(AdminCoursesPage); await flushPromises(); expect(failed.text()).toContain('Unable to load management data'); failed.unmount();
+    });
     it('reuses responsive admin navigation, breadcrumbs and document direction', async () => {
         state.route.matched = [{ path: '/admin', meta: { title: 'admin.dashboard' } }, { path: '/admin/categories', meta: { title: 'admin.categories' } }];
         state.route.fullPath = '/admin/categories';
@@ -109,11 +115,35 @@ describe('admin forms', () => {
         await wrapper.get('#course-days').setValue('90'); await wrapper.get('form').trigger('submit'); await flushPromises();
         expect(api.updateAdminCourse.mock.calls[0][1].access_duration_days).toBe(90); wrapper.unmount();
     });
+    it('does not serialize blank limited access as zero', async () => {
+        state.route.params.id = 7;
+        const wrapper = render(AdminCourseFormPage); await flushPromises();
+        await wrapper.findAll('input[type="radio"]')[1].setValue(true);
+        await wrapper.get('form').trigger('submit'); await flushPromises();
+        expect(api.updateAdminCourse).not.toHaveBeenCalled(); wrapper.unmount();
+    });
     it('does not allow a content editor to publish without the publish permission', async () => {
         state.route.params.id = 7; state.permissions = ['courses.view', 'courses.update'];
         const wrapper = render(AdminCourseFormPage); await flushPromises();
         expect(wrapper.get('#course-status').find('option[value="published"]').attributes('disabled')).toBeDefined();
         await wrapper.get('form').trigger('submit'); await flushPromises();
         expect(api.updateAdminCourse.mock.calls[0][1]).not.toHaveProperty('status'); wrapper.unmount();
+    });
+    it('submits an authorized publish transition and maps course slug 422 errors', async () => {
+        state.route.params.id = 7;
+        api.updateAdminCourse.mockRejectedValue({ status: 422, errors: { slug: ['Slug already taken.'] } });
+        const wrapper = render(AdminCourseFormPage); await flushPromises();
+        await wrapper.get('#course-status').setValue('published');
+        await wrapper.get('form').trigger('submit'); await flushPromises();
+        expect(api.updateAdminCourse.mock.calls[0][1].status).toBe('published');
+        expect(wrapper.text()).toContain('Slug already taken.'); wrapper.unmount();
+    });
+    it('prevents duplicate course saves while an update is pending', async () => {
+        state.route.params.id = 7;
+        const pending = deferred(); api.updateAdminCourse.mockReturnValue(pending.promise);
+        const wrapper = render(AdminCourseFormPage); await flushPromises();
+        await wrapper.get('form').trigger('submit'); await wrapper.get('form').trigger('submit');
+        expect(api.updateAdminCourse).toHaveBeenCalledTimes(1);
+        pending.resolve(course); await flushPromises(); wrapper.unmount();
     });
 });
