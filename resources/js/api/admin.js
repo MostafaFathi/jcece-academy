@@ -11,3 +11,5 @@ export async function fetchAdminCourses(params = {}) { return unwrapCollection(a
 export async function fetchAdminCourse(id) { return unwrapResource(await api.get(`${base}/courses/${id}`)); }
 export async function updateAdminCourse(id, payload) { return unwrapResource(await api.patch(`${base}/courses/${id}`, payload)); }
 export async function deleteAdminCourse(id) { await api.delete(`${base}/courses/${id}`); }
+export async function createAdminCourse(payload) { return unwrapResource(await api.post(`${base}/courses`, payload)); }
+export async function fetchAdminDashboardSummary() { return unwrapResource(await api.get(`${base}/dashboard-summary`)); }

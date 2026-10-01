@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { api } from '../api/client';
 import * as admin from '../api/admin';
+import * as users from '../api/admin-users';
+import * as instructors from '../api/admin-instructors';
+import * as options from '../api/instructor-options';
 
 vi.mock('../api/client', () => ({ api: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() } }));
 
@@ -35,5 +38,19 @@ describe('admin endpoint adapters', () => {
         expect(api.patch).toHaveBeenCalledWith('/api/v1/admin/courses/7', payload);
         await admin.deleteAdminCourse(7);
         expect(api.delete).toHaveBeenCalledWith('/api/v1/admin/courses/7');
+    });
+    it('keeps account, instructor and selector calls in focused API modules', async () => {
+        await users.fetchAdminUsers({ role: 'student', page: 2 });
+        expect(api.get).toHaveBeenCalledWith('/api/v1/admin/users', { params: { role: 'student', page: 2 } });
+        await instructors.fetchAdminInstructors({ search: 'Teacher' });
+        expect(api.get).toHaveBeenCalledWith('/api/v1/admin/instructors', { params: { search: 'Teacher' } });
+        await options.fetchInstructorOptions({ search: 'Teacher', page: 3 });
+        expect(api.get).toHaveBeenCalledWith('/api/v1/admin/instructor-options', { params: { search: 'Teacher', page: 3 } });
+        await users.createAdminUser({ name: 'New' }); await instructors.createAdminInstructor({ name: 'Trainer' });
+        expect(api.post).toHaveBeenCalledWith('/api/v1/admin/users', { name: 'New' });
+        expect(api.post).toHaveBeenCalledWith('/api/v1/admin/instructors', { name: 'Trainer' });
+        await users.updateAdminUser(3, { name: 'Updated' }); await instructors.updateAdminInstructor(4, { job_title: 'Teacher' });
+        expect(api.patch).toHaveBeenCalledWith('/api/v1/admin/users/3', { name: 'Updated' });
+        expect(api.patch).toHaveBeenCalledWith('/api/v1/admin/instructors/4', { job_title: 'Teacher' });
     });
 });

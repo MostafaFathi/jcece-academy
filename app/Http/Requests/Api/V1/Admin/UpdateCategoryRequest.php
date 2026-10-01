@@ -6,6 +6,7 @@ use App\Models\Category;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class UpdateCategoryRequest extends FormRequest
 {
@@ -36,6 +37,38 @@ class UpdateCategoryRequest extends FormRequest
             'icon' => ['nullable', 'string', 'max:255'],
             'sort_order' => ['sometimes', 'integer', 'min:0'],
             'is_active' => ['sometimes', 'boolean'],
+        ];
+    }
+
+    /** @return array<int, callable(Validator): void> */
+    public function after(): array
+    {
+        return [
+            function (Validator $validator): void {
+                if (! $this->has('parent_id') || $this->input('parent_id') === null || $validator->errors()->has('parent_id')) {
+                    return;
+                }
+
+                /** @var Category $category */
+                $category = $this->route('category');
+                $parentId = $this->integer('parent_id');
+                $visited = [];
+
+                while ($parentId !== 0 && ! isset($visited[$parentId])) {
+                    if ($parentId === $category->id) {
+                        $validator->errors()->add('parent_id', 'A category cannot be moved under itself or one of its descendants.');
+
+                        return;
+                    }
+
+                    $visited[$parentId] = true;
+                    $parentId = (int) (Category::query()->whereKey($parentId)->value('parent_id') ?? 0);
+                }
+
+                if ($parentId !== 0) {
+                    $validator->errors()->add('parent_id', 'The selected category hierarchy contains a cycle.');
+                }
+            },
         ];
     }
 }

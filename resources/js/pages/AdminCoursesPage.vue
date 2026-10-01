@@ -55,8 +55,7 @@ watch(() => route.query, load, { immediate: true, deep: true });
 
 <template>
     <div class="space-y-6" :dir="locale === 'ar' ? 'rtl' : 'ltr'">
-        <PageHeading :title="t('admin.courses')" :description="t('admin.courseListDescription')" />
-        <BaseAlert v-if="auth.can('courses.create')">{{ t('admin.createUnavailable') }}</BaseAlert>
+        <PageHeading :title="t('admin.courses')" :description="t('admin.courseListDescription')"><template #actions><RouterLink v-if="auth.can('courses.create')" :to="{ name: 'admin.courses.create' }" class="inline-flex min-h-11 items-center rounded-xl bg-brand px-5 py-2.5 text-sm font-bold text-white">{{ t('admin.addCourse') }}</RouterLink></template></PageHeading>
         <BaseAlert v-if="deleteError" tone="danger">{{ t(deleteError.status === 403 ? 'admin.notAllowed' : 'admin.loadError') }}</BaseAlert>
         <form class="grid gap-3 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:grid-cols-2 lg:grid-cols-4" @submit.prevent="applyFilters">
             <label class="sr-only" for="course-search">{{ t('admin.search') }}</label><input id="course-search" v-model="filters.search" type="search" :placeholder="t('admin.search')" class="min-h-11 w-full rounded-xl border border-slate-300 px-4">

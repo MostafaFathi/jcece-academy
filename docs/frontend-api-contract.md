@@ -227,13 +227,26 @@ Role-specific grouping of the implemented routes:
 
 ### Catalog and content management
 
-Phase 13A audit: there is no admin dashboard summary endpoint and no user or instructor-directory/profile management CRUD endpoint. The existing `/users/{user}/...` admin routes only grant course access or handle certificate eligibility/issuance; `users.view/update` and `instructors.view/update` permissions do not themselves expose listing or forms. Admin course creation requires a valid instructor ID, but no authorized paginated instructor selector is available, so the Phase 13A Vue UI exposes metadata editing only and does not guess IDs. Dashboard counts use the `meta.total` of small paginated category/course requests. Category update currently blocks only self-parenting, not ancestry cycles; the Vue edit form permits keeping the current parent or moving to the top level, but not arbitrary reparenting. Backend authorization and validation remain authoritative.
+Phase 13A.1 closes the prior admin contract gaps. User and instructor management have separate policies and safe resources. `users.manage` and `instructors.manage` are granted to Admin only by the role seeder; existing `users.view/update` and `instructors.view/update` retain their explicit role assignments. Content Manager can edit instructor profile fields under `instructors.update` but cannot create instructor accounts or edit name/email/status/password. Sales Support's existing `users.update` permits basic name/email updates only. Password, status, role assignment and user creation require `users.manage`. Instructor selection for Course forms uses `courses.create` or `courses.update`, without granting instructor administration. Backend authorization and validation remain authoritative.
+
+| Endpoints | Permission | Payload / result |
+|---|---|---|
+| `GET /dashboard-summary` | Any permitted metric | One small response with only authorized `total_categories`, `total_courses`, `published_courses`, `draft_courses`, `total_users`, `total_students`, `total_instructors`. |
+| `GET /users`, `GET /users/{id}` | `users.view` | Paginated index (default 25, max 100), `search`, `role`, `status`, `page`; safe `id,name,email,status,roles,created_at,updated_at`. |
+| `POST /users` | `users.manage` | Required `name,email,password,password_confirmation,roles[]` (real role names except `instructor`); optional status; 201. |
+| `PUT/PATCH /users/{id}` | `users.update` or `users.manage` | Basic name/email; password/status/roles require `users.manage`. Empty password is ignored; self-removal of Admin role or self-deactivation is rejected. |
+| `GET /instructors`, `GET /instructors/{id}` | `instructors.view` | Role-filtered paginated index (default 25, max 100), `search`, `page`; safe account/profile fields. Email is returned only to `instructors.manage`. |
+| `POST /instructors` | `instructors.manage` | Atomically creates User, instructor role and InstructorProfile; required `name,email,password,password_confirmation`; actual optional profile fields listed below; 201. |
+| `PUT/PATCH /instructors/{id}` | `instructors.update` or `instructors.manage` | Profile changes allowed with `instructors.update`; name/email/status/password require `instructors.manage`. Empty password leaves hash unchanged. |
+| `GET /instructor-options` | `courses.create` or `courses.update` | Minimal paginated/searchable options: `id,name,job_title`, default 25/max 100; only users with instructor role. |
+
+Instructor profile fields: `job_title`, `short_bio`, `bio`, `years_experience`, `specialties[]`, `linkedin_url`, `facebook_url`, `instagram_url`, `website_url`, `is_featured`. Existing users are not silently converted into instructors: only new account creation is supported here. No user/instructor delete endpoint was added. User and instructor resources never expose password hashes, tokens or authentication metadata. Existing `/auth/user` response remains unchanged.
 
 | Endpoints | Permission | Payload / result |
 |---|---|---|
 | `GET /categories`, `GET /categories/{id}` | CatV | Paginated index 25; category detail. |
 | `POST /categories` | CatC | `parent_id,name,slug,description,image,icon,sort_order,is_active`; 201. |
-| `PUT/PATCH /categories/{id}` | CatU | Same fields optional; updated resource. |
+| `PUT/PATCH /categories/{id}` | CatU | Same fields optional; updated resource. Parent may be changed, but self-parenting and descendant cycles return a normal 422 `parent_id` validation error. |
 | `DELETE /categories/{id}` | CatD | 204, or 422 when domain dependencies prevent deletion. |
 | `GET /courses`, `GET /courses/{id}` | CV | Index filters match public plus admin `status`; default 25. |
 | `POST /courses` | CC | Course payload described below; 201. |
@@ -417,4 +430,4 @@ Bootstrap is not installed. Tailwind CSS 4 and its Vite plugin are used by the i
 
 Implemented: all API routes inventoried above, cookie-session login/logout/current user, JSON API errors, role/permission exposure, and protected downloads. Vue foundation/authentication/layouts, public catalog/details/reviews display, Phase 12A commerce UI, Phase 12B learning UI, Phase 12C student quiz/assignment/certificate and public verification UI, and Phase 12D contextual student reviews/support tickets UI are implemented.
 
-Not implemented/planned: external gateways, coupons, refund actions, admin review moderation UI, admin support management UI, instructor grading UI, admin business pages, unrelated business-module UI, public registration, password reset, email verification, profile editing, user/instructor administration endpoints, lesson upload UI/service, email/SMS/push notifications, live chat, and external integrations.
+Not implemented/planned: external gateways, coupons, refund actions, admin review moderation UI, admin support management UI, instructor grading UI, unrelated business-module UI, public registration, password reset, email verification, student profile editing, lesson upload UI/service, email/SMS/push notifications, live chat, and external integrations. Admin users/instructors, category/course metadata and dashboard pages are implemented; other admin modules are not.

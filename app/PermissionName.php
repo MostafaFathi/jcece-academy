@@ -20,8 +20,10 @@ enum PermissionName: string
     case CategoriesDelete = 'categories.delete';
     case InstructorsView = 'instructors.view';
     case InstructorsUpdate = 'instructors.update';
+    case InstructorsManage = 'instructors.manage';
     case UsersView = 'users.view';
     case UsersUpdate = 'users.update';
+    case UsersManage = 'users.manage';
     case CurriculumView = 'curriculum.view';
     case CurriculumCreate = 'curriculum.create';
     case CurriculumUpdate = 'curriculum.update';

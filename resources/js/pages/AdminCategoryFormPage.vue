@@ -42,7 +42,8 @@ onMounted(async () => {
                 parents.value.push(parent);
             }
         }
-        if (!isEdit.value) { categoryLoaded.value = true; await loadParents(); }
+        categoryLoaded.value = true;
+        await loadParents();
     } catch (failure) { error.value = failure; }
     finally { loading.value = false; }
 });
@@ -51,7 +52,6 @@ async function submit() {
     busy.value = true;
     error.value = null;
     const payload = { ...form, name: form.name.trim(), slug: form.slug.trim(), parent_id: form.parent_id || null, description: form.description || null, image: form.image || null, icon: form.icon || null };
-    if (isEdit.value && payload.parent_id !== null) delete payload.parent_id;
     try {
         if (isEdit.value) await updateAdminCategory(route.params.id, payload);
         else await createAdminCategory(payload);
@@ -74,7 +74,7 @@ async function submit() {
                 <div class="grid gap-5 sm:grid-cols-2">
                     <div><label for="category-name" class="mb-2 block text-sm font-bold">{{ t('admin.name') }}</label><input id="category-name" v-model="form.name" required maxlength="255" class="w-full rounded-xl border border-slate-300 px-4 py-3" :aria-invalid="Boolean(error?.errors?.name)"><p v-if="error?.errors?.name" role="alert" class="mt-1 text-sm text-red-700">{{ error.errors.name[0] }}</p></div>
                     <div><label for="category-slug" class="mb-2 block text-sm font-bold">{{ t('admin.slug') }}</label><input id="category-slug" v-model="form.slug" required maxlength="255" pattern="[A-Za-z0-9_-]+" class="w-full rounded-xl border border-slate-300 px-4 py-3" :aria-invalid="Boolean(error?.errors?.slug)"><p class="mt-1 text-xs text-slate-500">{{ t('admin.slugHint') }}</p><p v-if="error?.errors?.slug" role="alert" class="mt-1 text-sm text-red-700">{{ error.errors.slug[0] }}</p></div>
-                    <div><label for="category-parent" class="mb-2 block text-sm font-bold">{{ t('admin.parent') }}</label><select id="category-parent" v-model="form.parent_id" class="w-full rounded-xl border border-slate-300 px-4 py-3"><option value="">{{ t('admin.noParent') }}</option><option v-for="parent in parents" :key="parent.id" :value="parent.id">{{ parent.name }}</option></select><button v-if="!isEdit && parentPage < parentLastPage" type="button" class="mt-2 min-h-11 text-sm font-bold text-brand underline" @click="loadParents">{{ t('admin.loadMoreCategories') }}</button><p v-if="isEdit" class="mt-1 text-xs text-slate-500">{{ t('admin.parentSafety') }}</p><p v-if="error?.errors?.parent_id" role="alert" class="mt-1 text-sm text-red-700">{{ error.errors.parent_id[0] }}</p></div>
+                    <div><label for="category-parent" class="mb-2 block text-sm font-bold">{{ t('admin.parent') }}</label><select id="category-parent" v-model="form.parent_id" class="w-full rounded-xl border border-slate-300 px-4 py-3"><option value="">{{ t('admin.noParent') }}</option><option v-for="parent in parents" :key="parent.id" :value="parent.id">{{ parent.name }}</option></select><button v-if="parentPage < parentLastPage" type="button" class="mt-2 min-h-11 text-sm font-bold text-brand underline" @click="loadParents">{{ t('admin.loadMoreCategories') }}</button><p v-if="isEdit" class="mt-1 text-xs text-slate-500">{{ t('admin.parentSafety') }}</p><p v-if="error?.errors?.parent_id" role="alert" class="mt-1 text-sm text-red-700">{{ error.errors.parent_id[0] }}</p></div>
                     <div><label for="category-sort" class="mb-2 block text-sm font-bold">{{ t('admin.sortOrder') }}</label><input id="category-sort" v-model.number="form.sort_order" type="number" min="0" required class="w-full rounded-xl border border-slate-300 px-4 py-3"><p v-if="error?.errors?.sort_order" role="alert" class="mt-1 text-sm text-red-700">{{ error.errors.sort_order[0] }}</p></div>
                     <div><label for="category-image" class="mb-2 block text-sm font-bold">{{ t('admin.image') }}</label><input id="category-image" v-model="form.image" maxlength="2048" class="w-full rounded-xl border border-slate-300 px-4 py-3"><p v-if="error?.errors?.image" role="alert" class="mt-1 text-sm text-red-700">{{ error.errors.image[0] }}</p></div>
                     <div><label for="category-icon" class="mb-2 block text-sm font-bold">{{ t('admin.icon') }}</label><input id="category-icon" v-model="form.icon" maxlength="255" class="w-full rounded-xl border border-slate-300 px-4 py-3"><p v-if="error?.errors?.icon" role="alert" class="mt-1 text-sm text-red-700">{{ error.errors.icon[0] }}</p></div>

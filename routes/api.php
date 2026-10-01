@@ -23,7 +23,10 @@ use App\Http\Controllers\Api\V1\Admin\CourseReviewPublicationController;
 use App\Http\Controllers\Api\V1\Admin\CourseReviewRejectionController;
 use App\Http\Controllers\Api\V1\Admin\CourseSectionController;
 use App\Http\Controllers\Api\V1\Admin\CurriculumOrderController;
+use App\Http\Controllers\Api\V1\Admin\DashboardSummaryController;
 use App\Http\Controllers\Api\V1\Admin\EnrollmentAccessController;
+use App\Http\Controllers\Api\V1\Admin\InstructorController as AdminInstructorController;
+use App\Http\Controllers\Api\V1\Admin\InstructorOptionController;
 use App\Http\Controllers\Api\V1\Admin\LessonController;
 use App\Http\Controllers\Api\V1\Admin\LessonResourceController;
 use App\Http\Controllers\Api\V1\Admin\OrderAccessProvisioningController;
@@ -46,6 +49,7 @@ use App\Http\Controllers\Api\V1\Admin\SupportTicketAttachmentDownloadController 
 use App\Http\Controllers\Api\V1\Admin\SupportTicketController as AdminSupportTicketController;
 use App\Http\Controllers\Api\V1\Admin\SupportTicketMessageController as AdminSupportTicketMessageController;
 use App\Http\Controllers\Api\V1\Admin\SupportTicketUpdateController;
+use App\Http\Controllers\Api\V1\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\CertificateVerificationController;
 use App\Http\Controllers\Api\V1\CourseController;
@@ -155,6 +159,10 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
     });
 
     Route::middleware('auth:sanctum')->prefix('admin')->name('admin.')->group(function (): void {
+        Route::get('dashboard-summary', DashboardSummaryController::class)->name('dashboard-summary.show');
+        Route::apiResource('users', AdminUserController::class)->only(['index', 'store', 'show', 'update']);
+        Route::get('instructor-options', InstructorOptionController::class)->name('instructor-options.index');
+        Route::apiResource('instructors', AdminInstructorController::class)->only(['index', 'store', 'show', 'update']);
         Route::apiResource('categories', AdminCategoryController::class);
         Route::apiResource('courses', AdminCourseController::class);
         Route::apiResource('packages', AdminPackageController::class);

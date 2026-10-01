@@ -8,6 +8,12 @@ use App\PermissionName;
 
 class CoursePolicy
 {
+    public function selectInstructor(User $user): bool
+    {
+        return $user->can(PermissionName::CoursesCreate->value)
+            || $user->can(PermissionName::CoursesUpdate->value);
+    }
+
     /**
      * Determine whether the user can view any models.
      */

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushPromises, mount } from '@vue/test-utils';
 import i18n, { setLocale } from '../i18n';
 import * as api from '../api/admin';
+import * as instructorApi from '../api/instructor-options';
 import AdminDashboardPage from '../pages/AdminDashboardPage.vue';
 import AdminCategoriesPage from '../pages/AdminCategoriesPage.vue';
 import AdminCategoryFormPage from '../pages/AdminCategoryFormPage.vue';
@@ -12,7 +13,8 @@ import AppShellLayout from '../layouts/AppShellLayout.vue';
 const state = vi.hoisted(() => ({ route: { params: {}, query: {} }, push: vi.fn(), permissions: [] }));
 vi.mock('vue-router', async (original) => ({ ...(await original()), useRoute: () => state.route, useRouter: () => ({ push: state.push }) }));
 vi.mock('../stores/auth', () => ({ useAuthStore: () => ({ can: (permission) => state.permissions.includes(permission) }) }));
-vi.mock('../api/admin', () => Object.fromEntries(['fetchAdminCategories', 'fetchAdminCategory', 'createAdminCategory', 'updateAdminCategory', 'deleteAdminCategory', 'fetchAdminCourses', 'fetchAdminCourse', 'updateAdminCourse', 'deleteAdminCourse'].map((name) => [name, vi.fn()])));
+vi.mock('../api/admin', () => Object.fromEntries(['fetchAdminCategories', 'fetchAdminCategory', 'createAdminCategory', 'updateAdminCategory', 'deleteAdminCategory', 'fetchAdminCourses', 'fetchAdminCourse', 'createAdminCourse', 'updateAdminCourse', 'deleteAdminCourse', 'fetchAdminDashboardSummary'].map((name) => [name, vi.fn()])));
+vi.mock('../api/instructor-options', () => ({ fetchInstructorOptions: vi.fn() }));
 
 const category = { id: 2, parent_id: null, name: 'Safety', slug: 'safety', description: '', image: null, icon: null, sort_order: 1, is_active: true };
 const course = { id: 7, title: 'Safety course', slug: 'safety-course', category: { ...category }, instructor: { id: 8, name: 'Teacher' }, price: '123.45', compare_price: null, currency: 'ILS', access_duration_days: null, status: 'draft', level: 'beginner', language: 'ar', duration_minutes: 60, certificate_enabled: false, discussion_enabled: false, is_featured: false, thumbnail: null, promo_video_url: null, published_at: null, discount_starts_at: null, discount_ends_at: null, learning_outcomes: [], requirements: [], target_audiences: [], required_tools: [] };
@@ -24,22 +26,24 @@ beforeEach(() => {
     api.fetchAdminCategory.mockResolvedValue(category);
     api.fetchAdminCourses.mockResolvedValue({ items: [course], meta: { current_page: 1, last_page: 1, total: 1 } });
     api.fetchAdminCourse.mockResolvedValue(course);
+    instructorApi.fetchInstructorOptions.mockResolvedValue({ items: [{ id: 8, name: 'Teacher' }], meta: { current_page: 1, last_page: 1 } });
+    api.fetchAdminDashboardSummary.mockResolvedValue({ total_categories: 1, total_courses: 8, published_courses: 4, draft_courses: 2 });
     api.createAdminCategory.mockResolvedValue(category); api.updateAdminCategory.mockResolvedValue(category); api.updateAdminCourse.mockResolvedValue(course);
     vi.spyOn(window, 'confirm').mockReturnValue(true);
 });
 
 describe('admin dashboard and lists', () => {
-    it('shows only server pagination totals permitted to this user', async () => {
+    it('shows only permission-safe summary metrics returned by the server', async () => {
         state.permissions = ['courses.view'];
-        api.fetchAdminCourses.mockImplementation(({ status } = {}) => Promise.resolve({ items: [], meta: { total: status === 'published' ? 4 : status === 'draft' ? 2 : 8 } }));
+        api.fetchAdminDashboardSummary.mockResolvedValue({ total_courses: 8, published_courses: 4, draft_courses: 2 });
         const wrapper = render(AdminDashboardPage); await flushPromises();
         expect(wrapper.text()).toContain('Total courses'); expect(wrapper.text()).toContain('Published courses'); expect(wrapper.text()).not.toContain('Total categories'); expect(wrapper.text()).not.toContain('Total users');
-        expect(api.fetchAdminCategories).not.toHaveBeenCalled(); wrapper.unmount();
+        expect(api.fetchAdminCourses).not.toHaveBeenCalled(); wrapper.unmount();
     });
-    it('surfaces partial dashboard errors without inventing metrics', async () => {
-        api.fetchAdminCategories.mockRejectedValue({ status: 500 });
+    it('surfaces summary errors without inventing metrics', async () => {
+        api.fetchAdminDashboardSummary.mockRejectedValue({ status: 500 });
         const wrapper = render(AdminDashboardPage); await flushPromises();
-        expect(wrapper.text()).toContain('Unable to load some summary metrics'); expect(wrapper.text()).toContain('Total courses'); wrapper.unmount();
+        expect(wrapper.text()).toContain('Unable to load some summary metrics'); expect(wrapper.text()).not.toContain('Total courses'); wrapper.unmount();
     });
     it('renders category records, gates actions, and keeps blocked deletion visible', async () => {
         state.permissions = ['categories.view', 'categories.delete'];
@@ -93,13 +97,56 @@ describe('admin forms', () => {
         expect(api.updateAdminCategory).toHaveBeenCalledTimes(1);
         pending.resolve(category); await flushPromises(); expect(state.push).toHaveBeenCalledWith({ name: 'admin.categories.index' }); wrapper.unmount();
     });
-    it('does not offer arbitrary reparenting on category edit', async () => {
+    it('offers server-validated reparenting on category edit', async () => {
         state.route.params.id = 2;
         api.fetchAdminCategory.mockImplementation((id) => Promise.resolve(id === 2 ? { ...category, parent_id: 1 } : { ...category, id: 1, name: 'Parent' }));
         const wrapper = render(AdminCategoryFormPage); await flushPromises();
         expect(wrapper.get('#category-parent').findAll('option').map((item) => item.text())).toEqual(['Top-level category', 'Parent']);
         await wrapper.get('form').trigger('submit'); await flushPromises();
-        expect(api.updateAdminCategory.mock.calls[0][1]).not.toHaveProperty('parent_id'); wrapper.unmount();
+        expect(api.updateAdminCategory.mock.calls[0][1]).toHaveProperty('parent_id', 1); wrapper.unmount();
+    });
+    it('shows a server cycle validation error for category parent', async () => {
+        state.route.params.id = 2;
+        api.updateAdminCategory.mockRejectedValue({ status: 422, errors: { parent_id: ['This parent would create a cycle.'] } });
+        const wrapper = render(AdminCategoryFormPage); await flushPromises();
+        await wrapper.get('form').trigger('submit'); await flushPromises();
+        expect(wrapper.text()).toContain('This parent would create a cycle.'); wrapper.unmount();
+    });
+    it('creates a draft course with a selected instructor from the directory', async () => {
+        state.permissions.push('courses.create'); api.createAdminCourse.mockResolvedValue(course);
+        const wrapper = render(AdminCourseFormPage); await flushPromises();
+        expect(instructorApi.fetchInstructorOptions).toHaveBeenCalledWith({ page: 1 });
+        await wrapper.get('#course-title').setValue('New course'); await wrapper.get('#course-slug').setValue('new-course');
+        await wrapper.get('#course-category').setValue('2'); await wrapper.get('#course-instructor').setValue('8');
+        await wrapper.get('form').trigger('submit'); await flushPromises();
+        expect(api.createAdminCourse).toHaveBeenCalledWith(expect.objectContaining({ category_id: 2, instructor_id: 8, status: 'draft' })); wrapper.unmount();
+    });
+    it('preserves the current and newly selected instructor across search result changes', async () => {
+        state.route.params.id = 7;
+        instructorApi.fetchInstructorOptions.mockResolvedValueOnce({ items: [{ id: 9, name: 'Other' }], meta: { current_page: 1, last_page: 1 } })
+            .mockResolvedValueOnce({ items: [], meta: { current_page: 1, last_page: 1 } });
+        const wrapper = render(AdminCourseFormPage); await flushPromises();
+        expect(wrapper.get('#course-instructor').findAll('option').some((option) => option.text().includes('Teacher'))).toBe(true);
+        await wrapper.get('#course-instructor').setValue('9');
+        await wrapper.get('#course-instructor-search').setValue('nobody');
+        await wrapper.findAll('button').find((button) => button.text() === 'Search').trigger('click'); await flushPromises();
+        expect(wrapper.get('#course-instructor').element.value).toBe('9');
+        await wrapper.get('form').trigger('submit'); await flushPromises();
+        expect(api.updateAdminCourse.mock.calls[0][1].instructor_id).toBe(9); wrapper.unmount();
+    });
+    it('reports instructor directory errors and keeps the assigned instructor', async () => {
+        state.route.params.id = 7; instructorApi.fetchInstructorOptions.mockRejectedValue({ status: 500 });
+        const wrapper = render(AdminCourseFormPage); await flushPromises();
+        expect(wrapper.text()).toContain('Unable to load instructors'); expect(wrapper.get('#course-instructor').element.value).toBe('8'); wrapper.unmount();
+    });
+    it('loads another instructor options page without replacing earlier choices', async () => {
+        state.route.params.id = 7;
+        instructorApi.fetchInstructorOptions.mockResolvedValueOnce({ items: [{ id: 9, name: 'Other' }], meta: { current_page: 1, last_page: 2 } })
+            .mockResolvedValueOnce({ items: [{ id: 10, name: 'Third' }], meta: { current_page: 2, last_page: 2 } });
+        const wrapper = render(AdminCourseFormPage); await flushPromises();
+        await wrapper.findAll('button').find((button) => button.text() === 'Load more instructors').trigger('click'); await flushPromises();
+        expect(instructorApi.fetchInstructorOptions).toHaveBeenLastCalledWith({ page: 2 });
+        expect(wrapper.get('#course-instructor').findAll('option').map((option) => option.text()).join(' ')).toContain('Third'); wrapper.unmount();
     });
     it('keeps course price as a decimal string, omits instructor, and sends null lifetime', async () => {
         state.route.params.id = 7;
