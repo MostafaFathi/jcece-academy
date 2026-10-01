@@ -30,7 +30,15 @@ class SupportTicketMessageService
                 }
                 $message = $locked->messages()->create(['user_id' => $actor->id, 'body' => $body, 'is_internal' => $internal]);
                 foreach ($attachments as $file) {
-                    $path = $file->store("support-tickets/{$locked->id}/messages/{$message->id}", $disk);
+                    $directory = "support-tickets/{$locked->id}/messages/{$message->id}";
+                    $temporaryPath = $file->getPathname();
+                    if (! $file->isValid() || $temporaryPath === '' || ! is_readable($temporaryPath)) {
+                        throw ValidationException::withMessages(['attachments' => 'The uploaded attachment is no longer available. Please select it again.']);
+                    }
+
+                    $path = $file->getRealPath() === false
+                        ? Storage::disk($disk)->putFileAs($directory, $temporaryPath, $file->hashName())
+                        : $file->store($directory, $disk);
                     if ($path === false) {
                         throw new RuntimeException('The support attachment could not be stored.');
                     }

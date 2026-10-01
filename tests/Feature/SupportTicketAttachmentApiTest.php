@@ -7,10 +7,12 @@ use App\Models\SupportTicketAttachment;
 use App\Models\SupportTicketMessage;
 use App\Models\User;
 use App\RoleName;
+use App\Services\SupportTicketMessageService;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -83,5 +85,49 @@ class SupportTicketAttachmentApiTest extends TestCase
         Sanctum::actingAs($staff);
 
         $this->get("/api/v1/admin/support-ticket-attachments/{$attachment->id}/download", ['Accept' => 'application/json'])->assertOk();
+    }
+
+    public function test_attachment_uses_readable_temporary_path_when_realpath_is_unavailable(): void
+    {
+        Storage::fake('local');
+        $student = User::factory()->create();
+        $ticket = SupportTicket::factory()->for($student)->create();
+        $temporaryFile = UploadedFile::fake()->create('problem.pdf', 1, 'application/pdf');
+        $attachment = new class($temporaryFile->getPathname()) extends UploadedFile
+        {
+            public function __construct(string $path)
+            {
+                parent::__construct($path, 'problem.pdf', 'application/pdf', null, true);
+            }
+
+            public function getRealPath(): string|false
+            {
+                return false;
+            }
+        };
+
+        $message = app(SupportTicketMessageService::class)->post($student, $ticket, 'Attached file', false, [$attachment]);
+
+        Storage::disk('local')->assertExists($message->attachments->firstOrFail()->storage_path);
+    }
+
+    public function test_missing_temporary_attachment_returns_validation_error_without_partial_message(): void
+    {
+        Storage::fake('local');
+        $student = User::factory()->create();
+        $ticket = SupportTicket::factory()->for($student)->create();
+        Storage::disk('local')->put('missing-upload.pdf', 'temporary content');
+        $attachment = new UploadedFile(Storage::disk('local')->path('missing-upload.pdf'), 'missing.pdf', 'application/pdf', null, true);
+        Storage::disk('local')->delete('missing-upload.pdf');
+
+        try {
+            app(SupportTicketMessageService::class)->post($student, $ticket, 'Attached file', false, [$attachment]);
+            $this->fail('An unavailable upload must be rejected.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('attachments', $exception->errors());
+        }
+
+        $this->assertDatabaseCount('support_ticket_messages', 0);
+        $this->assertDatabaseCount('support_ticket_attachments', 0);
     }
 }

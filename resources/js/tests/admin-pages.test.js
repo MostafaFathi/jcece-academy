@@ -12,7 +12,7 @@ import AppShellLayout from '../layouts/AppShellLayout.vue';
 
 const state = vi.hoisted(() => ({ route: { params: {}, query: {} }, push: vi.fn(), permissions: [], roles: [], user: { id: 8 } }));
 vi.mock('vue-router', async (original) => ({ ...(await original()), useRoute: () => state.route, useRouter: () => ({ push: state.push }) }));
-vi.mock('../stores/auth', () => ({ useAuthStore: () => ({ user: state.user, can: (permission) => state.permissions.includes(permission), hasRole: (role) => state.roles.includes(role), hasAnyRole: (roles) => roles.some((role) => state.roles.includes(role)) }) }));
+vi.mock('../stores/auth', () => ({ useAuthStore: () => ({ user: state.user, can: (permission) => state.permissions.includes(permission), canAny: (permissions) => permissions.some((permission) => state.permissions.includes(permission)), hasRole: (role) => state.roles.includes(role), hasAnyRole: (roles) => roles.some((role) => state.roles.includes(role)) }) }));
 vi.mock('../api/admin', () => Object.fromEntries(['fetchAdminCategories', 'fetchAdminCategory', 'createAdminCategory', 'updateAdminCategory', 'deleteAdminCategory', 'fetchAdminCourses', 'fetchAdminCourse', 'createAdminCourse', 'updateAdminCourse', 'deleteAdminCourse', 'fetchAdminDashboardSummary'].map((name) => [name, vi.fn()])));
 vi.mock('../api/instructor-options', () => ({ fetchInstructorOptions: vi.fn() }));
 

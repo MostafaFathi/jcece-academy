@@ -8,12 +8,17 @@ export const navigationByArea = {
         { label: 'support.heading', route: 'student.support.index' },
     ],
     admin: [
-        { label: 'nav.overview', route: 'admin.dashboard' },
+        { label: 'nav.overview', route: 'admin.dashboard', anyPermission: ['courses.view', 'users.view', 'categories.view', 'instructors.view', 'packages.view'] },
         { label: 'admin.categories', route: 'admin.categories.index', permissions: ['categories.view'] },
         { label: 'admin.courses', route: 'admin.courses.index', permissions: ['courses.view'] },
         { label: 'packages.adminHeading', route: 'admin.packages.index', permissions: ['packages.view'] },
         { label: 'admin.users', route: 'admin.users.index', permissions: ['users.view'] },
         { label: 'admin.instructors', route: 'admin.instructors.index', permissions: ['instructors.view'] },
+        { label: 'operations.orders', route: 'admin.orders.index', permissions: ['orders.view'] },
+        { label: 'operations.payments', route: 'admin.payments.index', permissions: ['payments.view'] },
+        { label: 'operations.reviews', route: 'admin.reviews.index', permissions: ['reviews.view'] },
+        { label: 'operations.certificates', route: 'admin.certificates.index', permissions: ['certificates.view'] },
+        { label: 'operations.support', route: 'admin.tickets.index', permissions: ['support_tickets.view'] },
     ],
     instructor: [
         { label: 'nav.overview', route: 'instructor.dashboard' },
@@ -23,6 +28,7 @@ export const navigationByArea = {
         { label: 'nav.overview', route: 'support.dashboard' },
         { label: 'nav.tickets', route: 'support.tickets', permissions: ['support_tickets.view'] },
         { label: 'nav.orders', route: 'support.orders', permissions: ['orders.view'] },
+        { label: 'operations.payments', route: 'support.payments.index', permissions: ['payments.view'] },
     ],
 };
 

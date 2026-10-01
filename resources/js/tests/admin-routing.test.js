@@ -22,7 +22,7 @@ describe('Phase 13A admin boundaries', () => {
         expect(canAccessRoute(auth(['courses.view', 'courses.update']), router.resolve('/admin/courses/5/edit').meta)).toBe(true);
     });
     it('shows only permitted modules in the admin navigation', () => {
-        expect(navigationByArea.admin.map((item) => item.route)).toEqual(['admin.dashboard', 'admin.categories.index', 'admin.courses.index', 'admin.packages.index', 'admin.users.index', 'admin.instructors.index']);
+        expect(navigationByArea.admin.map((item) => item.route)).toEqual(['admin.dashboard', 'admin.categories.index', 'admin.courses.index', 'admin.packages.index', 'admin.users.index', 'admin.instructors.index', 'admin.orders.index', 'admin.payments.index', 'admin.reviews.index', 'admin.certificates.index', 'admin.tickets.index']);
         expect(visibleNavigation(navigationByArea.admin, auth(['courses.view'])).map((item) => item.route)).toEqual(['admin.dashboard', 'admin.courses.index']);
         expect(visibleNavigation(navigationByArea.admin, auth(['categories.view'])).map((item) => item.route)).toEqual(['admin.dashboard', 'admin.categories.index']);
         expect(visibleNavigation(navigationByArea.admin, auth(['instructors.view'])).map((item) => item.route)).toEqual(['admin.dashboard', 'admin.instructors.index']);

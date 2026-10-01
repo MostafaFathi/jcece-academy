@@ -4,6 +4,7 @@ import { en as assessments } from './assessments';
 import { en as reviewsSupport } from './reviews-support';
 import { en as admin } from './admin';
 import { en as adminContent } from './admin-content';
+import { en as operations } from './operations';
 
 export default {
     commerce,
@@ -12,6 +13,7 @@ export default {
     ...reviewsSupport,
     admin,
     curriculum: adminContent.curriculum,
+    operations,
     brand: {
         name: 'JCEC Academy', tagline: 'Learn today… build a better tomorrow', promise: 'Build professional skills that create a real difference in your future.', description: 'An Arabic-first professional learning platform bringing specialized content, assessment, and practical progress into one experience.',
     },
