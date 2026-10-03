@@ -19,6 +19,7 @@ export const navigationByArea = {
         { label: 'operations.reviews', route: 'admin.reviews.index', permissions: ['reviews.view'] },
         { label: 'operations.certificates', route: 'admin.certificates.index', permissions: ['certificates.view'] },
         { label: 'operations.support', route: 'admin.tickets.index', permissions: ['support_tickets.view'] },
+        { label: 'policies.manage', route: 'admin.policy-pages', permissions: ['policy_pages.view'] },
     ],
     instructor: [
         { label: 'instructor.dashboard', route: 'instructor.dashboard', permissions: ['courses.view'] },

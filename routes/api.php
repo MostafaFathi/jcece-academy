@@ -29,6 +29,8 @@ use App\Http\Controllers\Api\V1\Admin\InstructorController as AdminInstructorCon
 use App\Http\Controllers\Api\V1\Admin\InstructorOptionController;
 use App\Http\Controllers\Api\V1\Admin\LessonController;
 use App\Http\Controllers\Api\V1\Admin\LessonResourceController;
+use App\Http\Controllers\Api\V1\Admin\LessonResourceDownloadController as AdminLessonResourceDownloadController;
+use App\Http\Controllers\Api\V1\Admin\LessonResourceUploadController;
 use App\Http\Controllers\Api\V1\Admin\OrderAccessProvisioningController;
 use App\Http\Controllers\Api\V1\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Api\V1\Admin\OrderStatusController;
@@ -39,6 +41,7 @@ use App\Http\Controllers\Api\V1\Admin\PaymentApprovalController;
 use App\Http\Controllers\Api\V1\Admin\PaymentController as AdminPaymentController;
 use App\Http\Controllers\Api\V1\Admin\PaymentProofController as AdminPaymentProofController;
 use App\Http\Controllers\Api\V1\Admin\PaymentRejectionController;
+use App\Http\Controllers\Api\V1\Admin\PolicyPageController as AdminPolicyPageController;
 use App\Http\Controllers\Api\V1\Admin\QuizAttemptController as AdminQuizAttemptController;
 use App\Http\Controllers\Api\V1\Admin\QuizController as AdminQuizController;
 use App\Http\Controllers\Api\V1\Admin\QuizPublicationController;
@@ -84,6 +87,7 @@ use App\Http\Controllers\Api\V1\Me\SupportTicketController as MeSupportTicketCon
 use App\Http\Controllers\Api\V1\Me\SupportTicketMessageController as MeSupportTicketMessageController;
 use App\Http\Controllers\Api\V1\Me\SupportTicketReopeningController;
 use App\Http\Controllers\Api\V1\PackageController;
+use App\Http\Controllers\Api\V1\PolicyPageController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->name('api.v1.')->group(function (): void {
@@ -94,6 +98,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
     Route::get('courses/{course:slug}/reviews', [CourseReviewController::class, 'index'])->name('courses.reviews.index');
     Route::get('packages', [PackageController::class, 'index'])->name('packages.index');
     Route::get('packages/{package:slug}', [PackageController::class, 'show'])->name('packages.show');
+    Route::get('policies/{policyPage:slug}', PolicyPageController::class)->name('policies.show');
     Route::get('certificates/verify/{token}', CertificateVerificationController::class)
         ->middleware('throttle:30,1')
         ->name('certificates.verify');
@@ -175,6 +180,9 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
     });
 
     Route::middleware('auth:sanctum')->prefix('admin')->name('admin.')->group(function (): void {
+        Route::get('policy-pages', [AdminPolicyPageController::class, 'index'])->name('policy-pages.index');
+        Route::put('policy-pages/{policyPage:slug}', [AdminPolicyPageController::class, 'update'])->name('policy-pages.update');
+        Route::post('policy-pages/{policyPage:slug}/publication', [AdminPolicyPageController::class, 'publish'])->name('policy-pages.publish');
         Route::get('dashboard-summary', DashboardSummaryController::class)->name('dashboard-summary.show');
         Route::apiResource('users', AdminUserController::class)->only(['index', 'store', 'show', 'update']);
         Route::get('instructor-options', InstructorOptionController::class)->name('instructor-options.index');
@@ -223,6 +231,8 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             Route::get('assignments/{assignment}/submissions/{submission}', [AdminAssignmentSubmissionController::class, 'show'])->name('assignments.submissions.show');
 
             Route::post('lessons/{lesson}/resources/reorder', [CurriculumOrderController::class, 'resources'])->name('lessons.resources.reorder');
+            Route::post('lessons/{lesson}/resources/upload', LessonResourceUploadController::class)->name('lessons.resources.upload');
+            Route::get('lessons/{lesson}/resources/{resource}/download', AdminLessonResourceDownloadController::class)->name('lessons.resources.download');
             Route::apiResource('lessons.resources', LessonResourceController::class);
         });
 

@@ -41,9 +41,9 @@ class LessonResourceFileService
         return $url;
     }
 
-    public function download(LessonResource $resource): StreamedResponse
+    public function download(LessonResource $resource, bool $requiresDownloadable = true): StreamedResponse
     {
-        abort_unless($resource->is_downloadable && self::hasSafeFile($resource), 404);
+        abort_unless((! $requiresDownloadable || $resource->is_downloadable) && self::hasSafeFile($resource), 404);
 
         $disk = Storage::disk('lesson_resources');
         $key = substr($resource->file_path, mb_strlen('lesson-resources/'));

@@ -55,4 +55,7 @@ enum PermissionName: string
     case SupportTicketsView = 'support_tickets.view';
     case SupportTicketsManage = 'support_tickets.manage';
     case SupportTicketsReply = 'support_tickets.reply';
+    case PolicyPagesView = 'policy_pages.view';
+    case PolicyPagesUpdate = 'policy_pages.update';
+    case PolicyPagesPublish = 'policy_pages.publish';
 }

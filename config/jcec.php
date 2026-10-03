@@ -14,6 +14,11 @@ return [
         'submission_file_max_count' => (int) env('JCEC_ASSIGNMENT_SUBMISSION_FILE_MAX_COUNT', 5),
     ],
 
+    'lesson_resources' => [
+        'max_kilobytes' => (int) env('JCEC_LESSON_RESOURCE_MAX_KILOBYTES', 20480),
+        'mimes' => ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'jpg', 'jpeg', 'png', 'zip', 'txt', 'csv'],
+    ],
+
     'certificates' => [
         'pdf_disk' => env('JCEC_CERTIFICATE_PDF_DISK', 'local'),
         'logo_path' => public_path('assets/images/logo-1.png'),

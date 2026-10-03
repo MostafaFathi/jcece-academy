@@ -8,6 +8,7 @@ use App\Http\Requests\Api\V1\Admin\UpdateLessonResourceRequest;
 use App\Http\Resources\Api\V1\LessonResourceResource;
 use App\Models\Lesson;
 use App\Models\LessonResource;
+use App\Services\LessonResourceUploadService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
@@ -63,10 +64,15 @@ class LessonResourceController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Lesson $lesson, LessonResource $resource): Response
+    public function destroy(Lesson $lesson, LessonResource $resource, LessonResourceUploadService $uploads): Response
     {
         Gate::authorize('delete', $resource);
+        $path = $resource->file_path;
         $resource->delete();
+
+        if (is_string($path)) {
+            $uploads->deleteManagedFileIfUnused($path);
+        }
 
         return response()->noContent();
     }

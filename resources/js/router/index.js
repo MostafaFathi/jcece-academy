@@ -21,6 +21,9 @@ export const routes = [
             { path: 'packages', name: 'packages.index', component: () => import('../pages/PackageCatalogPage.vue'), meta: { title: 'nav.packages' } },
             { path: 'packages/:slug', name: 'packages.show', component: () => import('../pages/PackageDetailPage.vue'), props: true, meta: { title: 'nav.packages' } },
             { path: 'certificates/verify/:token', name: 'certificates.verify', component: () => import('../pages/CertificateVerificationPage.vue'), props: true, meta: { title: 'assessments.verify' } },
+            { path: 'privacy', name: 'policies.privacy', component: () => import('../pages/PolicyPage.vue'), props: { slug: 'privacy' }, meta: { title: 'policies.privacy' } },
+            { path: 'terms', name: 'policies.terms', component: () => import('../pages/PolicyPage.vue'), props: { slug: 'terms' }, meta: { title: 'policies.terms' } },
+            { path: 'refund-policy', name: 'policies.refund', component: () => import('../pages/PolicyPage.vue'), props: { slug: 'refund' }, meta: { title: 'policies.refund' } },
         ],
     },
     {
@@ -28,6 +31,18 @@ export const routes = [
         component: AuthLayout,
         meta: { guestOnly: true },
         children: [{ path: '', name: 'login', component: () => import('../pages/LoginPage.vue'), meta: { title: 'common.login', guestOnly: true } }],
+    },
+    {
+        path: '/register', component: AuthLayout, meta: { guestOnly: true },
+        children: [{ path: '', name: 'register', component: () => import('../pages/RegisterPage.vue'), meta: { title: 'auth.registerTitle', guestOnly: true } }],
+    },
+    {
+        path: '/forgot-password', component: AuthLayout, meta: { guestOnly: true },
+        children: [{ path: '', name: 'forgot-password', component: () => import('../pages/ForgotPasswordPage.vue'), meta: { title: 'auth.forgotTitle', guestOnly: true } }],
+    },
+    {
+        path: '/reset-password/:token', component: AuthLayout,
+        children: [{ path: '', name: 'reset-password', component: () => import('../pages/ResetPasswordPage.vue'), props: true, meta: { title: 'auth.resetTitle' } }],
     },
     {
         path: '/student',
@@ -58,7 +73,7 @@ export const routes = [
     {
         path: '/admin',
         component: AdminLayout,
-        meta: { requiresAuth: true, anyPermission: ['courses.view', 'users.view', 'categories.view', 'instructors.view', 'packages.view', 'orders.view', 'payments.view', 'reviews.view', 'certificates.view', 'support_tickets.view'] },
+        meta: { requiresAuth: true, anyPermission: ['courses.view', 'users.view', 'categories.view', 'instructors.view', 'packages.view', 'orders.view', 'payments.view', 'reviews.view', 'certificates.view', 'support_tickets.view', 'policy_pages.view'] },
         children: [
             { path: '', name: 'admin.dashboard', component: () => import('../pages/AdminDashboardPage.vue'), meta: { requiresAuth: true, anyPermission: ['courses.view', 'users.view', 'categories.view', 'instructors.view', 'packages.view'], title: 'admin.dashboard' } },
             { path: 'categories', name: 'admin.categories.index', component: () => import('../pages/AdminCategoriesPage.vue'), meta: { requiresAuth: true, permissions: ['categories.view'], title: 'admin.categories' } },
@@ -88,6 +103,7 @@ export const routes = [
             { path: 'certificates/:id', name: 'admin.certificates.show', component: () => import('../pages/AdminCertificateDetailPage.vue'), meta: { requiresAuth: true, permissions: ['certificates.view'], title: 'operations.certificates' } },
             { path: 'support', name: 'admin.tickets.index', component: () => import('../pages/OperationalTicketsPage.vue'), meta: { requiresAuth: true, permissions: ['support_tickets.view'], title: 'operations.support' } },
             { path: 'support/:id', name: 'admin.tickets.show', component: () => import('../pages/OperationalTicketDetailPage.vue'), meta: { requiresAuth: true, permissions: ['support_tickets.view'], title: 'operations.support' } },
+            { path: 'policy-pages', name: 'admin.policy-pages', component: () => import('../pages/AdminPolicyPagesPage.vue'), meta: { requiresAuth: true, permissions: ['policy_pages.view'], title: 'policies.manage' } },
             { path: 'content', name: 'admin.content', redirect: { name: 'admin.courses.index' }, meta: { requiresAuth: true, permissions: ['courses.view'] } },
         ],
     },

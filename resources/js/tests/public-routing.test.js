@@ -7,7 +7,7 @@ import { routes } from '../router';
 describe('public routing and localization', () => {
     it('registers all Phase 11 public routes', () => {
         const publicRouteNames = routes[0].children.map((route) => route.name);
-        expect(publicRouteNames).toEqual(['home', 'courses.index', 'courses.show', 'packages.index', 'packages.show', 'certificates.verify']);
+        expect(publicRouteNames).toEqual(['home', 'courses.index', 'courses.show', 'packages.index', 'packages.show', 'certificates.verify', 'policies.privacy', 'policies.terms', 'policies.refund']);
     });
 
     it('switches the mounted interface direction', async () => {

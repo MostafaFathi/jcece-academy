@@ -20,3 +20,18 @@ export async function login(credentials) {
 export async function logout() {
     await api.post('api/v1/auth/logout');
 }
+
+export async function register(payload) {
+    await initializeCsrf();
+    return (await api.post('api/v1/auth/register', payload)).data.data;
+}
+
+export async function requestPasswordReset(email) {
+    await initializeCsrf();
+    return (await api.post('api/v1/auth/forgot-password', { email })).data;
+}
+
+export async function resetPassword(payload) {
+    await initializeCsrf();
+    return (await api.post('api/v1/auth/reset-password', payload)).data;
+}

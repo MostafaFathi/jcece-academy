@@ -19,6 +19,7 @@ class LessonResourceResource extends JsonResource
             'id' => $this->id,
             'title' => $this->title,
             'type' => $this->type,
+            'file_reference_available' => LessonResourceFileService::hasSafeFile($this->resource),
             'download_available' => $this->is_downloadable && LessonResourceFileService::hasSafeFile($this->resource),
             'external_url' => LessonResourceFileService::safeExternalUrl($this->resource),
             'is_downloadable' => $this->is_downloadable,

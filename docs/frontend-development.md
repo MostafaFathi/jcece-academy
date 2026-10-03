@@ -48,7 +48,7 @@ The public catalog persists supported search, filter, sort, and page values in U
 
 Student commerce routes live under `/student/cart`, `/student/checkout`, `/student/orders`, and `/student/orders/:id`, backed by `/api/v1/me/cart`, `/checkout`, `/orders`, order payments, and private proof download. Cart/auth/customer/payment data stays in memory. Only language preference uses localStorage and the non-sensitive checkout UUID uses sessionStorage to recover uncertain requests. See `frontend-api-contract.md` for exact retry, status, ownership, and upload behavior.
 
-Public registration, password reset, and email verification endpoints are not implemented. Gateways, coupons, refunds, review management, support-ticket UI, instructor grading UI, admin business pages, and unrelated business screens remain outside Phase 12C.
+At the Phase 12C boundary, public registration, password reset, and email verification endpoints were not implemented. Phase 15A later added registration/recovery; email verification remains unrequired by the original specification. Gateways, coupons, refunds and unrelated business screens remain outside Phase 12C.
 
 Manual-payment account instructions still need a managed backend/configuration contract. No bank or wallet details are fabricated. Automated API/component tests do not replace desktop/mobile RTL smoke testing. Historical Phase 12A browser results are recorded below; no live order/payment was created or approved.
 
@@ -203,3 +203,13 @@ Backend additions are read-only Instructor routes/resources and ownership tests;
 Manual Instructor browser QA remains pending a suitable authenticated Instructor session with disposable quiz/submission data. Do not mutate meaningful records for smoke testing. Verify desktop/mobile and Arabic/English, own/foreign course URLs, protected real-file download, initial grading, revision and correction only on disposable attempts. Repeat the real authenticated Support attachment upload check as well. Before role QA, compare/export local custom grants and review `RolesAndPermissionsSeeder`'s `syncPermissions`; it has not been rerun against the development DB automatically.
 
 Verification on 2026-10-02: 319 frontend tests passed (34 files); 421 Laravel tests / 1924 assertions passed. Vite production build passed with the pre-existing optional `fontaine` warning. Pint, route audit, migration status and `git diff --check` passed; all existing migrations are applied. The in-app browser exposed no open tab or authenticated Instructor session, so no live data was changed and the manual workflow remains pending.
+
+## Phase 15A P0 implementation report
+
+The public auth shell now has localized `/register`, `/forgot-password` and `/reset-password/:token` pages. Registration creates only a Student account and leads to sign-in; forgot-password gives a neutral success state, and reset accepts the email carried by the mail link. Forms show 422 field errors, pending/duplicate-submit states and Arabic/English copy. Production mail delivery and real mailbox link handling are not verified; email verification is not an original launch requirement.
+
+The Admin curriculum builder now uploads actual Lesson Resource bytes through multipart and offers protected management download. Server-side storage is private and generated; the UI never displays or sends an internal path. Byte replacement is not offered. Student access checks are unchanged. Real browser Lesson/Support/Assignment multipart QA is still pending an appropriate authenticated disposable session.
+
+Public `/privacy`, `/terms` and `/refund-policy` pages are linked from footer, auth and checkout. Admin/Content Manager can maintain bilingual drafts; only Admin can publish a pair of approved texts. The public page renders plain text safely and shows an unpublished state until approved legal copy is entered. **LEGAL CONTENT REQUIRED:** no legal prose was invented or seeded.
+
+The certificate eligibility and self-issuance behavior was not modified. The product owner explicitly deferred that decision to a separate phase; see `docs/phase-15a-plan.md`. Production signoff, staging browser matrix and remaining original P1 requirements are not implied by passing component/API tests.

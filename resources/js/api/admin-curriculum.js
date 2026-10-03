@@ -1,4 +1,4 @@
-import { api } from './client';
+import { api, downloadBlob } from './client';
 import { unwrapCollection, unwrapResource } from './responses';
 
 const base = '/api/v1/admin';
@@ -15,6 +15,8 @@ export async function reorderLessons(sectionId, ids) { return unwrapCollection(a
 
 export async function fetchLessonResources(lessonId) { return unwrapCollection(await api.get(`${base}/lessons/${lessonId}/resources`)).items; }
 export async function createLessonResource(lessonId, payload) { return unwrapResource(await api.post(`${base}/lessons/${lessonId}/resources`, payload)); }
+export async function uploadLessonResource(lessonId, payload) { return unwrapResource(await api.post(`${base}/lessons/${lessonId}/resources/upload`, payload)); }
+export async function downloadLessonResource(lessonId, resourceId) { await downloadBlob(`${base}/lessons/${lessonId}/resources/${resourceId}/download`, `lesson-resource-${resourceId}`); }
 export async function updateLessonResource(lessonId, resourceId, payload) { return unwrapResource(await api.patch(`${base}/lessons/${lessonId}/resources/${resourceId}`, payload)); }
 export async function deleteLessonResource(lessonId, resourceId) { await api.delete(`${base}/lessons/${lessonId}/resources/${resourceId}`); }
 export async function reorderLessonResources(lessonId, ids) { return unwrapCollection(await api.post(`${base}/lessons/${lessonId}/resources/reorder`, { ids })).items; }

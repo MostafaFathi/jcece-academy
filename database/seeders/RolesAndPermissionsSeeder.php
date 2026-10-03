@@ -78,6 +78,8 @@ class RolesAndPermissionsSeeder extends Seeder
                 PermissionName::CertificatesRevoke->value,
                 PermissionName::ReviewsView->value,
                 PermissionName::ReviewsModerate->value,
+                PermissionName::PolicyPagesView->value,
+                PermissionName::PolicyPagesUpdate->value,
             ],
             RoleName::SalesSupport->value => [
                 PermissionName::CoursesView->value,
@@ -99,7 +101,7 @@ class RolesAndPermissionsSeeder extends Seeder
         ];
 
         foreach ($rolePermissions as $roleName => $permissions) {
-            Role::findOrCreate($roleName)->syncPermissions($permissions);
+            Role::findOrCreate($roleName)->givePermissionTo($permissions);
         }
 
         app(PermissionRegistrar::class)->forgetCachedPermissions();

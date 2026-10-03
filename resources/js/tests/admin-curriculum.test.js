@@ -11,7 +11,7 @@ const state = vi.hoisted(() => ({ permissions: [], user: { id: 8 }, roles: [], r
 vi.mock('vue-router', async (original) => ({ ...(await original()), useRoute: () => state.route }));
 vi.mock('../stores/auth', () => ({ useAuthStore: () => ({ user: state.user, can: (permission) => state.permissions.includes(permission), hasRole: (role) => state.roles.includes(role), hasAnyRole: (roles) => roles.some((role) => state.roles.includes(role)) }) }));
 vi.mock('../api/admin', () => ({ fetchAdminCourse: vi.fn() }));
-vi.mock('../api/admin-curriculum', () => Object.fromEntries(['fetchSections', 'createSection', 'updateSection', 'deleteSection', 'reorderSections', 'createLesson', 'updateLesson', 'deleteLesson', 'reorderLessons', 'fetchLessonResources', 'createLessonResource', 'updateLessonResource', 'deleteLessonResource', 'reorderLessonResources'].map((name) => [name, vi.fn()])));
+vi.mock('../api/admin-curriculum', () => Object.fromEntries(['fetchSections', 'createSection', 'updateSection', 'deleteSection', 'reorderSections', 'createLesson', 'updateLesson', 'deleteLesson', 'reorderLessons', 'fetchLessonResources', 'createLessonResource', 'uploadLessonResource', 'downloadLessonResource', 'updateLessonResource', 'deleteLessonResource', 'reorderLessonResources'].map((name) => [name, vi.fn()])));
 
 const lesson = { id: 21, title: 'Read', slug: 'read', type: 'text', content: 'Plain <b>text</b>', is_published: true, is_preview: false, resources: [] };
 const sections = [
@@ -105,12 +105,35 @@ describe('lesson editor and resources', () => {
         await wrapper.get('#lesson-type').setValue('file'); expect(wrapper.find('#lesson-url').exists()).toBe(false); wrapper.unmount();
     });
     it('lists resources without storage metadata and creates only external links', async () => {
-        curriculum.fetchLessonResources.mockResolvedValue([{ id: 30, title: 'Protected PDF', type: 'pdf', download_available: true, is_downloadable: true, sort_order: 0 }]);
+        curriculum.fetchLessonResources.mockResolvedValue([{ id: 30, title: 'Protected PDF', type: 'pdf', file_reference_available: true, download_available: true, is_downloadable: true, sort_order: 0 }]);
         const wrapper = render(AdminLessonResources, { lesson, canCreate: true, canUpdate: true, canDelete: true }); await flushPromises();
-        expect(wrapper.text()).toContain('Protected PDF'); expect(wrapper.html()).not.toContain('file_path'); expect(wrapper.text()).toContain('not browser file upload');
+        expect(wrapper.text()).toContain('Protected PDF'); expect(wrapper.html()).not.toContain('file_path'); expect(wrapper.text()).toContain('Upload file');
+        expect(wrapper.text()).toContain('Download file');
         await wrapper.findAll('button').find((button) => button.text() === 'Add external link').trigger('click'); await wrapper.get('#resource-title').setValue('Handout'); await wrapper.get('#resource-url').setValue('https://example.test/handout');
         await wrapper.get('form').trigger('submit'); await flushPromises();
         expect(curriculum.createLessonResource).toHaveBeenCalledWith(21, expect.objectContaining({ title: 'Handout', type: 'link', external_url: 'https://example.test/handout' })); wrapper.unmount();
+    });
+    it('uploads selected bytes once and downloads through the protected admin API', async () => {
+        const resource = { id: 31, title: 'File', type: 'file', file_reference_available: true, download_available: false, sort_order: 0 };
+        curriculum.fetchLessonResources.mockResolvedValue([resource]);
+        const pending = deferred(); curriculum.uploadLessonResource.mockReturnValue(pending.promise);
+        const wrapper = render(AdminLessonResources, { lesson, canCreate: true }); await flushPromises();
+        await wrapper.findAll('button').find((button) => button.text() === 'Upload file').trigger('click');
+        await wrapper.get('#resource-title').setValue('Handout');
+        const file = new File(['%PDF-1.4'], 'handout.pdf', { type: 'application/pdf' });
+        Object.defineProperty(wrapper.get('#resource-file').element, 'files', { value: [file] });
+        await wrapper.get('#resource-file').trigger('change');
+        expect(wrapper.text()).toContain('handout.pdf');
+        await wrapper.get('form').trigger('submit');
+        await wrapper.get('form').trigger('submit');
+        expect(curriculum.uploadLessonResource).toHaveBeenCalledTimes(1);
+        expect(curriculum.uploadLessonResource.mock.calls[0][1].get('file')).toBe(file);
+        pending.resolve(resource); await flushPromises();
+        expect(wrapper.text()).toContain('Protected file available');
+        expect(wrapper.text()).not.toContain('No available file');
+        await wrapper.findAll('button').find((button) => button.text() === 'Download file').trigger('click');
+        expect(curriculum.downloadLessonResource).toHaveBeenCalledWith(21, 31);
+        wrapper.unmount();
     });
     it('keeps failed resource deletion visible and shows server errors', async () => {
         curriculum.fetchLessonResources.mockResolvedValue([{ id: 30, title: 'Protected PDF', type: 'pdf', download_available: true, sort_order: 0 }]); curriculum.deleteLessonResource.mockRejectedValue({ status: 500 });

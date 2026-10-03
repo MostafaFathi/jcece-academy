@@ -15,6 +15,7 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call(RolesAndPermissionsSeeder::class);
+        $this->call(PolicyPageSeeder::class);
 
         if (app()->isLocal()) {
             $this->call(DevelopmentSeeder::class);
