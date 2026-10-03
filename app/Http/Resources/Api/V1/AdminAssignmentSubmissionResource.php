@@ -19,6 +19,7 @@ class AdminAssignmentSubmissionResource extends JsonResource
             'assignment_id' => $this->assignment_id,
             'enrollment_id' => $this->enrollment_id,
             'user_id' => $this->user_id,
+            'student' => new UserSummaryResource($this->whenLoaded('user')),
             'attempt_number' => $this->attempt_number,
             'status' => $this->status->value,
             'text_answer' => $this->text_answer,

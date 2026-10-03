@@ -6,6 +6,7 @@ use App\Models\CourseSection;
 use App\Models\Lesson;
 use App\Models\User;
 use App\PermissionName;
+use App\RoleName;
 
 class LessonPolicy
 {
@@ -22,7 +23,10 @@ class LessonPolicy
      */
     public function view(User $user, Lesson $lesson): bool
     {
-        return $user->can(PermissionName::CurriculumView->value);
+        return $user->can(PermissionName::CurriculumView->value)
+            && (! $user->hasRole(RoleName::Instructor->value)
+                || $user->hasAnyRole([RoleName::Admin->value, RoleName::ContentManager->value])
+                || $lesson->section()->whereHas('course', fn ($query) => $query->where('instructor_id', $user->id))->exists());
     }
 
     /**

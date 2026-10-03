@@ -5,6 +5,7 @@ import { ar as reviewsSupport } from './reviews-support';
 import { ar as admin } from './admin';
 import { ar as adminContent } from './admin-content';
 import { ar as operations } from './operations';
+import { ar as instructor } from './instructor';
 
 export default {
     commerce,
@@ -14,6 +15,7 @@ export default {
     admin,
     curriculum: adminContent.curriculum,
     operations,
+    instructor,
     brand: {
         name: 'أكاديمية الجزيرة',
         tagline: 'نتعلّم اليوم... لنَبني مستقبلًا أفضل',

@@ -4,10 +4,12 @@ namespace Tests\Feature\Api\V1\Me;
 
 use App\AssignmentSubmissionType;
 use App\Models\Assignment;
+use App\Models\AssignmentSubmission;
 use App\Models\AssignmentSubmissionFile;
 use App\Models\Enrollment;
 use App\Models\EnrollmentAccessGrant;
 use App\Models\User;
+use App\Services\AssignmentFileService;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -105,6 +107,30 @@ class AssignmentFileApiTest extends TestCase
 
         $this->assertDatabaseCount('assignment_submission_files', 2);
         $this->assertCount(2, Storage::disk('local')->allFiles());
+    }
+
+    public function test_submission_file_uses_readable_temporary_path_when_realpath_is_unavailable(): void
+    {
+        Storage::fake('local');
+        [$student, $assignment] = $this->accessibleAssignment();
+        $submission = AssignmentSubmission::findOrFail($this->startDraft($assignment));
+        $temporaryFile = UploadedFile::fake()->create('work.pdf', 1, 'application/pdf');
+        $file = new class($temporaryFile->getPathname()) extends UploadedFile
+        {
+            public function __construct(string $path)
+            {
+                parent::__construct($path, 'work.pdf', 'application/pdf', null, true);
+            }
+
+            public function getRealPath(): string|false
+            {
+                return false;
+            }
+        };
+
+        $updated = app(AssignmentFileService::class)->storeSubmissionFiles($student, $submission, [$file]);
+
+        Storage::disk('local')->assertExists($updated->files->firstOrFail()->storage_path);
     }
 
     public function test_student_with_course_access_downloads_assignment_attachment_without_raw_path(): void

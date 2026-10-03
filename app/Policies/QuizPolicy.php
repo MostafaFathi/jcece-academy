@@ -5,6 +5,7 @@ namespace App\Policies;
 use App\Models\Quiz;
 use App\Models\User;
 use App\PermissionName;
+use App\RoleName;
 
 class QuizPolicy
 {
@@ -72,5 +73,12 @@ class QuizPolicy
     public function viewResults(User $user, Quiz $quiz): bool
     {
         return $user->can(PermissionName::AssessmentResultsView->value);
+    }
+
+    public function viewInstructorResults(User $user, Quiz $quiz): bool
+    {
+        return $user->hasRole(RoleName::Instructor->value)
+            && $user->can(PermissionName::AssignmentSubmissionsView->value)
+            && $quiz->course()->where('instructor_id', $user->id)->exists();
     }
 }

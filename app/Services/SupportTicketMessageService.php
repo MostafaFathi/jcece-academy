@@ -12,11 +12,12 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
-use RuntimeException;
 use Throwable;
 
 class SupportTicketMessageService
 {
+    public function __construct(private UploadedFileStorage $uploads) {}
+
     /** @param list<UploadedFile> $attachments */
     public function post(User $actor, SupportTicket $ticket, string $body, bool $internal, array $attachments = [], bool $applyWorkflow = true): SupportTicketMessage
     {
@@ -31,17 +32,7 @@ class SupportTicketMessageService
                 $message = $locked->messages()->create(['user_id' => $actor->id, 'body' => $body, 'is_internal' => $internal]);
                 foreach ($attachments as $file) {
                     $directory = "support-tickets/{$locked->id}/messages/{$message->id}";
-                    $temporaryPath = $file->getPathname();
-                    if (! $file->isValid() || $temporaryPath === '' || ! is_readable($temporaryPath)) {
-                        throw ValidationException::withMessages(['attachments' => 'The uploaded attachment is no longer available. Please select it again.']);
-                    }
-
-                    $path = $file->getRealPath() === false
-                        ? Storage::disk($disk)->putFileAs($directory, $temporaryPath, $file->hashName())
-                        : $file->store($directory, $disk);
-                    if ($path === false) {
-                        throw new RuntimeException('The support attachment could not be stored.');
-                    }
+                    $path = $this->uploads->store($file, $directory, $disk, 'attachments');
                     $paths[] = $path;
                     $message->attachments()->create(['original_filename' => Str::limit(basename(str_replace('\\', '/', $file->getClientOriginalName())), 255, ''), 'storage_disk' => $disk, 'storage_path' => $path, 'mime_type' => $file->getMimeType() ?? 'application/octet-stream', 'file_size' => $file->getSize()]);
                 }

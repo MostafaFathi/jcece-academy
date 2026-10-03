@@ -21,6 +21,7 @@ class LessonController extends Controller
     public function index(CourseSection $section): AnonymousResourceCollection
     {
         Gate::authorize('viewAny', Lesson::class);
+        Gate::authorize('view', $section);
 
         return LessonApiResource::collection($section->lessons()->with('resources')->get());
     }
@@ -43,6 +44,7 @@ class LessonController extends Controller
     public function show(CourseSection $section, Lesson $lesson): LessonApiResource
     {
         Gate::authorize('view', $lesson);
+        abort_unless($lesson->course_section_id === $section->id, 404);
 
         return new LessonApiResource($lesson->load('resources'));
     }

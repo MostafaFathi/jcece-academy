@@ -9,7 +9,6 @@ const AdminLayout = () => import('../layouts/AdminLayout.vue');
 const InstructorLayout = () => import('../layouts/InstructorLayout.vue');
 const SalesSupportLayout = () => import('../layouts/SalesSupportLayout.vue');
 const DashboardPage = () => import('../pages/DashboardPage.vue');
-const UpcomingPage = () => import('../pages/UpcomingPage.vue');
 
 export const routes = [
     {
@@ -97,8 +96,13 @@ export const routes = [
         component: InstructorLayout,
         meta: { requiresAuth: true, roles: ['instructor'] },
         children: [
-            { path: '', name: 'instructor.dashboard', component: DashboardPage, meta: { requiresAuth: true, roles: ['instructor'], title: 'pages.instructor' } },
-            { path: 'assignments', name: 'instructor.assignments', component: UpcomingPage, props: { titleKey: 'nav.assignments' }, meta: { requiresAuth: true, roles: ['instructor'], permissions: ['assignment_submissions.view'], title: 'nav.assignments' } },
+            { path: '', name: 'instructor.dashboard', component: () => import('../pages/InstructorDashboardPage.vue'), meta: { requiresAuth: true, roles: ['instructor'], permissions: ['courses.view'], title: 'instructor.dashboard' } },
+            { path: 'courses', name: 'instructor.courses.index', component: () => import('../pages/InstructorCoursesPage.vue'), meta: { requiresAuth: true, roles: ['instructor'], permissions: ['courses.view'], title: 'instructor.myCourses' } },
+            { path: 'courses/:courseId', name: 'instructor.courses.show', component: () => import('../pages/InstructorCoursePage.vue'), meta: { requiresAuth: true, roles: ['instructor'], permissions: ['courses.view'], title: 'instructor.courseWorkspace' } },
+            { path: 'courses/:courseId/quizzes/:quizId', name: 'instructor.quizzes.show', component: () => import('../pages/InstructorQuizPage.vue'), meta: { requiresAuth: true, roles: ['instructor'], permissions: ['courses.view', 'assignment_submissions.view'], title: 'instructor.results' } },
+            { path: 'courses/:courseId/quizzes/:quizId/attempts/:attemptId', name: 'instructor.quizzes.attempts.show', component: () => import('../pages/InstructorQuizPage.vue'), meta: { requiresAuth: true, roles: ['instructor'], permissions: ['courses.view', 'assignment_submissions.view'], title: 'instructor.attempt' } },
+            { path: 'courses/:courseId/assignments/:assignmentId', name: 'instructor.assignments.show', component: () => import('../pages/InstructorAssignmentPage.vue'), meta: { requiresAuth: true, roles: ['instructor'], permissions: ['courses.view', 'assignment_submissions.view'], title: 'instructor.assignments' } },
+            { path: 'courses/:courseId/assignments/:assignmentId/submissions/:submissionId', name: 'instructor.submissions.show', component: () => import('../pages/InstructorSubmissionPage.vue'), meta: { requiresAuth: true, roles: ['instructor'], permissions: ['courses.view', 'assignment_submissions.view'], title: 'instructor.submissions' } },
         ],
     },
     {

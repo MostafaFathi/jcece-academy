@@ -28,7 +28,8 @@ class CoursePolicy
      */
     public function view(User $user, Course $course): bool
     {
-        return $user->can(PermissionName::CoursesView->value);
+        return $user->can(PermissionName::CoursesView->value)
+            && (! $this->isInstructorOnly($user) || $course->instructor_id === $user->id);
     }
 
     /**

@@ -54,6 +54,7 @@ use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\CertificateVerificationController;
 use App\Http\Controllers\Api\V1\CourseController;
 use App\Http\Controllers\Api\V1\CourseReviewController;
+use App\Http\Controllers\Api\V1\Instructor\WorkspaceController as InstructorWorkspaceController;
 use App\Http\Controllers\Api\V1\Me\AssignmentAttachmentDownloadController as MeAssignmentAttachmentDownloadController;
 use App\Http\Controllers\Api\V1\Me\AssignmentController as MeAssignmentController;
 use App\Http\Controllers\Api\V1\Me\AssignmentSubmissionController;
@@ -156,6 +157,21 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             Route::post('courses/{course:slug}/lessons/{lesson}/complete', [LessonProgressController::class, 'complete'])->name('courses.lessons.complete');
             Route::get('courses/{course:slug}/lessons/{lesson}/resources/{resource}/download', LessonResourceDownloadController::class)->name('courses.lessons.resources.download');
         });
+    });
+
+    Route::middleware('auth:sanctum')->prefix('instructor')->name('instructor.')->group(function (): void {
+        Route::get('dashboard-summary', [InstructorWorkspaceController::class, 'summary'])->name('dashboard-summary.show');
+        Route::get('courses', [InstructorWorkspaceController::class, 'courses'])->name('courses.index');
+        Route::get('courses/{course}', [InstructorWorkspaceController::class, 'course'])->name('courses.show');
+        Route::get('courses/{course}/curriculum', [InstructorWorkspaceController::class, 'curriculum'])->name('courses.curriculum.index');
+        Route::get('courses/{course}/quizzes', [InstructorWorkspaceController::class, 'quizzes'])->name('courses.quizzes.index');
+        Route::get('courses/{course}/quizzes/{quiz}', [InstructorWorkspaceController::class, 'quiz'])->name('courses.quizzes.show');
+        Route::get('courses/{course}/quizzes/{quiz}/attempts', [InstructorWorkspaceController::class, 'quizAttempts'])->name('courses.quizzes.attempts.index');
+        Route::get('courses/{course}/quizzes/{quiz}/attempts/{attempt}', [InstructorWorkspaceController::class, 'quizAttempt'])->name('courses.quizzes.attempts.show');
+        Route::get('courses/{course}/assignments', [InstructorWorkspaceController::class, 'assignments'])->name('courses.assignments.index');
+        Route::get('courses/{course}/assignments/{assignment}', [InstructorWorkspaceController::class, 'assignment'])->name('courses.assignments.show');
+        Route::get('courses/{course}/assignments/{assignment}/submissions', [InstructorWorkspaceController::class, 'submissions'])->name('courses.assignments.submissions.index');
+        Route::get('courses/{course}/assignments/{assignment}/submissions/{submission}', [InstructorWorkspaceController::class, 'submission'])->name('courses.assignments.submissions.show');
     });
 
     Route::middleware('auth:sanctum')->prefix('admin')->name('admin.')->group(function (): void {

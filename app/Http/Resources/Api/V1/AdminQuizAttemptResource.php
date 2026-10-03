@@ -19,6 +19,7 @@ class AdminQuizAttemptResource extends JsonResource
             'quiz_id' => $this->quiz_id,
             'enrollment_id' => $this->enrollment_id,
             'user_id' => $this->user_id,
+            'student' => new UserSummaryResource($this->whenLoaded('user')),
             'attempt_number' => $this->attempt_number,
             'status' => $this->status->value,
             'passing_score' => $this->passing_score,

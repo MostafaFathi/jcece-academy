@@ -21,6 +21,7 @@ class QuizAttemptController extends Controller
     public function show(Quiz $quiz, QuizAttempt $attempt): AdminQuizAttemptResource
     {
         Gate::authorize('viewResults', $quiz);
+        abort_unless($attempt->quiz_id === $quiz->id, 404);
 
         return new AdminQuizAttemptResource($attempt->load(['questions.options', 'questions.answer']));
     }

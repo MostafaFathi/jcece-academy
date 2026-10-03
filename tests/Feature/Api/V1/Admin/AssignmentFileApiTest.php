@@ -6,10 +6,12 @@ use App\Models\Assignment;
 use App\Models\AssignmentAttachment;
 use App\Models\User;
 use App\RoleName;
+use App\Services\AssignmentFileService;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -60,6 +62,49 @@ class AssignmentFileApiTest extends TestCase
         $this->post("/api/v1/admin/assignments/{$assignment->id}/attachments", [
             'file' => UploadedFile::fake()->create('brief.pdf', 10, 'application/pdf'),
         ], ['Accept' => 'application/json'])->assertForbidden();
+
+        $this->assertDatabaseCount('assignment_attachments', 0);
+    }
+
+    public function test_attachment_uses_readable_temporary_path_when_realpath_is_unavailable(): void
+    {
+        Storage::fake('local');
+        config()->set('jcec.assignments.file_disk', 'local');
+        $assignment = Assignment::factory()->create();
+        $temporaryFile = UploadedFile::fake()->create('guide.pdf', 1, 'application/pdf');
+        $file = new class($temporaryFile->getPathname()) extends UploadedFile
+        {
+            public function __construct(string $path)
+            {
+                parent::__construct($path, 'guide.pdf', 'application/pdf', null, true);
+            }
+
+            public function getRealPath(): string|false
+            {
+                return false;
+            }
+        };
+
+        $attachment = app(AssignmentFileService::class)->storeAttachment($assignment, $file);
+
+        Storage::disk('local')->assertExists($attachment->storage_path);
+    }
+
+    public function test_missing_temporary_attachment_does_not_create_database_record(): void
+    {
+        Storage::fake('local');
+        config()->set('jcec.assignments.file_disk', 'local');
+        $assignment = Assignment::factory()->create();
+        Storage::disk('local')->put('disappeared.pdf', 'content');
+        $file = new UploadedFile(Storage::disk('local')->path('disappeared.pdf'), 'disappeared.pdf', 'application/pdf', null, true);
+        Storage::disk('local')->delete('disappeared.pdf');
+
+        try {
+            app(AssignmentFileService::class)->storeAttachment($assignment, $file);
+            $this->fail('An unavailable upload must be rejected.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('file', $exception->errors());
+        }
 
         $this->assertDatabaseCount('assignment_attachments', 0);
     }

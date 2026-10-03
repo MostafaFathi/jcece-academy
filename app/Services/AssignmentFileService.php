@@ -12,7 +12,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
-use RuntimeException;
 use Throwable;
 
 class AssignmentFileService
@@ -20,6 +19,7 @@ class AssignmentFileService
     public function __construct(
         private AssignmentSubmissionService $submissions,
         private AssignmentAccessService $access,
+        private UploadedFileStorage $uploads,
     ) {}
 
     public function storeAttachment(Assignment $assignment, UploadedFile $file): AssignmentAttachment
@@ -30,11 +30,7 @@ class AssignmentFileService
         try {
             return DB::transaction(function () use ($assignment, $file, $disk, &$path): AssignmentAttachment {
                 $lockedAssignment = Assignment::query()->lockForUpdate()->findOrFail($assignment->id);
-                $path = $file->store("assignment-attachments/{$lockedAssignment->id}", $disk);
-
-                if ($path === false) {
-                    throw new RuntimeException('The assignment attachment could not be stored.');
-                }
+                $path = $this->uploads->store($file, "assignment-attachments/{$lockedAssignment->id}", $disk, 'file');
 
                 return $lockedAssignment->attachments()->create($this->fileAttributes($file, $disk, $path));
             });
@@ -66,11 +62,7 @@ class AssignmentFileService
                 }
 
                 foreach ($files as $file) {
-                    $path = $file->store("assignment-submissions/{$lockedSubmission->id}", $disk);
-
-                    if ($path === false) {
-                        throw new RuntimeException('A submission file could not be stored.');
-                    }
+                    $path = $this->uploads->store($file, "assignment-submissions/{$lockedSubmission->id}", $disk, 'files');
 
                     $storedPaths[] = $path;
                     $lockedSubmission->files()->create($this->fileAttributes($file, $disk, $path));

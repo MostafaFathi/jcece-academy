@@ -48,6 +48,10 @@ export function createAccessGuard(auth) {
             return { name: 'login', query: { redirect: to.fullPath } };
         }
 
+        if (to.path?.startsWith('/admin') && auth.hasRole?.('instructor') && !auth.hasAnyRole(['admin', 'content_manager'])) {
+            return { name: 'forbidden' };
+        }
+
         if (auth.isAuthenticated && !canAccessRoute(auth, to.meta)) {
             return { name: 'forbidden' };
         }

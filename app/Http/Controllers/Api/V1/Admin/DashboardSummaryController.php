@@ -21,6 +21,11 @@ class DashboardSummaryController extends Controller
     public function __invoke(Request $request): JsonResponse
     {
         $actor = $request->user();
+        abort_if(
+            $actor->hasRole(RoleName::Instructor->value)
+                && ! $actor->hasAnyRole([RoleName::Admin->value, RoleName::ContentManager->value]),
+            403,
+        );
         $canViewCategories = $actor->can(PermissionName::CategoriesView->value);
         $canViewCourses = $actor->can(PermissionName::CoursesView->value);
         $canViewUsers = $actor->can(PermissionName::UsersView->value);

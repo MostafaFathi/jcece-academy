@@ -21,8 +21,8 @@ export const navigationByArea = {
         { label: 'operations.support', route: 'admin.tickets.index', permissions: ['support_tickets.view'] },
     ],
     instructor: [
-        { label: 'nav.overview', route: 'instructor.dashboard' },
-        { label: 'nav.assignments', route: 'instructor.assignments', permissions: ['assignment_submissions.view'] },
+        { label: 'instructor.dashboard', route: 'instructor.dashboard', permissions: ['courses.view'] },
+        { label: 'instructor.myCourses', route: 'instructor.courses.index', permissions: ['courses.view'] },
     ],
     support: [
         { label: 'nav.overview', route: 'support.dashboard' },

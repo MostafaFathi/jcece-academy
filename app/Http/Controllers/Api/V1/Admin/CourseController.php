@@ -9,6 +9,7 @@ use App\Http\Requests\Api\V1\Admin\UpdateCourseRequest;
 use App\Http\Requests\Api\V1\ListCoursesRequest;
 use App\Http\Resources\Api\V1\CourseResource;
 use App\Models\Course;
+use App\RoleName;
 use App\Services\CourseService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -28,6 +29,11 @@ class CourseController extends Controller
         $filters = $request->validated();
         $courses = Course::query()
             ->with(['category', 'instructor'])
+            ->when(
+                $request->user()->hasRole(RoleName::Instructor->value)
+                    && ! $request->user()->hasAnyRole([RoleName::Admin->value, RoleName::ContentManager->value]),
+                fn (Builder $query) => $query->where('instructor_id', $request->user()->id),
+            )
             ->when($filters['search'] ?? null, fn (Builder $query, string $search) => $query->where(function (Builder $query) use ($search): void {
                 $query->where('title', 'like', "%{$search}%")
                     ->orWhere('short_description', 'like', "%{$search}%");

@@ -24,6 +24,7 @@ class AssignmentSubmissionController extends Controller
     public function show(Assignment $assignment, AssignmentSubmission $submission): AdminAssignmentSubmissionResource
     {
         Gate::authorize('review', $submission);
+        abort_unless($submission->assignment_id === $assignment->id, 404);
 
         return new AdminAssignmentSubmissionResource($submission->load(['assignment.course', 'user', 'files', 'grader', 'gradingEvents.reviewer']));
     }
