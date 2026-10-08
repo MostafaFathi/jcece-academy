@@ -1,1 +1,0 @@
-import{F as e,T as t}from"./app-DEMO2_Wb.js";import{t as n}from"./AppShellLayout-DMsJpHqX.js";var r={__name:`AdminLayout`,setup(r){return(r,i)=>(e(),t(n,{area:`admin`}))}};export{r as default};

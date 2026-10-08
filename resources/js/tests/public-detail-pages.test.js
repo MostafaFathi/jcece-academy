@@ -55,6 +55,7 @@ describe('public detail pages', () => {
         expect(wrapper.text()).toContain('Career Path');
         expect(wrapper.text()).toContain('Core Course');
         expect(wrapper.text()).toContain('Package access for 180 days');
+        expect(wrapper.find('article .relative').classes()).toContain('w-full');
     });
 
     it('renders a not-found state for a missing package', async () => {

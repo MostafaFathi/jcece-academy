@@ -11,7 +11,6 @@ import EmptyState from '../components/ui/EmptyState.vue';
 import CatalogSkeleton from '../components/public/CatalogSkeleton.vue';
 import CategoryCard from '../components/public/CategoryCard.vue';
 import CourseCard from '../components/public/CourseCard.vue';
-import MediaFrame from '../components/public/MediaFrame.vue';
 import PackageCard from '../components/public/PackageCard.vue';
 import SectionHeading from '../components/public/SectionHeading.vue';
 import ReviewCard from '../components/public/ReviewCard.vue';
@@ -27,7 +26,6 @@ const testimonials = ref([]);
 const loading = ref({ categories: true, courses: true, packages: true, instructors: true, testimonials: true });
 const errors = ref({ categories: null, courses: null, packages: null, instructors: null, testimonials: null });
 const startupFailed = computed(() => route.query.startup === 'failed');
-const spotlightCourse = computed(() => courses.value[0] ?? null);
 
 usePageMeta(() => t('common.home'), () => t('brand.description'));
 
@@ -73,13 +71,28 @@ onMounted(loadHomepage);
                     <p class="mt-7 max-w-2xl text-base leading-8 text-white/70 sm:text-xl">{{ t('home.heroDescription') }}</p>
                     <div class="mt-9 flex flex-wrap gap-3"><RouterLink :to="{ name: 'courses.index' }" class="inline-flex min-h-13 items-center gap-3 rounded-2xl bg-accent px-6 py-3 font-black text-brand-dark shadow-xl shadow-black/20 transition hover:-translate-y-1 hover:bg-yellow-300 focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-white">{{ t('home.browseCourses') }} <span aria-hidden="true">{{ locale === 'ar' ? '←' : '→' }}</span></RouterLink><RouterLink :to="{ name: 'packages.index' }" class="inline-flex min-h-13 items-center rounded-2xl border border-white/20 bg-white/10 px-6 py-3 font-black text-white backdrop-blur transition hover:-translate-y-1 hover:bg-white/15 focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-accent">{{ t('home.browsePackages') }}</RouterLink></div>
                 </div>
-                <div class="relative mx-auto w-full max-w-xl"><div class="absolute -inset-6 rounded-[2.5rem] bg-accent/15 blur-3xl" /><div class="relative rotate-1 overflow-hidden rounded-[2rem] border border-white/15 bg-white/10 p-3 shadow-2xl backdrop-blur-xl"><div v-if="spotlightCourse" class="overflow-hidden rounded-[1.5rem] bg-white text-slate-950"><MediaFrame :src="spotlightCourse.thumbnail" :alt="spotlightCourse.title" /><div class="p-6"><p class="text-xs font-black tracking-wider text-brand uppercase">{{ t('home.recentEyebrow') }}</p><h2 class="mt-2 text-2xl font-black">{{ spotlightCourse.title }}</h2><p v-if="spotlightCourse.short_description" class="mt-3 line-clamp-2 text-sm leading-6 text-slate-600">{{ spotlightCourse.short_description }}</p><RouterLink :to="{ name: 'courses.show', params: { slug: spotlightCourse.slug } }" class="mt-5 inline-flex items-center gap-2 text-sm font-black text-brand">{{ t('common.viewDetails') }} <span aria-hidden="true">{{ locale === 'ar' ? '←' : '→' }}</span></RouterLink></div></div><div v-else class="grid aspect-[4/3] place-items-center rounded-[1.5rem] bg-white"><img :src="'/assets/images/logo-1.png'" alt="JCEC Academy" class="max-h-80 w-full object-contain p-8"></div></div><div class="absolute -bottom-8 -start-8 hidden rounded-2xl border border-white/15 bg-slate-950/80 p-4 text-white shadow-xl backdrop-blur sm:block"><p class="text-xs text-white/55">JCEC ACADEMY</p><strong class="mt-1 block text-sm text-accent">LEARN · BUILD · LEAD</strong></div></div>
+                <div class="relative mx-auto w-full max-w-xl">
+                    <div class="absolute -inset-6 rounded-[2.5rem] bg-accent/15 blur-3xl" />
+                    <div class="relative overflow-hidden rounded-[2rem] border border-white/15 bg-white/10 p-2 shadow-2xl backdrop-blur-xl">
+                        <img :src="'/assets/images/slider-image.png'" alt="" width="1452" height="1083" fetchpriority="high" class="aspect-[4/3] w-full rounded-[1.5rem] object-cover">
+                    </div>
+                </div>
             </div>
         </section>
 
         <section class="bg-white py-20 sm:py-24"><div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"><div class="flex flex-wrap items-end justify-between gap-6"><SectionHeading :eyebrow="t('home.recentEyebrow')" :title="t('home.recentTitle')" :description="t('home.recentDescription')" /><RouterLink :to="{ name: 'courses.index' }" class="rounded-xl px-4 py-2 text-sm font-black text-brand hover:bg-brand-soft">{{ t('common.viewAll') }} <span aria-hidden="true">{{ locale === 'ar' ? '←' : '→' }}</span></RouterLink></div><BaseAlert v-if="errors.courses" tone="danger" class="mt-8">{{ t('catalog.loadError') }} <button type="button" class="font-black underline" @click="loadSection('courses', () => fetchCourses({ sort: 'latest', per_page: 6 }))">{{ t('common.retry') }}</button></BaseAlert><div v-if="loading.courses" class="mt-10 grid gap-6 md:grid-cols-2 xl:grid-cols-3"><CatalogSkeleton v-for="index in 3" :key="index" /></div><div v-else-if="courses.length" class="mt-10 grid gap-6 md:grid-cols-2 xl:grid-cols-3"><CourseCard v-for="course in courses" :key="course.id" :course="course" /></div><EmptyState v-else-if="!errors.courses" class="mt-10" :title="t('home.emptyCourses')" /></div></section>
 
-        <section class="border-y border-slate-200 bg-slate-50 py-20 sm:py-24"><div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"><SectionHeading :eyebrow="t('home.categoriesEyebrow')" :title="t('home.categoriesTitle')" :description="t('home.categoriesDescription')" centered /><BaseAlert v-if="errors.categories" tone="danger" class="mt-8">{{ t('catalog.loadError') }} <button type="button" class="font-black underline" @click="loadSection('categories', fetchCategories)">{{ t('common.retry') }}</button></BaseAlert><div v-if="loading.categories" class="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4"><div v-for="index in 4" :key="index" class="h-44 animate-pulse rounded-3xl bg-slate-200" /></div><div v-else-if="categories.length" class="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4"><CategoryCard v-for="category in categories.slice(0, 8)" :key="category.id" :category="category" /></div><EmptyState v-else-if="!errors.categories" class="mt-10" :title="t('home.emptyCategories')" /></div></section>
+        <section class="border-y border-slate-200 bg-slate-50 py-20 sm:py-24">
+            <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                <SectionHeading :eyebrow="t('home.categoriesEyebrow')" :title="t('home.categoriesTitle')" :description="t('home.categoriesDescription')" centered />
+                <BaseAlert v-if="errors.categories" tone="danger" class="mt-8">{{ t('catalog.loadError') }} <button type="button" class="font-black underline" @click="loadSection('categories', fetchCategories)">{{ t('common.retry') }}</button></BaseAlert>
+                <div v-if="loading.categories" class="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4"><div v-for="index in 4" :key="index" class="h-44 animate-pulse rounded-3xl bg-slate-200" /></div>
+                <div v-else-if="categories.length" class="mt-10 flex flex-wrap justify-center gap-5">
+                    <CategoryCard v-for="category in categories.slice(0, 8)" :key="category.id" :category="category" class="w-full sm:w-[calc((100%-1.25rem)/2)] lg:w-[calc((100%-3.75rem)/4)]" />
+                </div>
+                <EmptyState v-else-if="!errors.categories" class="mt-10" :title="t('home.emptyCategories')" />
+            </div>
+        </section>
 
         <section v-if="loading.packages || packages.length || errors.packages" class="bg-white py-20 sm:py-24"><div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"><div class="flex flex-wrap items-end justify-between gap-6"><SectionHeading :eyebrow="t('home.packagesEyebrow')" :title="t('home.packagesTitle')" :description="t('home.packagesDescription')" /><RouterLink :to="{ name: 'packages.index' }" class="rounded-xl px-4 py-2 text-sm font-black text-brand hover:bg-brand-soft">{{ t('common.viewAll') }} <span aria-hidden="true">{{ locale === 'ar' ? '←' : '→' }}</span></RouterLink></div><BaseAlert v-if="errors.packages" tone="danger" class="mt-8">{{ t('catalog.loadError') }} <button type="button" class="font-black underline" @click="loadSection('packages', () => fetchPackages({ sort: 'latest', per_page: 3 }))">{{ t('common.retry') }}</button></BaseAlert><div v-if="loading.packages" class="mt-10 grid gap-6 md:grid-cols-2 xl:grid-cols-3"><CatalogSkeleton v-for="index in 3" :key="index" /></div><div v-else-if="packages.length" class="mt-10 grid gap-6 md:grid-cols-2 xl:grid-cols-3"><PackageCard v-for="packageItem in packages" :key="packageItem.id" :package-item="packageItem" /></div></div></section>
 

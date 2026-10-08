@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushPromises, mount } from '@vue/test-utils';
 import { createPinia } from 'pinia';
 import HomePage from '../pages/HomePage.vue';
+import CategoryCard from '../components/public/CategoryCard.vue';
 import i18n, { setLocale } from '../i18n';
 import { fetchCategories } from '../api/categories';
 import { fetchCourses } from '../api/courses';
@@ -33,12 +34,16 @@ describe('homepage', () => {
         expect(wrapper.text()).toContain('الهندسة');
         expect(wrapper.text()).toContain('مسار BIM');
         expect(fetchCourses).toHaveBeenCalledWith({ sort: 'latest', per_page: 6 });
+        const categoryCard = wrapper.findComponent(CategoryCard);
+        expect(categoryCard.element.parentElement.classList.contains('justify-center')).toBe(true);
+        expect(categoryCard.classes()).toContain('w-full');
     });
 
     it('keeps successful sections when one request fails', async () => {
         fetchCourses.mockRejectedValue(new Error('offline'));
         const wrapper = mountPage();
         await flushPromises();
+        expect(wrapper.find('img[src="/assets/images/slider-image.png"]').exists()).toBe(true);
         expect(wrapper.text()).toContain('الهندسة');
         expect(wrapper.text()).toContain('مسار BIM');
         expect(wrapper.text()).toContain('تعذر تحميل المحتوى الآن');
