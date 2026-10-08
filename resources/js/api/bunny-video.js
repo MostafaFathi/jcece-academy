@@ -1,6 +1,11 @@
 import { api } from './client';
 
-const chunkSize = 8 * 1024 * 1024;
+const chunkSize = 2 * 1024 * 1024;
+
+function withTimeout(signal, milliseconds) {
+    const timeout = AbortSignal.timeout(milliseconds);
+    return signal ? AbortSignal.any([signal, timeout]) : timeout;
+}
 
 export function videoUploadPath(lessonId) {
     return `/api/v1/admin/lessons/${encodeURIComponent(lessonId)}/video-uploads`;
@@ -28,7 +33,7 @@ function tusHeaders(authorization) {
 }
 
 async function offsetAt(url, authorization, signal) {
-    const response = await fetch(url, { method: 'HEAD', headers: tusHeaders(authorization), signal, credentials: 'omit' });
+    const response = await fetch(url, { method: 'HEAD', headers: tusHeaders(authorization), signal: withTimeout(signal, 20000), credentials: 'omit' });
     if (response.status === 404 || response.status === 410) return null;
     if (!response.ok) throw new Error('Unable to resume video upload');
     const offset = Number(response.headers.get('Upload-Offset'));
@@ -49,7 +54,7 @@ export async function uploadBunnyVideo(file, authorization, { resumeUrl = null, 
                 'Upload-Length': String(file.size),
                 'Upload-Metadata': `filetype ${metadata(file.type)},title ${metadata(file.name)}`,
             },
-            signal,
+            signal: withTimeout(signal, 20000),
             credentials: 'omit',
         });
         if (response.status !== 201) throw new Error('Unable to start video upload');
@@ -72,7 +77,7 @@ export async function uploadBunnyVideo(file, authorization, { resumeUrl = null, 
                     method: 'PATCH',
                     headers: { ...tusHeaders(authorization), 'Content-Type': 'application/offset+octet-stream', 'Upload-Offset': String(offset) },
                     body: file.slice(offset, Math.min(offset + chunkSize, file.size)),
-                    signal,
+                    signal: withTimeout(signal, 120000),
                     credentials: 'omit',
                 });
                 if (response.status === 204) {
@@ -101,17 +106,17 @@ export async function uploadBunnyVideo(file, authorization, { resumeUrl = null, 
 }
 
 export async function createVideoUpload(lessonId, payload) {
-    const response = await api.post(videoUploadPath(lessonId), payload);
+    const response = await api.post(videoUploadPath(lessonId), payload, { timeout: 20000 });
     return response.data.data;
 }
 
 export async function getVideoUpload(lessonId, uploadId = null) {
-    const response = await api.get(`${videoUploadPath(lessonId)}${uploadId ? `/${uploadId}` : ''}`);
+    const response = await api.get(`${videoUploadPath(lessonId)}${uploadId ? `/${uploadId}` : ''}`, { timeout: 20000 });
     return response.data.data;
 }
 
 export async function getVideoUploadOverview(lessonId) {
-    const response = await api.get(videoUploadPath(lessonId));
+    const response = await api.get(videoUploadPath(lessonId), { timeout: 20000 });
     return { upload: response.data.data, settings: response.data.meta };
 }
 

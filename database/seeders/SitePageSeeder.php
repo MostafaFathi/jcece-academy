@@ -15,5 +15,9 @@ class SitePageSeeder extends Seeder
         foreach (SitePage::SLUGS as $slug) {
             SitePage::query()->firstOrCreate(['slug' => $slug]);
         }
+
+        SitePage::query()->where('slug', 'about')->whereNull('published_at')->update([
+            'draft_ar' => 'أكاديمية الجزيرة للتدريب المهني منصة للتعلّم وتطوير المهارات. تصفح الدورات والباقات، واختر المسار المناسب لك. هذه صياغة تجريبية تحتاج اعتماد فريق المحتوى قبل النشر.',
+        ]);
     }
 }

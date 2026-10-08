@@ -2,6 +2,7 @@ import { computed, ref, watch } from 'vue';
 import { defineStore } from 'pinia';
 import * as commerce from '../api/commerce';
 import { useAuthStore } from './auth';
+import { createRequestId } from '../utils/request-id';
 
 const intentStorageKey = 'jcec.checkout-intent';
 function storedIntent() { try { return sessionStorage.getItem(intentStorageKey); } catch { return null; } }
@@ -95,7 +96,7 @@ export const useCartStore = defineStore('cart', () => {
         error.value = null;
         const currentGeneration = generation;
         try {
-            if (!checkoutKey.value) { checkoutKey.value = crypto.randomUUID(); saveIntent(checkoutKey.value); }
+            if (!checkoutKey.value) { checkoutKey.value = createRequestId(); saveIntent(checkoutKey.value); }
             submittedPayload ??= { ...customer, idempotency_key: checkoutKey.value, expected_total: cart.value?.estimated_total, expected_coupon_code: cart.value?.coupon_code ?? null };
             intentCustomer.value = { ...submittedPayload };
             const order = await commerce.checkout(submittedPayload);

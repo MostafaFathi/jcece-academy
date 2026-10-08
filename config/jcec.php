@@ -16,7 +16,7 @@ return [
         'max_upload_megabytes' => (int) env('BUNNY_STREAM_MAX_UPLOAD_MEGABYTES', 2048),
     ],
     'commerce' => [
-        'currency' => env('JCEC_COMMERCE_CURRENCY'),
+        'currency' => env('JCEC_COMMERCE_CURRENCY', 'ILS'),
         'payment_proof_disk' => env('JCEC_PAYMENT_PROOF_DISK', 'local'),
         'payment_proof_max_kilobytes' => (int) env('JCEC_PAYMENT_PROOF_MAX_KILOBYTES', 5120),
     ],

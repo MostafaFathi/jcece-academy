@@ -18,7 +18,7 @@ const sections = [
     { id: 11, title: 'Introduction', description: 'Start here', is_active: true, lessons: [lesson] },
     { id: 12, title: 'Practice', description: null, is_active: false, lessons: [] },
 ];
-function render(component, props = {}) { return mount(component, { props, global: { plugins: [i18n], stubs: { RouterLink: { props: ['to'], template: '<a><slot /></a>' } } } }); }
+function render(component, props = {}, stubs = {}) { return mount(component, { props, global: { plugins: [i18n], stubs: { RouterLink: { props: ['to'], template: '<a><slot /></a>' }, ...stubs } } }); }
 function deferred() { let resolve; const promise = new Promise((done) => { resolve = done; }); return { promise, resolve }; }
 beforeEach(() => {
     vi.resetAllMocks(); setLocale('en'); state.permissions = ['courses.view', 'courses.update', 'curriculum.view', 'curriculum.create', 'curriculum.update', 'curriculum.delete']; state.roles = ['admin']; state.user = { id: 8 }; state.route = { params: { id: 7 } };
@@ -96,6 +96,26 @@ describe('curriculum builder', () => {
         await lessonCard().findAll('button').find((button) => button.text() === 'Delete').trigger('click'); await flushPromises();
         expect(curriculum.deleteLesson).toHaveBeenCalledWith(11, 21); wrapper.unmount();
     });
+    it('shows protected video upload immediately after creating a video lesson', async () => {
+        curriculum.createLesson.mockResolvedValue({ id: 40, title: 'Video lesson', slug: 'video-lesson', type: 'video', is_preview: false, is_published: false });
+        const wrapper = render(AdminCurriculumPage, {}, { LessonVideoUploader: { props: ['lesson', 'initialFile'], template: '<div data-test="video-uploader">{{ lesson.id }} · {{ initialFile?.name }}</div>' } });
+        await flushPromises();
+        await wrapper.findAll('button').find((button) => button.text() === 'Add lesson').trigger('click');
+        await wrapper.get('#lesson-title').setValue('Video lesson');
+        await wrapper.get('#lesson-slug').setValue('video-lesson');
+        await wrapper.get('#lesson-type').setValue('video');
+        expect(wrapper.get('#lesson-video-file-new').exists()).toBe(true);
+        const file = new File(['video data'], 'lesson.mp4', { type: 'video/mp4' });
+        Object.defineProperty(wrapper.get('#lesson-video-file-new').element, 'files', { configurable: true, value: [file] });
+        await wrapper.get('#lesson-video-file-new').trigger('change');
+        expect(wrapper.text()).toContain('Create and upload video');
+        await wrapper.get('#lesson-title').element.closest('form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+        await flushPromises();
+        expect(curriculum.createLesson).toHaveBeenCalledWith(11, expect.objectContaining({ type: 'video', is_preview: false, is_published: false }));
+        expect(wrapper.get('[data-test="video-uploader"]').text()).toBe('40 · lesson.mp4');
+        expect(wrapper.get('#lesson-title').element.value).toBe('Video lesson');
+        wrapper.unmount();
+    });
     it('is read-only without mutation permissions and respects Arabic direction', async () => {
         state.permissions = ['courses.view', 'curriculum.view']; state.roles = ['instructor']; setLocale('ar');
         const wrapper = render(AdminCurriculumPage); await flushPromises();
@@ -105,10 +125,27 @@ describe('curriculum builder', () => {
 });
 
 describe('lesson editor and resources', () => {
+    it('keeps protected lessons unpublished until video is ready and preserves provider duration', async () => {
+        const protectedLesson = { id: 40, title: 'Video lesson', slug: 'video-lesson', type: 'video', duration_seconds: null, is_preview: false, is_published: false };
+        const wrapper = render(AdminLessonEditor, { lesson: protectedLesson }, {
+            LessonVideoUploader: { props: ['lesson'], emits: ['status-change'], template: '<button type="button" data-test="ready" @click="$emit(\'status-change\', \'ready\')">Ready</button>' },
+        });
+        const published = wrapper.findAll('input[type="checkbox"]')[0];
+        expect(published.element.disabled).toBe(true);
+        expect(wrapper.text()).toContain('You can publish this lesson after video processing is complete.');
+        await wrapper.get('[data-test="ready"]').trigger('click');
+        expect(published.element.disabled).toBe(false);
+        await published.setValue(true);
+        await wrapper.get('form').trigger('submit');
+        expect(wrapper.emitted('save')[0][0].is_published).toBe(true);
+        expect(wrapper.emitted('save')[0][0]).not.toHaveProperty('duration_seconds');
+        wrapper.unmount();
+    });
+
     it('shows only fields for the selected type and submits preview state', async () => {
         const wrapper = render(AdminLessonEditor); await wrapper.get('#lesson-title').setValue('Video'); await wrapper.get('#lesson-slug').setValue('video');
         await wrapper.get('#lesson-type').setValue('video'); expect(wrapper.find('#video-id').exists()).toBe(false); expect(wrapper.find('#lesson-content').exists()).toBe(false);
-        expect(wrapper.text()).toContain('Save this lesson first');
+        expect(wrapper.get('#lesson-video-file-new').exists()).toBe(true);
         expect(wrapper.find('#protected-asset-key').exists()).toBe(false);
         await wrapper.findAll('input[type="checkbox"]').at(1).setValue(true);
         expect(wrapper.find('#protected-asset-key').exists()).toBe(false);

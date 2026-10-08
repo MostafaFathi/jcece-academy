@@ -71,9 +71,18 @@ async function saveLesson(payload) {
     if (busy.value || !lessonEditor.value) return;
     busy.value = true; editError.value = null;
     try {
-        if (lessonEditor.value.lesson) await updateLesson(lessonEditor.value.sectionId, lessonEditor.value.lesson.id, payload);
-        else await createLesson(lessonEditor.value.sectionId, payload);
-        lessonEditor.value = null; await refreshSections();
+        const sectionId = lessonEditor.value.sectionId;
+        const existingLesson = lessonEditor.value.lesson;
+        const savedLesson = existingLesson
+            ? await updateLesson(sectionId, existingLesson.id, payload)
+            : await createLesson(sectionId, payload);
+        const keepVideoEditorOpen = !existingLesson && payload.type === 'video' && !payload.is_preview && savedLesson?.id;
+        lessonEditor.value = keepVideoEditorOpen ? { sectionId, lesson: savedLesson } : null;
+        await refreshSections();
+        if (keepVideoEditorOpen) {
+            const refreshedLesson = sections.value.find((section) => section.id === sectionId)?.lessons?.find((lesson) => lesson.id === savedLesson.id);
+            if (refreshedLesson) lessonEditor.value = { sectionId, lesson: refreshedLesson };
+        }
     } catch (failure) { editError.value = failure; }
     finally { busy.value = false; }
 }
