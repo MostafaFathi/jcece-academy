@@ -1,1 +1,0 @@
-import{F as e,T as t}from"./app-uDH475I5.js";import{t as n}from"./AppShellLayout-Vf-LmrJ-.js";var r={__name:`SalesSupportLayout`,setup(r){return(r,i)=>(e(),t(n,{area:`support`}))}};export{r as default};

@@ -1,1 +1,0 @@
-import{F as e,T as t}from"./app-uDH475I5.js";import{t as n}from"./AppShellLayout-Vf-LmrJ-.js";var r={__name:`StudentLayout`,setup(r){return(r,i)=>(e(),t(n,{area:`student`}))}};export{r as default};

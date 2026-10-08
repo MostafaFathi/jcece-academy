@@ -26,6 +26,7 @@ describe('public account lifecycle', () => {
     it('registers a learner with confirmation and prevents duplicate submits', async () => {
         const pending = deferred(); auth.register.mockReturnValue(pending.promise);
         const wrapper = render(RegisterPage);
+        expect(wrapper.get('a[href^="/auth/google/redirect?"]').text()).toContain('Continue with Google');
         await wrapper.get('#register-name').setValue('Learner');
         await wrapper.get('#register-email').setValue('learner@example.test');
         await wrapper.get('#register-password').setValue('secure-password');

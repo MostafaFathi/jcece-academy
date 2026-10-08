@@ -1,0 +1,1 @@
+import{F as e,T as t}from"./app-DNmXH-36.js";import{t as n}from"./AppShellLayout-BGK6MLkS.js";var r={__name:`StudentLayout`,setup(r){return(r,i)=>(e(),t(n,{area:`student`}))}};export{r as default};

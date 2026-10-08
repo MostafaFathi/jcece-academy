@@ -7,6 +7,7 @@ import { homeRouteFor } from '../router/access';
 import BaseAlert from '../components/ui/BaseAlert.vue';
 import BaseButton from '../components/ui/BaseButton.vue';
 import BaseInput from '../components/ui/BaseInput.vue';
+import GoogleAuthLink from '../components/auth/GoogleAuthLink.vue';
 
 const auth = useAuthStore();
 const route = useRoute();
@@ -15,6 +16,7 @@ const { t } = useI18n();
 const form = reactive({ email: '', password: '', remember: false });
 const fieldErrors = ref({});
 const errorMessage = ref('');
+const googleError = typeof route.query.google_error === 'string' ? route.query.google_error : '';
 
 function validate() {
     const errors = {};
@@ -64,7 +66,9 @@ async function submit() {
     <div>
         <div class="mb-8 text-center lg:text-start"><img :src="'/assets/images/logo-1.png'" alt="JCEC Academy" class="mx-auto mb-5 size-24 object-contain lg:hidden"><p class="mb-3 text-xs font-black tracking-[0.18em] text-brand uppercase">JCEC ACADEMY</p><h1 class="text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">{{ t('auth.title') }}</h1><p class="mt-3 leading-7 text-slate-600">{{ t('auth.subtitle') }}</p></div>
         <BaseAlert v-if="errorMessage" tone="danger" class="mb-5">{{ errorMessage }}</BaseAlert>
+        <BaseAlert v-if="googleError" tone="danger" class="mb-5">{{ t(googleError === 'unavailable' ? 'auth.googleUnavailable' : googleError === 'account' ? 'auth.googleAccount' : 'auth.googleFailed') }}</BaseAlert>
         <form class="space-y-5" novalidate @submit.prevent="submit"><BaseInput id="email" v-model="form.email" type="email" autocomplete="email" :label="t('auth.email')" :error="fieldErrors.email" required /><BaseInput id="password" v-model="form.password" type="password" autocomplete="current-password" :label="t('auth.password')" :error="fieldErrors.password" required /><div class="flex flex-wrap items-center justify-between gap-3"><label class="flex cursor-pointer items-center gap-3 text-sm font-semibold text-slate-700"><input v-model="form.remember" type="checkbox" class="size-4 rounded accent-brand">{{ t('auth.remember') }}</label><span class="text-xs text-slate-400">{{ t('auth.secure') }}</span></div><BaseButton type="submit" :loading="auth.loginLoading" class="w-full">{{ t('auth.submit') }}</BaseButton></form>
+        <GoogleAuthLink class="mt-6" :redirect="typeof route.query.redirect === 'string' ? route.query.redirect : ''" />
         <div class="mt-6 flex flex-wrap justify-between gap-3 text-sm font-bold text-brand"><RouterLink :to="{ name: 'forgot-password' }">{{ t('auth.forgotLink') }}</RouterLink><RouterLink :to="{ name: 'register' }">{{ t('auth.registerLink') }}</RouterLink></div>
     </div>
 </template>

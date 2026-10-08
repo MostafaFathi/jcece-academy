@@ -25,6 +25,7 @@ describe('login page', () => {
 
     it('shows client-side required validation before calling the API', async () => {
         const wrapper = mountPage();
+        expect(wrapper.get('a[href^="/auth/google/redirect?"]').attributes('href')).toContain('redirect=%2Fcourses%2Fbim');
         await wrapper.get('form').trigger('submit');
         expect(wrapper.text()).toContain('Email is required');
         expect(wrapper.text()).toContain('Password is required');

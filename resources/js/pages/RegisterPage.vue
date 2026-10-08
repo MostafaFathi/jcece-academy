@@ -5,6 +5,7 @@ import { register } from '../api/auth';
 import BaseAlert from '../components/ui/BaseAlert.vue';
 import BaseButton from '../components/ui/BaseButton.vue';
 import BaseInput from '../components/ui/BaseInput.vue';
+import GoogleAuthLink from '../components/auth/GoogleAuthLink.vue';
 
 const { t, locale } = useI18n();
 const form = reactive({ name: '', email: '', password: '', password_confirmation: '' });
@@ -47,6 +48,7 @@ async function submit() {
             <BaseInput id="register-confirm" v-model="form.password_confirmation" :label="t('auth.confirmPassword')" :error="errors.password_confirmation" type="password" autocomplete="new-password" required />
             <BaseButton type="submit" :loading="loading" class="w-full">{{ t('auth.registerSubmit') }}</BaseButton>
         </form>
+        <GoogleAuthLink v-if="!success" />
         <RouterLink :to="{ name: 'login' }" class="block text-center text-sm font-bold text-brand">{{ t('auth.alreadyHaveAccount') }}</RouterLink>
     </div>
 </template>
