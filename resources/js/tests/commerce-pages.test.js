@@ -23,7 +23,7 @@ const item = { id: 7, purchasable_type: 'course', purchasable_id: 2, available: 
 const cartData = (items = [item]) => ({ id: 1, items, item_count: items.length, estimated_total: items.length ? '10.25' : '0.00', currency: 'JOD' });
 const order = (status = 'pending', payments = []) => ({ id: 12, order_number: 'JCEC-12', status, currency: 'JOD', subtotal: '10.25', discount_total: '0.00', tax_total: '0.00', total: '10.25', customer_name: 'Student', customer_email: 'student@example.test', customer_phone: '0599000000', payment_proof_max_kilobytes: 1024, items: [{ id: 3, title: 'Historical Package', purchasable_type: 'package', quantity: 1, unit_price: '10.25', total: '10.25', discount_amount: '0.00', access_duration_days: 180, package_courses: [{ id: 9, course_title: 'Historical Course' }] }], payments, created_at: '2026-09-28T00:00:00Z' });
 let pinia;
-function render(component, props = {}) { return mount(component, { props, global: { plugins: [pinia, i18n], stubs: { RouterLink: { props: ['to'], template: '<a><slot /></a>' } } } }); }
+function render(component, props = {}) { return mount(component, { props, global: { plugins: [pinia, i18n], stubs: { RouterLink: { props: ['to'], template: '<a :data-route-name="to?.name" :data-redirect="to?.query?.redirect"><slot /></a>' } } } }); }
 function selectFile(wrapper, file) {
     const input = wrapper.get('input[type="file"]');
     Object.defineProperty(input.element, 'files', { value: file ? [file] : [], configurable: true });
@@ -115,6 +115,10 @@ describe('student commerce UI', () => {
         expect(wrapper.text()).toContain('View cart');
         expect(router.push).not.toHaveBeenCalled();
         expect(commerce.addCartItem).not.toHaveBeenCalled();
+        const toast = document.body.querySelector('[role="status"]')?.closest('.fixed');
+        expect(toast?.textContent).toContain('Added to your cart');
+        expect(toast?.querySelector('a')?.dataset).toMatchObject({ routeName: 'login', redirect: '/student/cart' });
+        wrapper.unmount();
     });
 
     it('merges saved guest choices into the student cart once and welcomes the learner', async () => {
@@ -194,6 +198,23 @@ describe('student commerce UI', () => {
         await flushPromises();
         expect(wrapper.text()).toContain('Already in cart');
         expect(wrapper.get('button').attributes('disabled')).toBeDefined();
+        const toast = document.body.querySelector('[role="status"]')?.closest('.fixed');
+        expect(toast?.textContent).toContain('Added to your cart');
+        expect(toast?.querySelector('a')?.dataset.routeName).toBe('student.checkout');
+        wrapper.unmount();
+    });
+
+    it('does not show checkout toast when adding an item fails', async () => {
+        commerce.fetchCart.mockResolvedValue(cartData([]));
+        commerce.addCartItem.mockRejectedValue({ status: 422, message: 'Unavailable' });
+        const wrapper = render(AddToCartButton, { type: 'course', product: item.product });
+
+        await wrapper.get('button').trigger('click');
+        await flushPromises();
+
+        expect(document.body.querySelector('[role="status"]')).toBeNull();
+        expect(wrapper.text()).toContain('Unavailable');
+        wrapper.unmount();
     });
 
     it('submits required checkout fields once and navigates to the created order', async () => {

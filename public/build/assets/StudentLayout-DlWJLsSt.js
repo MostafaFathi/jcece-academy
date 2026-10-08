@@ -1,0 +1,1 @@
+import{D as e,L as t}from"./app-BaxCWbOh.js";import{t as n}from"./AppShellLayout-DdLc_G2i.js";var r={__name:`StudentLayout`,setup(r){return(r,i)=>(t(),e(n,{area:`student`}))}};export{r as default};

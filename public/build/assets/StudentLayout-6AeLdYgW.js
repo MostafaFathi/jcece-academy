@@ -1,1 +1,0 @@
-import{F as e,T as t}from"./app-CV5uZvkS.js";import{t as n}from"./AppShellLayout-CGarLUjX.js";var r={__name:`StudentLayout`,setup(r){return(r,i)=>(e(),t(n,{area:`student`}))}};export{r as default};
