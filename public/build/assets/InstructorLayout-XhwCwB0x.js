@@ -1,0 +1,1 @@
+import{F as e,T as t}from"./app-DEMO2_Wb.js";import{t as n}from"./AppShellLayout-DMsJpHqX.js";var r={__name:`InstructorLayout`,setup(r){return(r,i)=>(e(),t(n,{area:`instructor`}))}};export{r as default};

@@ -56,6 +56,34 @@ class GoogleAuthTest extends TestCase
         Http::assertSentCount(2);
     }
 
+    public function test_new_google_student_returns_to_cart_with_registration_notice(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+        $this->fakeGoogleProfile();
+        $this->get('/auth/google/redirect?redirect=%2Fstudent%2Fcart')->assertRedirect();
+        $state = session('google_oauth.state');
+
+        $this->get('/auth/google/callback?state='.$state.'&code=valid-code')
+            ->assertRedirect('/student/cart?welcome=registered');
+
+        $this->assertAuthenticated();
+    }
+
+    public function test_existing_google_student_returns_to_cart_with_login_notice(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+        $student = User::factory()->create(['email' => 'learner@gmail.com', 'google_id' => 'google-sub-1']);
+        $student->assignRole(RoleName::Student->value);
+        $this->fakeGoogleProfile(['email' => 'learner@gmail.com']);
+        $this->get('/auth/google/redirect?redirect=%2Fstudent%2Fcart')->assertRedirect();
+        $state = session('google_oauth.state');
+
+        $this->get('/auth/google/callback?state='.$state.'&code=valid-code')
+            ->assertRedirect('/student/cart?welcome=login');
+
+        $this->assertAuthenticatedAs($student);
+    }
+
     public function test_existing_student_is_linked_without_duplicate_account(): void
     {
         $this->seed(RolesAndPermissionsSeeder::class);

@@ -31,6 +31,8 @@ class AuthLifecycleApiTest extends TestCase
         $this->assertTrue($user->hasRole(RoleName::Student->value));
         $this->assertFalse($user->hasRole(RoleName::Admin->value));
         $this->assertTrue(Hash::check('secure-password-123', $user->password));
+        $this->assertAuthenticatedAs($user);
+        $this->assertNotNull($user->fresh()->last_login_at);
     }
 
     public function test_registration_rejects_duplicate_email_and_invalid_fields(): void

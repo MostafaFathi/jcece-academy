@@ -1,1 +1,0 @@
-import{F as e,N as t,T as n,d as r,n as i,t as a}from"./app-DNmXH-36.js";import{t as o}from"./LoadingState-DWNpqJrL.js";var s={__name:`DashboardRedirectPage`,setup(s){let c=i(),l=r();return t(()=>l.replace(a(c))),(t,r)=>(e(),n(o,{class:`min-h-screen`}))}};export{s as default};

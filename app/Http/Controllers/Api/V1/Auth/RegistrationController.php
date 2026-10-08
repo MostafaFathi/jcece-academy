@@ -11,6 +11,7 @@ use App\Services\TransactionalDeliveryService;
 use App\UserStatus;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Role;
@@ -35,6 +36,10 @@ class RegistrationController extends Controller
         } catch (UniqueConstraintViolationException) {
             throw ValidationException::withMessages(['email' => __('validation.unique', ['attribute' => __('validation.attributes.email')])]);
         }
+
+        Auth::guard('web')->login($user);
+        $request->session()->regenerate();
+        $user->forceFill(['last_login_at' => now()])->save();
 
         return (new AuthenticatedUserResource($user->load('roles')))->response()->setStatusCode(201);
     }

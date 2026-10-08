@@ -4,6 +4,7 @@ import { flushPromises, mount } from '@vue/test-utils';
 import LoginPage from '../pages/LoginPage.vue';
 import { ApiError } from '../api/errors';
 import * as authApi from '../api/auth';
+import { useCartStore } from '../stores/cart';
 import i18n, { setLocale } from '../i18n';
 
 const routerMocks = vi.hoisted(() => ({ push: vi.fn(), route: { query: { redirect: '/courses/bim' } } }));
@@ -21,6 +22,7 @@ describe('login page', () => {
         setLocale('en');
         routerMocks.push.mockReset();
         authApi.login.mockReset();
+        sessionStorage.clear();
     });
 
     it('shows client-side required validation before calling the API', async () => {
@@ -41,6 +43,18 @@ describe('login page', () => {
         await flushPromises();
         expect(authApi.login).toHaveBeenCalledWith({ email: 'student@example.com', password: 'secret', remember: false });
         expect(routerMocks.push).toHaveBeenCalledWith('/courses/bim');
+    });
+
+    it('returns a student with guest choices to the cart with a login notice', async () => {
+        authApi.login.mockResolvedValue({ id: 1, name: 'Student', roles: ['student'], permissions: [] });
+        const wrapper = mountPage();
+        useCartStore().addGuest('course', 2);
+        await wrapper.get('#email').setValue('student@example.com');
+        await wrapper.get('#password').setValue('secret');
+        await wrapper.get('form').trigger('submit');
+        await flushPromises();
+
+        expect(routerMocks.push).toHaveBeenCalledWith({ name: 'student.cart', query: { welcome: 'login' } });
     });
 
     it('renders backend validation failures without redirecting', async () => {

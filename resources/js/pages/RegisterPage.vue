@@ -1,13 +1,21 @@
 <script setup>
 import { reactive, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useRoute, useRouter } from 'vue-router';
 import { register } from '../api/auth';
+import { useAuthStore } from '../stores/auth';
+import { useCartStore } from '../stores/cart';
+import { homeRouteFor } from '../router/access';
 import BaseAlert from '../components/ui/BaseAlert.vue';
 import BaseButton from '../components/ui/BaseButton.vue';
 import BaseInput from '../components/ui/BaseInput.vue';
 import GoogleAuthLink from '../components/auth/GoogleAuthLink.vue';
 
 const { t, locale } = useI18n();
+const route = useRoute();
+const router = useRouter();
+const auth = useAuthStore();
+const cart = useCartStore();
 const form = reactive({ name: '', email: '', password: '', password_confirmation: '' });
 const errors = ref({});
 const failure = ref(false);
@@ -26,20 +34,28 @@ async function submit() {
     if (Object.keys(errors.value).length) return;
 
     loading.value = true;
+    let user;
     try {
-        await register({ ...form, name: form.name.trim(), email: form.email.trim(), locale: locale.value });
-        success.value = true;
+        user = await register({ ...form, name: form.name.trim(), email: form.email.trim(), locale: locale.value });
     } catch (error) {
         errors.value = Object.fromEntries(Object.entries(error.errors ?? {}).map(([key, messages]) => [key, messages[0]]));
         failure.value = true;
-    } finally { loading.value = false; }
+        loading.value = false;
+        return;
+    }
+    auth.setUser(user);
+    auth.initialized = true;
+    success.value = true;
+    loading.value = false;
+    const cartDestination = cart.guestCount || route.query.redirect === '/student/cart';
+    await router.push(cartDestination ? { name: 'student.cart', query: { welcome: 'registered' } } : homeRouteFor(auth));
 }
 </script>
 
 <template>
     <div class="space-y-6">
         <div><p class="mb-2 text-xs font-black tracking-widest text-brand uppercase">JCEC ACADEMY</p><h1 class="text-3xl font-black text-slate-950">{{ t('auth.registerTitle') }}</h1><p class="mt-2 leading-7 text-slate-600">{{ t('auth.registerSubtitle') }}</p></div>
-        <BaseAlert v-if="success">{{ t('auth.registerSuccess') }} <RouterLink :to="{ name: 'login' }" class="font-bold underline">{{ t('common.login') }}</RouterLink></BaseAlert>
+        <BaseAlert v-if="success" tone="success">{{ t('auth.registerSuccess') }} <RouterLink :to="{ name: 'student.cart' }" class="font-bold underline">{{ t('commerce.viewCart') }}</RouterLink></BaseAlert>
         <BaseAlert v-else-if="failure" tone="danger">{{ t('errors.generic') }}</BaseAlert>
         <form v-if="!success" class="space-y-4" novalidate @submit.prevent="submit">
             <BaseInput id="register-name" v-model="form.name" :label="t('auth.name')" :error="errors.name" autocomplete="name" maxlength="255" required />
@@ -48,7 +64,7 @@ async function submit() {
             <BaseInput id="register-confirm" v-model="form.password_confirmation" :label="t('auth.confirmPassword')" :error="errors.password_confirmation" type="password" autocomplete="new-password" required />
             <BaseButton type="submit" :loading="loading" class="w-full">{{ t('auth.registerSubmit') }}</BaseButton>
         </form>
-        <GoogleAuthLink v-if="!success" />
-        <RouterLink :to="{ name: 'login' }" class="block text-center text-sm font-bold text-brand">{{ t('auth.alreadyHaveAccount') }}</RouterLink>
+        <GoogleAuthLink v-if="!success" :redirect="cart.guestCount || route.query.redirect === '/student/cart' ? '/student/cart' : ''" />
+        <RouterLink :to="{ name: 'login', query: cart.guestCount || route.query.redirect === '/student/cart' ? { redirect: '/student/cart' } : {} }" class="block text-center text-sm font-bold text-brand">{{ t('auth.alreadyHaveAccount') }}</RouterLink>
     </div>
 </template>

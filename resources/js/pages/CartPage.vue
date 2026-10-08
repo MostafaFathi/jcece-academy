@@ -1,6 +1,8 @@
 <script setup>
 import { onMounted, ref } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
+import { useAuthStore } from '../stores/auth';
 import { useCartStore } from '../stores/cart';
 import PageHeading from '../components/ui/PageHeading.vue';
 import LoadingState from '../components/ui/LoadingState.vue';
@@ -12,21 +14,36 @@ import MoneyAmount from '../components/commerce/MoneyAmount.vue';
 import CommerceError from '../components/commerce/CommerceError.vue';
 import CartSummary from '../components/commerce/CartSummary.vue';
 const cart = useCartStore();
+const auth = useAuthStore();
+const route = useRoute();
+const router = useRouter();
 const { t } = useI18n();
 const couponCode = ref('');
-async function load() { try { await cart.load(); } catch {} }
+const restoringGuest = ref(false);
+const skippedGuestItems = ref(0);
+const welcome = ref(['login', 'registered'].includes(route.query.welcome) ? route.query.welcome : null);
+async function load() {
+    restoringGuest.value = true;
+    try { skippedGuestItems.value = await cart.mergeGuest(); } catch {}
+    finally { restoringGuest.value = false; }
+}
 async function remove(id) { try { await cart.remove(id); } catch {} }
 async function clear() { try { await cart.clear(); } catch {} }
 async function applyCoupon() { try { await cart.applyCoupon(couponCode.value); couponCode.value = ''; } catch {} }
 async function removeCoupon() { try { await cart.removeCoupon(); } catch {} }
-onMounted(load);
+onMounted(() => {
+    load();
+    if (welcome.value) router.replace?.({ name: 'student.cart', query: {} });
+});
 </script>
 <template>
     <div class="space-y-7">
         <PageHeading :title="t('commerce.cart')" :description="t('commerce.cartDescription')"><template #actions><RouterLink :to="{ name: 'courses.index' }" class="text-sm font-bold text-brand">{{ t('commerce.continueShopping') }}</RouterLink></template></PageHeading>
+        <BaseAlert v-if="welcome" tone="success"><strong class="block text-base">{{ t('commerce.welcomeName', { name: auth.user?.name ?? '' }) }}</strong><span>{{ t(welcome === 'registered' ? 'commerce.registrationComplete' : 'commerce.loginComplete') }}</span><span v-if="!restoringGuest && (cart.guestCount || cart.count)" class="block mt-1">{{ t(cart.guestCount ? 'commerce.guestItemsPending' : 'commerce.guestItemsRestored') }}</span></BaseAlert>
+        <BaseAlert v-if="skippedGuestItems" tone="danger">{{ t('commerce.guestItemsUnavailable', { count: skippedGuestItems }) }}</BaseAlert>
         <CommerceError :error="cart.error"><BaseButton variant="secondary" class="mt-3" @click="load">{{ t('common.retry') }}</BaseButton></CommerceError>
         <BaseAlert v-if="cart.uncertain">{{ t('commerce.uncertain') }} <RouterLink :to="{ name: 'student.checkout' }" class="font-bold underline">{{ t('commerce.resumeCheckout') }}</RouterLink></BaseAlert>
-        <LoadingState v-if="cart.loading" />
+        <LoadingState v-if="cart.loading || restoringGuest" />
         <EmptyState v-else-if="cart.cart && !cart.count" :title="t('commerce.emptyCart')" :description="t('commerce.emptyCartText')" />
         <div v-else-if="cart.cart" class="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
             <div class="min-w-0 space-y-4">

@@ -5,12 +5,31 @@ import { useAuthStore } from './auth';
 import { createRequestId } from '../utils/request-id';
 
 const intentStorageKey = 'jcec.checkout-intent';
+const guestCartStorageKey = 'jcec.guest-cart.v1';
 function storedIntent() { try { return sessionStorage.getItem(intentStorageKey); } catch { return null; } }
 function saveIntent(key) { try { if (key) sessionStorage.setItem(intentStorageKey, key); else sessionStorage.removeItem(intentStorageKey); } catch {} }
+function readGuestCart() {
+    try {
+        const entries = JSON.parse(sessionStorage.getItem(guestCartStorageKey) || '[]');
+        if (!Array.isArray(entries)) return [];
+        return entries.filter((entry, index) => entry && ['course', 'package'].includes(entry.type)
+            && Number.isSafeInteger(entry.id) && entry.id > 0
+            && entries.findIndex((candidate) => candidate?.type === entry.type && candidate?.id === entry.id) === index).slice(0, 20)
+            .map(({ type, id }) => ({ type, id }));
+    } catch { return []; }
+}
+function writeGuestCart(entries) {
+    try {
+        if (entries.length) sessionStorage.setItem(guestCartStorageKey, JSON.stringify(entries));
+        else sessionStorage.removeItem(guestCartStorageKey);
+        return true;
+    } catch { return false; }
+}
 
 export const useCartStore = defineStore('cart', () => {
     const auth = useAuthStore();
     const cart = ref(null);
+    const guestItems = ref(readGuestCart());
     const loading = ref(false);
     const mutating = ref(false);
     const error = ref(null);
@@ -21,13 +40,31 @@ export const useCartStore = defineStore('cart', () => {
     let submittedPayload = null;
     let generation = 0;
     let loadPromise = null;
+    let mergePromise = null;
 
     const items = computed(() => cart.value?.items ?? []);
     const count = computed(() => cart.value?.item_count ?? 0);
+    const guestCount = computed(() => guestItems.value.length);
     const total = computed(() => cart.value?.estimated_total ?? null);
     const currency = computed(() => cart.value?.currency ?? null);
-    const ready = computed(() => Boolean(cart.value && count.value && currency.value && !cart.value.coupon_error && items.value.every((item) => item.available && item.product)));
+    const ready = computed(() => Boolean(cart.value && count.value && currency.value && !guestCount.value && !cart.value.coupon_error && items.value.every((item) => item.available && item.product)));
     const hasItem = (type, id) => items.value.some((item) => item.purchasable_type === type && item.purchasable_id === id);
+    const hasGuestItem = (type, id) => guestItems.value.some((item) => item.type === type && item.id === id);
+
+    function addGuest(type, id) {
+        if (!['course', 'package'].includes(type) || !Number.isSafeInteger(id) || id < 1) return false;
+        if (hasGuestItem(type, id)) return true;
+        if (guestCount.value >= 20) return false;
+        const next = [...guestItems.value, { type, id }];
+        if (!writeGuestCart(next)) return false;
+        guestItems.value = next;
+        return true;
+    }
+
+    function removeGuest(type, id) {
+        const next = guestItems.value.filter((item) => item.type !== type || item.id !== id);
+        if (writeGuestCart(next)) guestItems.value = next;
+    }
 
     function accept(result) {
         if (!result || !Array.isArray(result.items) || result.item_count !== result.items.length
@@ -76,6 +113,37 @@ export const useCartStore = defineStore('cart', () => {
     }
 
     function add(type, id) { return hasItem(type, id) ? Promise.resolve(cart.value) : mutate(() => commerce.addCartItem(type, id)); }
+    async function mergeGuest() {
+        if (mergePromise) return mergePromise;
+        mergePromise = (async () => {
+            if (!cart.value) await load();
+            if (!auth.isAuthenticated || !guestCount.value) return 0;
+            if (uncertain.value) return 0;
+            let skipped = 0;
+            for (const chosen of [...guestItems.value]) {
+                if (hasItem(chosen.type, chosen.id)) {
+                    removeGuest(chosen.type, chosen.id);
+                    continue;
+                }
+                try {
+                    const merged = await add(chosen.type, chosen.id);
+                    if (!merged) throw new Error('Cart merge is busy.');
+                    removeGuest(chosen.type, chosen.id);
+                } catch (requestError) {
+                    if (requestError.status === 404 || requestError.status === 422) {
+                        removeGuest(chosen.type, chosen.id);
+                        skipped++;
+                        continue;
+                    }
+                    error.value = requestError;
+                    throw requestError;
+                }
+            }
+            error.value = null;
+            return skipped;
+        })();
+        try { return await mergePromise; } finally { mergePromise = null; }
+    }
     function remove(id) { return mutate(() => commerce.removeCartItem(id)); }
     function clear() { return mutate(commerce.clearCart); }
     function applyCoupon(code) { return mutate(() => commerce.applyCartCoupon(code)); }
@@ -137,5 +205,5 @@ export const useCartStore = defineStore('cart', () => {
         if (previousId !== undefined) newIntent();
     }, { flush: 'sync' });
 
-    return { cart, items, count, total, currency, ready, loading, mutating, error, hasItem, load, add, remove, clear, applyCoupon, removeCoupon, placeOrder, checkoutLoading, checkoutKey, uncertain, intentCustomer, newIntent };
+    return { cart, items, count, guestCount, total, currency, ready, loading, mutating, error, hasItem, hasGuestItem, addGuest, mergeGuest, load, add, remove, clear, applyCoupon, removeCoupon, placeOrder, checkoutLoading, checkoutKey, uncertain, intentCustomer, newIntent };
 });

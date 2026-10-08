@@ -106,8 +106,9 @@ class GoogleAuthController extends Controller
             return $this->failure('failed');
         }
 
+        $wasCreated = false;
         try {
-            $user = DB::transaction(function () use ($subject, $email, $name, $pending, $profile): ?User {
+            $user = DB::transaction(function () use ($subject, $email, $name, $pending, $profile, &$wasCreated): ?User {
                 $normalizedEmail = mb_strtolower(trim($email));
                 $user = User::withTrashed()->where('google_id', $subject)->first();
 
@@ -141,6 +142,7 @@ class GoogleAuthController extends Controller
                 ]);
                 $user->forceFill(['google_id' => $subject, 'email_verified_at' => now()])->save();
                 $user->assignRole(Role::findOrCreate(RoleName::Student->value));
+                $wasCreated = true;
 
                 return $user;
             });
@@ -156,7 +158,11 @@ class GoogleAuthController extends Controller
         $request->session()->regenerate();
         $user->forceFill(['last_login_at' => now()])->save();
 
-        return redirect()->to($pending['destination']);
+        $destination = $pending['destination'] === '/student/cart'
+            ? '/student/cart?welcome='.($wasCreated ? 'registered' : 'login')
+            : $pending['destination'];
+
+        return redirect()->to($destination);
     }
 
     private function isConfigured(): bool

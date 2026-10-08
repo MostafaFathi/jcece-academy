@@ -3,6 +3,7 @@ import { reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useAuthStore } from '../stores/auth';
+import { useCartStore } from '../stores/cart';
 import { homeRouteFor } from '../router/access';
 import BaseAlert from '../components/ui/BaseAlert.vue';
 import BaseButton from '../components/ui/BaseButton.vue';
@@ -10,6 +11,7 @@ import BaseInput from '../components/ui/BaseInput.vue';
 import GoogleAuthLink from '../components/auth/GoogleAuthLink.vue';
 
 const auth = useAuthStore();
+const cart = useCartStore();
 const route = useRoute();
 const router = useRouter();
 const { t } = useI18n();
@@ -54,7 +56,11 @@ async function submit() {
     try {
         await auth.signIn(form);
         const redirect = typeof route.query.redirect === 'string' && route.query.redirect.startsWith('/') && !route.query.redirect.startsWith('//') ? route.query.redirect : null;
-        await router.push(redirect || homeRouteFor(auth));
+        if (auth.hasRole('student') && (cart.guestCount || redirect === '/student/cart')) {
+            await router.push({ name: 'student.cart', query: { welcome: 'login' } });
+        } else {
+            await router.push(redirect || homeRouteFor(auth));
+        }
     } catch (error) {
         fieldErrors.value = Object.fromEntries(Object.entries(error.errors ?? {}).map(([key, messages]) => [key, messages[0]]));
         errorMessage.value = localizedError(error);
@@ -69,6 +75,6 @@ async function submit() {
         <BaseAlert v-if="googleError" tone="danger" class="mb-5">{{ t(googleError === 'unavailable' ? 'auth.googleUnavailable' : googleError === 'account' ? 'auth.googleAccount' : 'auth.googleFailed') }}</BaseAlert>
         <form class="space-y-5" novalidate @submit.prevent="submit"><BaseInput id="email" v-model="form.email" type="email" autocomplete="email" :label="t('auth.email')" :error="fieldErrors.email" required /><BaseInput id="password" v-model="form.password" type="password" autocomplete="current-password" :label="t('auth.password')" :error="fieldErrors.password" required /><div class="flex flex-wrap items-center justify-between gap-3"><label class="flex cursor-pointer items-center gap-3 text-sm font-semibold text-slate-700"><input v-model="form.remember" type="checkbox" class="size-4 rounded accent-brand">{{ t('auth.remember') }}</label><span class="text-xs text-slate-400">{{ t('auth.secure') }}</span></div><BaseButton type="submit" :loading="auth.loginLoading" class="w-full">{{ t('auth.submit') }}</BaseButton></form>
         <GoogleAuthLink class="mt-6" :redirect="typeof route.query.redirect === 'string' ? route.query.redirect : ''" />
-        <div class="mt-6 flex flex-wrap justify-between gap-3 text-sm font-bold text-brand"><RouterLink :to="{ name: 'forgot-password' }">{{ t('auth.forgotLink') }}</RouterLink><RouterLink :to="{ name: 'register' }">{{ t('auth.registerLink') }}</RouterLink></div>
+        <div class="mt-6 flex flex-wrap justify-between gap-3 text-sm font-bold text-brand"><RouterLink :to="{ name: 'forgot-password' }">{{ t('auth.forgotLink') }}</RouterLink><RouterLink :to="{ name: 'register', query: route.query.redirect === '/student/cart' || cart.guestCount ? { redirect: '/student/cart' } : {} }">{{ t('auth.registerLink') }}</RouterLink></div>
     </div>
 </template>

@@ -105,13 +105,80 @@ describe('student commerce UI', () => {
         expect(wrapper.text()).not.toContain('Proceed to checkout');
     });
 
-    it.each(['course', 'package'])('redirects guest %s purchases to a safe intended detail page', async (type) => {
+    it.each(['course', 'package'])('saves guest %s choices before asking for sign-in', async (type) => {
         useAuthStore().clearSession();
         const wrapper = render(AddToCartButton, { type, product: item.product });
         await wrapper.get('button').trigger('click');
-        expect(router.resolve).toHaveBeenCalledWith({ name: type === 'course' ? 'courses.show' : 'packages.show', params: { slug: 'bim' } });
-        expect(router.push).toHaveBeenCalledWith({ name: 'login', query: { redirect: '/courses/bim' } });
+        expect(useCartStore().guestCount).toBe(1);
+        expect(sessionStorage.getItem('jcec.guest-cart.v1')).toContain(`"type":"${type}"`);
+        expect(wrapper.text()).toContain('Saved for you');
+        expect(wrapper.text()).toContain('View cart');
+        expect(router.push).not.toHaveBeenCalled();
         expect(commerce.addCartItem).not.toHaveBeenCalled();
+    });
+
+    it('merges saved guest choices into the student cart once and welcomes the learner', async () => {
+        const cart = useCartStore();
+        cart.addGuest('course', 2);
+        cart.addGuest('package', 3);
+        const packageItem = { ...item, id: 8, purchasable_type: 'package', purchasable_id: 3, product: { ...item.product, id: 3, title: 'Career Package' } };
+        commerce.fetchCart.mockResolvedValue(cartData([]));
+        commerce.addCartItem.mockResolvedValueOnce(cartData([item])).mockResolvedValueOnce(cartData([item, packageItem]));
+        router.route.query = { welcome: 'registered' };
+
+        const wrapper = render(CartPage);
+        await flushPromises();
+
+        expect(commerce.addCartItem).toHaveBeenCalledTimes(2);
+        expect(commerce.addCartItem).toHaveBeenNthCalledWith(1, 'course', 2);
+        expect(commerce.addCartItem).toHaveBeenNthCalledWith(2, 'package', 3);
+        expect(cart.guestCount).toBe(0);
+        expect(sessionStorage.getItem('jcec.guest-cart.v1')).toBeNull();
+        expect(wrapper.text()).toContain('Welcome, Student!');
+        expect(wrapper.text()).toContain('Congratulations!');
+        expect(wrapper.text()).toContain('Career Package');
+    });
+
+    it('does not duplicate an item already in the signed-in cart', async () => {
+        const cart = useCartStore();
+        cart.addGuest('course', 2);
+        commerce.fetchCart.mockResolvedValue(cartData());
+
+        const wrapper = render(CartPage);
+        await flushPromises();
+
+        expect(commerce.addCartItem).not.toHaveBeenCalled();
+        expect(cart.guestCount).toBe(0);
+        expect(wrapper.text()).toContain('BIM Essentials');
+    });
+
+    it('keeps choices pending after a network failure and can retry', async () => {
+        const cart = useCartStore();
+        cart.addGuest('course', 2);
+        commerce.fetchCart.mockResolvedValue(cartData([]));
+        commerce.addCartItem.mockRejectedValueOnce({ code: 'network' }).mockResolvedValueOnce(cartData());
+
+        const wrapper = render(CartPage);
+        await flushPromises();
+        expect(cart.guestCount).toBe(1);
+        expect(sessionStorage.getItem('jcec.guest-cart.v1')).toContain('"id":2');
+        await wrapper.findAll('button').find((button) => button.text() === 'Try again').trigger('click');
+        await flushPromises();
+        expect(cart.guestCount).toBe(0);
+        expect(wrapper.text()).toContain('BIM Essentials');
+    });
+
+    it('skips a product the server no longer allows and explains it', async () => {
+        const cart = useCartStore();
+        cart.addGuest('course', 2);
+        commerce.fetchCart.mockResolvedValue(cartData([]));
+        commerce.addCartItem.mockRejectedValue({ status: 422, errors: { purchasable_id: ['Unavailable'] } });
+
+        const wrapper = render(CartPage);
+        await flushPromises();
+
+        expect(cart.guestCount).toBe(0);
+        expect(wrapper.text()).toContain('no longer available');
     });
 
     it('prevents duplicate clicks while adding and shows already-present state', async () => {

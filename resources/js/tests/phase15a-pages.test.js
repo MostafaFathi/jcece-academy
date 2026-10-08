@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushPromises, mount } from '@vue/test-utils';
+import { createPinia } from 'pinia';
 import i18n, { setLocale } from '../i18n';
 import RegisterPage from '../pages/RegisterPage.vue';
 import ForgotPasswordPage from '../pages/ForgotPasswordPage.vue';
@@ -10,17 +11,18 @@ import * as auth from '../api/auth';
 import * as policies from '../api/policy-pages';
 
 const route = vi.hoisted(() => ({ query: { email: 'student@example.test' } }));
-vi.mock('vue-router', async (original) => ({ ...(await original()), useRoute: () => route }));
-vi.mock('../stores/auth', () => ({ useAuthStore: () => ({ can: (permission) => ['policy_pages.view', 'policy_pages.update', 'policy_pages.publish'].includes(permission) }) }));
+const routerPush = vi.hoisted(() => vi.fn());
+vi.mock('vue-router', async (original) => ({ ...(await original()), useRoute: () => route, useRouter: () => ({ push: routerPush }) }));
+vi.mock('../stores/auth', () => ({ useAuthStore: () => ({ can: (permission) => ['policy_pages.view', 'policy_pages.update', 'policy_pages.publish'].includes(permission), hasRole: () => false, setUser: vi.fn() }) }));
 vi.mock('../api/auth', () => ({ register: vi.fn(), requestPasswordReset: vi.fn(), resetPassword: vi.fn() }));
 vi.mock('../api/policy-pages', () => ({ fetchPolicyPage: vi.fn(), fetchAdminPolicyPages: vi.fn(), savePolicyPage: vi.fn(), publishPolicyPage: vi.fn() }));
 
 function render(component, props = {}) {
-    return mount(component, { props, global: { plugins: [i18n], stubs: { RouterLink: { props: ['to'], template: '<a><slot /></a>' } } } });
+    return mount(component, { props, global: { plugins: [createPinia(), i18n], stubs: { RouterLink: { props: ['to'], template: '<a><slot /></a>' } } } });
 }
 function deferred() { let resolve; const promise = new Promise((done) => { resolve = done; }); return { promise, resolve }; }
 
-beforeEach(() => { vi.resetAllMocks(); setLocale('en'); });
+beforeEach(() => { vi.resetAllMocks(); sessionStorage.clear(); route.query = { email: 'student@example.test' }; setLocale('en'); });
 
 describe('public account lifecycle', () => {
     it('registers a learner with confirmation and prevents duplicate submits', async () => {
@@ -36,6 +38,23 @@ describe('public account lifecycle', () => {
         expect(auth.register.mock.calls[0][0]).toMatchObject({ email: 'learner@example.test', password_confirmation: 'secure-password' });
         pending.resolve({ id: 1 }); await flushPromises();
         expect(wrapper.text()).toContain('Your account is ready');
+        wrapper.unmount();
+    });
+
+    it('returns a newly registered student with saved choices to the cart', async () => {
+        sessionStorage.setItem('jcec.guest-cart.v1', JSON.stringify([{ type: 'course', id: 2 }]));
+        route.query = { redirect: '/student/cart' };
+        auth.register.mockResolvedValue({ id: 2, name: 'Learner', roles: ['student'] });
+        const wrapper = render(RegisterPage);
+        await wrapper.get('#register-name').setValue('Learner');
+        await wrapper.get('#register-email').setValue('learner@example.test');
+        await wrapper.get('#register-password').setValue('secure-password');
+        await wrapper.get('#register-confirm').setValue('secure-password');
+        await wrapper.get('form').trigger('submit');
+        await flushPromises();
+
+        expect(routerPush).toHaveBeenCalledWith({ name: 'student.cart', query: { welcome: 'registered' } });
+        expect(sessionStorage.getItem('jcec.guest-cart.v1')).toContain('"id":2');
         wrapper.unmount();
     });
 
