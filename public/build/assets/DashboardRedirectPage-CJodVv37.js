@@ -1,0 +1,1 @@
+import{F as e,N as t,T as n,d as r,n as i,t as a}from"./app-uDH475I5.js";import{t as o}from"./LoadingState-C5X_-pgK.js";var s={__name:`DashboardRedirectPage`,setup(s){let c=i(),l=r();return t(()=>l.replace(a(c))),(t,r)=>(e(),n(o,{class:`min-h-screen`}))}};export{s as default};

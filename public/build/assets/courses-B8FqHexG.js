@@ -1,0 +1,1 @@
+import{o as e}from"./app-uDH475I5.js";import{n as t,t as n}from"./responses-BrlSr86X.js";async function r(t={}){return n(await e.get(`api/v1/courses`,{params:t}))}async function i(n){return t(await e.get(`api/v1/courses/${encodeURIComponent(n)}`))}export{r as n,i as t};

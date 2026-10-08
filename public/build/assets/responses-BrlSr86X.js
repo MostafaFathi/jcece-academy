@@ -1,0 +1,1 @@
+function e(e){return e.data.data}function t(e){return{items:e.data.data??[],links:e.data.links??{},meta:e.data.meta??null}}export{e as n,t};
