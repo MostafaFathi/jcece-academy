@@ -77,6 +77,13 @@ class UpdateLessonRequest extends FormRequest
                     $validator->errors()->add('video_url', 'A public preview video URL is required.');
                 }
 
+                if ($type === LessonType::Video->value && ! $this->boolean('is_preview', $lesson->is_preview)
+                    && $this->boolean('is_published', $lesson->is_published)
+                    && (! $lesson->is_published || $lesson->is_preview || $lesson->type !== LessonType::Video)
+                    && ! $lesson->videoUploads()->where('status', 'ready')->where('is_current', true)->exists()) {
+                    $validator->errors()->add('is_published', 'Upload and process the protected video before publishing this lesson.');
+                }
+
                 if ($type === LessonType::Link->value && blank($videoUrl)) {
                     $validator->errors()->add('video_url', 'A URL is required for link lessons.');
                 }

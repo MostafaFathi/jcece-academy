@@ -46,6 +46,21 @@ describe('Phase 15C protected media and audit UI', () => {
         wrapper.unmount();
     });
 
+    it('renders a signed Bunny embed without marking the lesson complete or saving a fake position', async () => {
+        api.post.mockResolvedValue({ data: { data: { url: 'https://player.mediadelivery.net/embed/773691/123e4567-e89b-42d3-a456-426614174000?token=short&expires=100', player: 'bunny_embed' } } });
+        const wrapper = render(VideoLesson, { lesson: { id: 7, title: 'Video lesson', protected_playback_available: true, video_url: null }, courseSlug: 'first-course' });
+        await flushPromises();
+        expect(wrapper.find('iframe').attributes('src')).toContain('player.mediadelivery.net/embed/773691');
+        expect(wrapper.find('video').exists()).toBe(false);
+        expect(wrapper.emitted('save-position')).toBeUndefined();
+        expect(wrapper.text()).not.toContain('Save video position');
+        await wrapper.setProps({ lesson: { id: 8, title: 'Preview', protected_playback_available: false, video_url: 'https://preview.example.test/video.mp4' } });
+        await flushPromises();
+        expect(wrapper.find('iframe').exists()).toBe(false);
+        expect(wrapper.find('video').attributes('src')).toBe('https://preview.example.test/video.mp4');
+        wrapper.unmount();
+    });
+
     it('restricts audit navigation to Admin and displays paginated safe rows', async () => {
         const adminRoute = routes.find((route) => route.path === '/admin').children.find((route) => route.name === 'admin.audit.index');
         expect(canAccessRoute({ hasAnyRole: () => false }, adminRoute.meta)).toBe(false);

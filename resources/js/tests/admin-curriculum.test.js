@@ -108,12 +108,12 @@ describe('lesson editor and resources', () => {
     it('shows only fields for the selected type and submits preview state', async () => {
         const wrapper = render(AdminLessonEditor); await wrapper.get('#lesson-title').setValue('Video'); await wrapper.get('#lesson-slug').setValue('video');
         await wrapper.get('#lesson-type').setValue('video'); expect(wrapper.find('#video-id').exists()).toBe(false); expect(wrapper.find('#lesson-content').exists()).toBe(false);
-        expect(wrapper.text()).toContain('Protected video playback is not configured');
-        expect(wrapper.find('#protected-asset-key').exists()).toBe(true);
+        expect(wrapper.text()).toContain('Save this lesson first');
+        expect(wrapper.find('#protected-asset-key').exists()).toBe(false);
         await wrapper.findAll('input[type="checkbox"]').at(1).setValue(true);
         expect(wrapper.find('#protected-asset-key').exists()).toBe(false);
         await wrapper.get('#lesson-url').setValue('https://example.test/preview.mp4'); await wrapper.get('form').trigger('submit');
-        expect(wrapper.emitted('save')[0][0]).toMatchObject({ type: 'video', video_url: 'https://example.test/preview.mp4', protected_video_asset_key: null, content: null, is_preview: true });
+        expect(wrapper.emitted('save')[0][0]).toMatchObject({ type: 'video', video_url: 'https://example.test/preview.mp4', content: null, is_preview: true });
         await wrapper.get('#lesson-type').setValue('link'); expect(wrapper.find('#video-id').exists()).toBe(false); expect(wrapper.find('#lesson-url').exists()).toBe(true);
         await wrapper.get('#lesson-type').setValue('file'); expect(wrapper.find('#lesson-url').exists()).toBe(false); wrapper.unmount();
     });

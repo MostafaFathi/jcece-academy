@@ -125,6 +125,7 @@ class CourseController extends Controller
     public function destroy(Course $course): Response
     {
         Gate::authorize('delete', $course);
+        abort_if($course->lessons()->whereHas('videoUploads', fn ($query) => $query->where('status', '!=', 'deleted'))->exists(), 409, 'Remove protected video uploads before deleting this course.');
 
         $course->delete();
 

@@ -74,6 +74,7 @@ class LessonController extends Controller
     {
         abort_unless($lesson->course_section_id === $section->id, 404);
         Gate::authorize('delete', $lesson);
+        abort_if($lesson->videoUploads()->where('status', '!=', 'deleted')->exists(), 409, 'Remove protected video uploads before deleting this lesson.');
         $lesson->delete();
 
         return response()->noContent();

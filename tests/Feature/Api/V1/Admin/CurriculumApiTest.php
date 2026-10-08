@@ -242,10 +242,11 @@ class CurriculumApiTest extends TestCase
     public static function invalidLessonPayloads(): array
     {
         return [
-            'video without source' => [[
+            'public preview video without source' => [[
                 'title' => 'Video',
                 'slug' => 'video',
                 'type' => LessonType::Video->value,
+                'is_preview' => true,
             ], 'video_url'],
             'text without content' => [[
                 'title' => 'Text',

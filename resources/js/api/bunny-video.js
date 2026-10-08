@@ -92,6 +92,7 @@ export async function uploadBunnyVideo(file, authorization, { resumeUrl = null, 
             if (recovered === null) throw new Error('Upload session expired; retry with the same file');
             offset = recovered;
             onProgress(Math.round(offset / file.size * 100));
+            if (offset === file.size) succeeded = true;
         }
         if (!succeeded) throw new Error('Video upload did not complete; retry');
     }
@@ -107,6 +108,11 @@ export async function createVideoUpload(lessonId, payload) {
 export async function getVideoUpload(lessonId, uploadId = null) {
     const response = await api.get(`${videoUploadPath(lessonId)}${uploadId ? `/${uploadId}` : ''}`);
     return response.data.data;
+}
+
+export async function getVideoUploadOverview(lessonId) {
+    const response = await api.get(videoUploadPath(lessonId));
+    return { upload: response.data.data, settings: response.data.meta };
 }
 
 export async function removeVideoUpload(lessonId, uploadId) {

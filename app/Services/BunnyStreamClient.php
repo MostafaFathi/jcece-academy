@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 use Symfony\Component\HttpKernel\Exception\ServiceUnavailableHttpException;
 
@@ -49,7 +50,7 @@ class BunnyStreamClient
             throw new ServiceUnavailableHttpException(null, 'Video provider could not create the upload.');
         }
 
-        return strtolower($guid);
+        return $guid;
     }
 
     /** @return array{status: int, encode_progress: int, length: int} */
@@ -108,7 +109,7 @@ class BunnyStreamClient
         ];
     }
 
-    private function request(): \Illuminate\Http\Client\PendingRequest
+    private function request(): PendingRequest
     {
         return Http::withHeaders(['AccessKey' => config('jcec.bunny_stream.api_key')])
             ->acceptJson()->connectTimeout(3)->timeout(10);

@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { createVideoUpload, getVideoUpload, previewVideo, removeVideoUpload, uploadBunnyVideo } from '../../api/bunny-video';
+import { createVideoUpload, getVideoUpload, getVideoUploadOverview, previewVideo, removeVideoUpload, uploadBunnyVideo } from '../../api/bunny-video';
 import { safeLearningUrl } from '../../utils/learning';
 import BaseAlert from '../ui/BaseAlert.vue';
 import BaseButton from '../ui/BaseButton.vue';
@@ -15,10 +15,13 @@ const progress = ref(0);
 const busy = ref(false);
 const error = ref('');
 const previewUrl = ref(null);
+const providerConfigured = ref(false);
+const maxUploadMegabytes = ref(0);
+const cleanupPending = ref([]);
 let abortController = null;
 let pollTimer = null;
 
-const mayUpload = computed(() => !busy.value && !['creating', 'processing', 'uncertain'].includes(upload.value?.status));
+const mayUpload = computed(() => providerConfigured.value && !busy.value && !cleanupPending.value.length && !['creating', 'processing', 'uncertain', 'failed', 'retired', 'cleanup_failed'].includes(upload.value?.status));
 const previewSource = computed(() => {
     const safe = safeLearningUrl(previewUrl.value);
     if (!safe) return null;
@@ -45,6 +48,7 @@ async function refresh() {
         upload.value = await getVideoUpload(props.lesson.id, upload.value?.id ?? null);
         if (upload.value?.status === 'ready') {
             stopPolling();
+            await loadOverview();
             emit('changed');
         } else if (['failed', 'deleted', 'cleanup_failed', 'uncertain'].includes(upload.value?.status)) stopPolling();
     } catch {
@@ -63,7 +67,7 @@ async function start() {
     const selected = file.value;
     const allowed = { mp4: 'video/mp4', mov: 'video/quicktime', webm: 'video/webm' };
     const extension = selected.name.split('.').pop()?.toLowerCase();
-    if (allowed[extension] !== selected.type || !selected.size || selected.size > 2048 * 1048576) {
+    if (allowed[extension] !== selected.type || !selected.size || selected.size > maxUploadMegabytes.value * 1048576) {
         error.value = t('curriculum.videoInvalidFile');
         return;
     }
@@ -113,8 +117,28 @@ async function remove() {
         previewUrl.value = null;
         emit('changed');
         if (upload.value.status === 'cleanup_failed') error.value = t('curriculum.videoCleanupFailed');
+        else await loadOverview();
     } catch { error.value = t('curriculum.videoRemoveError'); }
     finally { busy.value = false; }
+}
+
+async function retryCleanup(id) {
+    if (busy.value) return;
+    busy.value = true;
+    try {
+        const result = await removeVideoUpload(props.lesson.id, id);
+        if (result.status === 'cleanup_failed') error.value = t('curriculum.videoCleanupFailed');
+        await loadOverview();
+    } catch { error.value = t('curriculum.videoRemoveError'); }
+    finally { busy.value = false; }
+}
+
+async function loadOverview() {
+    const overview = await getVideoUploadOverview(props.lesson.id);
+    upload.value = overview.upload;
+    providerConfigured.value = overview.settings.configured;
+    maxUploadMegabytes.value = overview.settings.max_upload_megabytes;
+    cleanupPending.value = overview.settings.cleanup_pending ?? [];
 }
 
 async function preview() {
@@ -125,7 +149,7 @@ async function preview() {
 
 onMounted(async () => {
     try {
-        upload.value = await getVideoUpload(props.lesson.id);
+        await loadOverview();
         if (upload.value && ['uploading', 'processing'].includes(upload.value.status)) poll();
     } catch { error.value = t('curriculum.videoStatusError'); }
 });
@@ -137,6 +161,8 @@ onBeforeUnmount(() => { stopPolling(); abortController?.abort(); previewUrl.valu
     <section class="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 sm:p-5" :aria-label="t('curriculum.videoUploadHeading')">
         <div class="space-y-1"><h4 class="font-black text-slate-950">{{ t('curriculum.videoUploadHeading') }}</h4><p class="text-sm text-slate-600">{{ t('curriculum.videoUploadHint') }}</p></div>
         <BaseAlert v-if="error" tone="danger" role="alert">{{ error }}</BaseAlert>
+        <BaseAlert v-if="!providerConfigured" tone="warning">{{ t('curriculum.videoNotConfigured') }}</BaseAlert>
+        <div v-for="pending in cleanupPending" :key="pending.id" class="flex flex-wrap items-center gap-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950"><span>{{ t('curriculum.videoCleanupFailed') }} · {{ pending.filename }}</span><BaseButton type="button" variant="secondary" :disabled="busy" @click="retryCleanup(pending.id)">{{ t('curriculum.videoRetryCleanup') }}</BaseButton></div>
         <p v-if="upload" class="text-sm font-bold text-slate-800" role="status">{{ t(`curriculum.videoStates.${upload.status}`) }}<span v-if="upload.status === 'processing'"> · {{ upload.encode_progress ?? 0 }}%</span><span v-if="upload.filename"> · {{ upload.filename }}</span></p>
         <div v-if="upload?.status === 'uploading' && !busy" class="text-sm text-slate-600">{{ t('curriculum.videoResumeHint') }}</div>
         <div v-if="busy" class="space-y-2"><progress :value="progress" max="100" class="h-3 w-full accent-brand" /><p class="text-sm text-slate-600">{{ progress }}%</p></div>

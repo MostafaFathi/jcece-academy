@@ -1,5 +1,8 @@
 export const en = {
     curriculum: {
+        videoNotConfigured: 'Bunny Stream is not configured on this server. Ask an administrator to enable it; do not paste keys here.',
+        videoRetryCleanup: 'Retry remote cleanup',
+        videoPublishBeforeReady: 'Upload and process the protected video before publishing this lesson.',
         videoUploadHeading: 'Protected lesson video', videoUploadHint: 'Choose an MP4, MOV or WebM file. Uploads go directly to Bunny Stream and can resume after interruption. Save the lesson first.', videoSaveFirst: 'Save this lesson first, then reopen it to upload a protected video.', videoChooseFile: 'Video file', videoUpload: 'Upload video', videoResume: 'Resume upload', videoResumeHint: 'Choose the same file to resume this upload.', videoInvalidFile: 'Choose a supported video file within the configured size limit.', videoUploadError: 'Unable to upload the video. Choose the same file to retry.', videoStatusError: 'Unable to check video processing. Try again later.', videoRemoveConfirm: 'Remove this protected video? Learners will lose access to it.', videoRemove: 'Remove video', videoRemoveError: 'Unable to remove the video.', videoCleanupFailed: 'Playback was removed, but remote cleanup failed. Retry removal or ask an administrator.', videoPreview: 'Preview protected video', videoPreviewError: 'Protected preview is unavailable.', videoStates: { creating: 'Creating', uncertain: 'Creation uncertain — contact an administrator', uploading: 'Uploading', processing: 'Processing', ready: 'Ready', failed: 'Failed', retired: 'Retired', deleted: 'Removed', cleanup_failed: 'Remote cleanup needed' },
         manage: 'Manage curriculum', loadMoreOptions: 'Load more options',
         addFile: 'Upload file', selectFile: 'Select a file', downloadFile: 'Download file',
@@ -13,6 +16,9 @@ export const en = {
 
 export const ar = {
     curriculum: {
+        videoNotConfigured: 'لم يُهيّأ Bunny Stream على هذا الخادم. اطلب من الإدارة تفعيله؛ لا تضع المفاتيح هنا.',
+        videoRetryCleanup: 'إعادة محاولة الحذف من المزوّد',
+        videoPublishBeforeReady: 'ارفع الفيديو المحمي وانتظر اكتمال معالجته قبل نشر هذا الدرس.',
         videoUploadHeading: 'فيديو الدرس المحمي', videoUploadHint: 'اختر ملف MP4 أو MOV أو WebM. يُرفع مباشرة إلى Bunny Stream ويمكن استئنافه بعد الانقطاع. احفظ الدرس أولًا.', videoSaveFirst: 'احفظ هذا الدرس أولًا، ثم افتحه مجددًا لرفع الفيديو المحمي.', videoChooseFile: 'ملف الفيديو', videoUpload: 'رفع الفيديو', videoResume: 'استئناف الرفع', videoResumeHint: 'اختر الملف نفسه لاستئناف الرفع.', videoInvalidFile: 'اختر ملف فيديو مدعومًا ضمن الحد المسموح.', videoUploadError: 'تعذّر رفع الفيديو. اختر الملف نفسه لإعادة المحاولة.', videoStatusError: 'تعذّر فحص معالجة الفيديو. حاول لاحقًا.', videoRemoveConfirm: 'إزالة هذا الفيديو المحمي؟ سيفقد المتدربون الوصول إليه.', videoRemove: 'إزالة الفيديو', videoRemoveError: 'تعذّرت إزالة الفيديو.', videoCleanupFailed: 'أُوقف التشغيل، لكن حذف الملف من المزوّد فشل. أعد المحاولة أو تواصل مع الإدارة.', videoPreview: 'معاينة الفيديو المحمي', videoPreviewError: 'المعاينة المحمية غير متاحة.', videoStates: { creating: 'جارٍ الإنشاء', uncertain: 'حالة الإنشاء غير مؤكدة — تواصل مع الإدارة', uploading: 'جارٍ الرفع', processing: 'قيد المعالجة', ready: 'جاهز', failed: 'فشل', retired: 'مستبدل', deleted: 'أُزيل', cleanup_failed: 'يحتاج حذفًا من المزوّد' },
         manage: 'إدارة المنهج', loadMoreOptions: 'تحميل خيارات إضافية',
         addFile: 'رفع ملف', selectFile: 'اختر ملفًا', downloadFile: 'تنزيل الملف',

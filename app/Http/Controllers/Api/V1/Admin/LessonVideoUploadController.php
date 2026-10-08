@@ -13,13 +13,15 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpKernel\Exception\ServiceUnavailableHttpException;
 
 class LessonVideoUploadController extends Controller
 {
-    public function index(Request $request, Lesson $lesson): JsonResponse
+    public function index(Request $request, Lesson $lesson, BunnyStreamClient $bunny): JsonResponse
     {
         $this->authorizeLesson($request, $lesson);
-        $upload = $lesson->videoUploads()->latest('id')->first();
+        $upload = $lesson->videoUploads()->where('status', '!=', 'deleted')->latest('id')->first();
 
         return response()->json(['data' => $upload ? [
             'id' => $upload->id,
@@ -28,7 +30,11 @@ class LessonVideoUploadController extends Controller
             'filename' => $upload->filename,
             'size_bytes' => $upload->size_bytes,
             'is_current' => $upload->is_current,
-        ] : null])->header('Cache-Control', 'no-store, private');
+        ] : null, 'meta' => [
+            'configured' => $bunny->configured(),
+            'max_upload_megabytes' => (int) config('jcec.bunny_stream.max_upload_megabytes'),
+            'cleanup_pending' => $lesson->videoUploads()->where('status', 'cleanup_failed')->get(['id', 'filename'])->toArray(),
+        ]])->header('Cache-Control', 'no-store, private');
     }
 
     public function store(Request $request, Lesson $lesson, BunnyStreamClient $bunny): JsonResponse
@@ -47,10 +53,10 @@ class LessonVideoUploadController extends Controller
         $extension = strtolower(pathinfo($input['filename'], PATHINFO_EXTENSION));
         $expectedMime = ['mp4' => 'video/mp4', 'mov' => 'video/quicktime', 'webm' => 'video/webm'][$extension] ?? null;
         if ($expectedMime !== $input['mime_type']) {
-            throw \Illuminate\Validation\ValidationException::withMessages(['filename' => 'The video file extension and type do not match.']);
+            throw ValidationException::withMessages(['filename' => 'The video file extension and type do not match.']);
         }
 
-        $upload = DB::transaction(function () use ($lesson, $request, $input): LessonVideoUpload {
+        $reservation = DB::transaction(function () use ($lesson, $request, $input): array {
             Lesson::query()->whereKey($lesson->id)->lockForUpdate()->firstOrFail();
             $existing = $lesson->videoUploads()->where('request_id', $input['request_id'])->first();
 
@@ -60,12 +66,12 @@ class LessonVideoUploadController extends Controller
                     && $existing->mime_type === $input['mime_type']
                     && $existing->size_bytes === (int) $input['size_bytes'], 409);
 
-                return $existing;
+                return ['upload' => $existing, 'created' => false];
             }
 
-            abort_if($lesson->videoUploads()->whereIn('status', ['creating', 'uploading', 'processing', 'uncertain'])->exists(), 409);
+            abort_if($lesson->videoUploads()->whereIn('status', ['creating', 'uploading', 'processing', 'uncertain', 'failed', 'retired', 'cleanup_failed'])->exists(), 409);
 
-            return $lesson->videoUploads()->create([
+            $upload = $lesson->videoUploads()->create([
                 'uploaded_by' => $request->user()->id,
                 'request_id' => $input['request_id'],
                 'filename' => $input['filename'],
@@ -73,15 +79,18 @@ class LessonVideoUploadController extends Controller
                 'size_bytes' => $input['size_bytes'],
                 'status' => 'creating',
             ]);
-        });
 
-        if ($upload->status === 'creating' && $upload->video_guid === null) {
+            return ['upload' => $upload, 'created' => true];
+        });
+        $upload = $reservation['upload'];
+
+        if ($reservation['created']) {
             try {
                 $guid = $bunny->create($lesson->title);
                 $upload->update(['video_guid' => $guid, 'status' => 'uploading']);
             } catch (\Throwable $exception) {
                 $upload->update(['status' => 'uncertain']);
-                throw new \Symfony\Component\HttpKernel\Exception\ServiceUnavailableHttpException(null, 'Video upload creation is uncertain; contact an administrator before retrying.');
+                throw new ServiceUnavailableHttpException(null, 'Video upload creation is uncertain; contact an administrator before retrying.');
             }
         }
 
@@ -106,20 +115,25 @@ class LessonVideoUploadController extends Controller
                 3 => 'ready',
                 5, 8 => 'failed',
                 1, 2, 4, 7 => 'processing',
-                default => 'uploading',
+                0, 6 => 'uploading',
+                default => throw new ServiceUnavailableHttpException(null, 'Unsupported video processing state.'),
             };
 
             $retired = null;
             DB::transaction(function () use ($upload, $lesson, $state, $nextStatus, &$retired): void {
+                $currentLesson = Lesson::query()->whereKey($lesson->id)->lockForUpdate()->firstOrFail();
                 $locked = LessonVideoUpload::query()->lockForUpdate()->findOrFail($upload->id);
                 if (! in_array($locked->status, ['uploading', 'processing'], true)) {
                     return;
                 }
 
-                $locked->update(['status' => $nextStatus, 'encode_progress' => $state['encode_progress']]);
+                $locked->update([
+                    'status' => $nextStatus,
+                    'encode_progress' => $state['encode_progress'],
+                    'uploaded_at' => in_array($nextStatus, ['processing', 'ready'], true) ? ($locked->uploaded_at ?? now()) : $locked->uploaded_at,
+                ]);
 
                 if ($nextStatus === 'ready') {
-                    $currentLesson = Lesson::query()->whereKey($lesson->id)->lockForUpdate()->firstOrFail();
                     $retired = $currentLesson->videoUploads()->where('is_current', true)->where('id', '!=', $locked->id)->first();
                     if ($retired) {
                         $retired->update(['status' => 'retired', 'is_current' => false]);
@@ -148,6 +162,7 @@ class LessonVideoUploadController extends Controller
         $this->authorizeLesson($request, $lesson);
         $upload = $videoUpload;
         abort_unless($upload->lesson_id === $lesson->id, 404);
+        abort_if(in_array($upload->status, ['creating', 'uncertain'], true), 409, 'Upload creation must be reconciled before removal.');
 
         DB::transaction(function () use ($lesson, $upload): void {
             $currentLesson = Lesson::query()->whereKey($lesson->id)->lockForUpdate()->firstOrFail();

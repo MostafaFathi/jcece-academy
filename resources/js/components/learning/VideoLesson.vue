@@ -20,11 +20,12 @@ const embedSource = computed(() => {
 });
 let requestSequence = 0;
 async function authorizePlayback() {
-    if (!props.lesson.protected_playback_available) return;
     const sequence = ++requestSequence;
-    loading.value = true;
-    failed.value = false;
     protectedSource.value = null;
+    protectedPlayer.value = 'html5';
+    failed.value = false;
+    if (!props.lesson.protected_playback_available) { loading.value = false; return; }
+    loading.value = true;
     try {
         const response = await api.post(`/api/v1/me/courses/${encodeURIComponent(props.courseSlug)}/lessons/${props.lesson.id}/protected-playback`);
         if (sequence === requestSequence) {
