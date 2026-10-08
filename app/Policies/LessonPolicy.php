@@ -6,7 +6,6 @@ use App\Models\CourseSection;
 use App\Models\Lesson;
 use App\Models\User;
 use App\PermissionName;
-use App\RoleName;
 
 class LessonPolicy
 {
@@ -24,9 +23,7 @@ class LessonPolicy
     public function view(User $user, Lesson $lesson): bool
     {
         return $user->can(PermissionName::CurriculumView->value)
-            && (! $user->hasRole(RoleName::Instructor->value)
-                || $user->hasAnyRole([RoleName::Admin->value, RoleName::ContentManager->value])
-                || $lesson->section()->whereHas('course', fn ($query) => $query->where('instructor_id', $user->id))->exists());
+            && $user->can('viewCurriculum', $lesson->section->course);
     }
 
     /**
@@ -34,7 +31,7 @@ class LessonPolicy
      */
     public function create(User $user, CourseSection $section): bool
     {
-        return $user->can(PermissionName::CurriculumCreate->value);
+        return $user->can('createCurriculum', $section->course);
     }
 
     /**
@@ -42,7 +39,7 @@ class LessonPolicy
      */
     public function update(User $user, Lesson $lesson): bool
     {
-        return $user->can(PermissionName::CurriculumUpdate->value);
+        return $user->can('updateCurriculum', $lesson->section->course);
     }
 
     /**
@@ -50,7 +47,7 @@ class LessonPolicy
      */
     public function delete(User $user, Lesson $lesson): bool
     {
-        return $user->can(PermissionName::CurriculumDelete->value);
+        return $user->can('deleteCurriculum', $lesson->section->course);
     }
 
     /**
@@ -58,7 +55,7 @@ class LessonPolicy
      */
     public function restore(User $user, Lesson $lesson): bool
     {
-        return $user->can(PermissionName::CurriculumUpdate->value);
+        return $this->update($user, $lesson);
     }
 
     /**
@@ -66,11 +63,11 @@ class LessonPolicy
      */
     public function forceDelete(User $user, Lesson $lesson): bool
     {
-        return $user->can(PermissionName::CurriculumDelete->value);
+        return $this->delete($user, $lesson);
     }
 
     public function reorder(User $user, CourseSection $section): bool
     {
-        return $user->can(PermissionName::CurriculumUpdate->value);
+        return $user->can('updateCurriculum', $section->course);
     }
 }

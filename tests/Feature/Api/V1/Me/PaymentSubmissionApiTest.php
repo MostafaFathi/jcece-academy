@@ -8,9 +8,11 @@ use App\Models\User;
 use App\OrderStatus;
 use App\PaymentMethod;
 use App\PaymentStatus;
+use App\Services\PaymentSubmissionService;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -54,6 +56,52 @@ class PaymentSubmissionApiTest extends TestCase
             ->assertJsonValidationErrors(['method', 'payment_proof']);
 
         $this->assertDatabaseCount('payments', 0);
+    }
+
+    public function test_payment_proof_uses_readable_temporary_path_when_realpath_is_unavailable(): void
+    {
+        Storage::fake('local');
+        $user = $this->authenticate();
+        $order = Order::factory()->for($user)->create();
+        $temporaryFile = UploadedFile::fake()->create('proof.pdf', 1, 'application/pdf');
+        $proof = new class($temporaryFile->getPathname()) extends UploadedFile
+        {
+            public function __construct(string $path)
+            {
+                parent::__construct($path, 'proof.pdf', 'application/pdf', null, true);
+            }
+
+            public function getRealPath(): string|false
+            {
+                return false;
+            }
+        };
+
+        $payment = app(PaymentSubmissionService::class)->submit($order, $user, PaymentMethod::BankTransfer, $proof);
+
+        Storage::disk('local')->assertExists($payment->payment_proof);
+        $this->assertSame(PaymentStatus::PendingReview, $payment->status);
+        $this->assertSame(OrderStatus::AwaitingPayment, $order->fresh()->status);
+    }
+
+    public function test_missing_temporary_payment_proof_is_rejected_without_creating_a_payment(): void
+    {
+        Storage::fake('local');
+        $user = $this->authenticate();
+        $order = Order::factory()->for($user)->create();
+        Storage::disk('local')->put('vanished.pdf', 'temporary content');
+        $proof = new UploadedFile(Storage::disk('local')->path('vanished.pdf'), 'proof.pdf', 'application/pdf', null, true);
+        Storage::disk('local')->delete('vanished.pdf');
+
+        try {
+            app(PaymentSubmissionService::class)->submit($order, $user, PaymentMethod::BankTransfer, $proof);
+            $this->fail('An unavailable payment proof must be rejected.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('payment_proof', $exception->errors());
+        }
+
+        $this->assertDatabaseCount('payments', 0);
+        $this->assertSame(OrderStatus::Pending, $order->fresh()->status);
     }
 
     public function test_student_cannot_submit_payment_for_another_students_order(): void

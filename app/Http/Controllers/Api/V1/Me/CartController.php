@@ -18,4 +18,16 @@ class CartController extends Controller
     {
         return new CartResource($cartService->clear($request->user()));
     }
+
+    public function applyCoupon(Request $request, CartService $cartService): CartResource
+    {
+        $data = $request->validate(['code' => ['required', 'string', 'max:64']]);
+
+        return new CartResource($cartService->applyCoupon($request->user(), $data['code']));
+    }
+
+    public function removeCoupon(Request $request, CartService $cartService): CartResource
+    {
+        return new CartResource($cartService->removeCoupon($request->user()));
+    }
 }

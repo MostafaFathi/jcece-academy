@@ -6,16 +6,30 @@ import { en as admin } from './admin';
 import { en as adminContent } from './admin-content';
 import { en as operations } from './operations';
 import { en as instructor } from './instructor';
+import { en as certificatePolicy } from './certificate-policy';
+import { en as path } from './sequential';
+import { en as audit } from './audit';
+import { en as phase15f } from './phase15f';
+import { en as reports } from './reports';
+import { en as rolePermissions } from './role-permissions';
+import { en as assessmentAuthoring } from './assessment-authoring';
 
 export default {
     commerce,
     learning,
-    assessments,
+    assessments: { ...assessments, reasons: { ...assessments.reasons, certificate_configuration_missing: 'Certificate requirements have not been configured.', final_exam_unavailable: 'The final exam is unavailable.', final_exam_incomplete: 'Complete the final exam first.', final_exam_failed: 'The final exam passing score has not been met.', required_assignments_incomplete: 'Complete and pass the required assignments.', admin_approval_pending: 'Administrator approval is pending.' } },
     ...reviewsSupport,
     admin,
     curriculum: adminContent.curriculum,
     operations,
     instructor,
+    certificatePolicy,
+    path,
+    audit,
+    reports,
+    rolePermissions,
+    assessmentAuthoring,
+    ...phase15f,
     brand: {
         name: 'JCEC Academy', tagline: 'Learn today… build a better tomorrow', promise: 'Build professional skills that create a real difference in your future.', description: 'An Arabic-first professional learning platform bringing specialized content, assessment, and practical progress into one experience.',
     },
@@ -26,7 +40,7 @@ export default {
         title: 'Welcome back', subtitle: 'Enter your learning space and continue from where you left off.', email: 'Email address', password: 'Password', remember: 'Remember me', invalid: 'Unable to sign in. Check your details and try again.', submit: 'Sign in to my account', secure: 'Secure session-based access', emailRequired: 'Email is required.', emailInvalid: 'Enter a valid email address.', passwordRequired: 'Password is required.', registrationUnavailable: 'Online registration is not currently available. Contact the academy to join.', noReset: 'Password recovery is not currently available through the platform.',
         registerTitle: 'Create a learner account', registerSubtitle: 'Start your learning journey with your own account.', registerLink: 'Create an account', name: 'Full name', confirmPassword: 'Confirm password', registerSubmit: 'Create account', registerSuccess: 'Your account is ready. You can sign in now.', alreadyHaveAccount: 'Already have an account? Sign in', forgotLink: 'Forgot password?', forgotTitle: 'Reset your password', forgotSubtitle: 'Enter your email and we will send a reset link if the account exists.', forgotSubmit: 'Send reset link', forgotSuccess: 'If the account exists, a reset link will be sent to your email.', resetTitle: 'Set a new password', resetSubtitle: 'Choose a new password for your account.', resetSubmit: 'Change password', resetSuccess: 'Your password has changed. Sign in with the new one.', resetInvalid: 'The link is invalid or expired. Request a new one.', requestAgain: 'Request a new link', nameRequired: 'Name is required.', confirmRequired: 'Password confirmation is required.', passwordMismatch: 'Passwords do not match.',
     },
-    nav: { primary: 'Primary navigation', mobile: 'Mobile navigation', overview: 'Overview', courses: 'Courses', packages: 'Packages & paths', howItWorks: 'How it works', learning: 'My learning', content: 'Content management', users: 'Users', assignments: 'Assignments', tickets: 'Support tickets', orders: 'Orders', main: 'Main navigation' },
+    nav: { primary: 'Primary navigation', mobile: 'Mobile navigation', overview: 'Overview', courses: 'Courses', packages: 'Packages & paths', howItWorks: 'How it works', learning: 'My learning', content: 'Content management', website: 'Website & policies', users: 'Users', assignments: 'Assignments', tickets: 'Support tickets', orders: 'Orders', main: 'Main navigation' },
     home: {
         eyebrow: 'Skills today for a brighter tomorrow', heroTitle: 'Professional learning designed to move you from knowledge to achievement', heroDescription: 'Discover focused courses and learning paths with clear curricula and an experience shaped around your professional ambition.', browseCourses: 'Explore courses', browsePackages: 'Explore learning paths', recentEyebrow: 'Learn with focus', recentTitle: 'Latest available courses', recentDescription: 'Content currently published by the academy, ordered from newest so you can start with the right choice.', categoriesEyebrow: 'Choose your field', categoriesTitle: 'Learning fields that move you closer to your goal', categoriesDescription: 'Browse available categories and go directly to published courses in your field.', packagesEyebrow: 'A complete journey', packagesTitle: 'Packages and paths that connect the knowledge', packagesDescription: 'Related courses brought together in one clear learning experience.', howEyebrow: 'Simple steps', howTitle: 'Your learning journey starts with one decision', howDescription: 'A clear path from discovery to practical application.', stepExplore: 'Explore your options', stepExploreText: 'Compare published courses and packages based on your goal and level.', stepLearn: 'Learn at your pace', stepLearnText: 'Follow an organized curriculum with clear details before you begin.', stepGrow: 'Build your skill', stepGrowText: 'Turn knowledge into professional progress through practical steps.', whyEyebrow: 'Why JCEC', whyTitle: 'An experience focused on what you actually need', whyPractical: 'Career focused', whyPracticalText: 'Programs designed around skills that apply in a professional environment.', whyClear: 'Clear experience', whyClearText: 'Transparent curriculum, duration, and level details before you decide.', whyFlexible: 'Flexible learning', whyFlexibleText: 'Access content for the period defined for each course or package.', ctaTitle: 'Ready for your next step?', ctaText: 'Browse published content and choose the experience closest to your ambition.', emptyCourses: 'No courses are currently published.', emptyPackages: 'No packages are currently published.', emptyCategories: 'No categories are currently available.',
     },

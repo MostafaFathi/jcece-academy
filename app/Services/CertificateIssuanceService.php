@@ -22,14 +22,17 @@ class CertificateIssuanceService
     public function __construct(
         public CertificateEligibilityService $eligibility,
         public CertificatePdfGenerator $pdfGenerator,
+        private AuditTrail $audit,
+        private TransactionalDeliveryService $deliveries,
     ) {}
 
-    public function issue(User $user, Course $course, bool $isExplicitReissue = false): Certificate
+    public function issue(User $user, Course $course, bool $isExplicitReissue = false, ?User $actor = null): Certificate
     {
         $storedFile = null;
 
         try {
-            return DB::transaction(function () use ($user, $course, $isExplicitReissue, &$storedFile): Certificate {
+            return DB::transaction(function () use ($user, $course, $isExplicitReissue, $actor, &$storedFile): Certificate {
+                $course = Course::query()->whereKey($course->id)->lockForUpdate()->firstOrFail();
                 $enrollment = Enrollment::query()
                     ->whereBelongsTo($user)
                     ->whereBelongsTo($course)
@@ -102,6 +105,9 @@ class CertificateIssuanceService
                 $certificate->pdf_disk = $disk;
                 $certificate->pdf_path = $path;
                 $certificate->save();
+
+                $this->audit->record($isExplicitReissue ? 'certificate.reissued' : 'certificate.issued', $certificate, $actor ?? $user);
+                $this->deliveries->recordForUser('certificate_issued', 'Certificate', $certificate->id, $user);
 
                 return $certificate->refresh();
             });

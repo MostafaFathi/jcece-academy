@@ -18,8 +18,12 @@ class RolesAndPermissionsSeeder extends Seeder
     {
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
+        $newPermissionKeys = [];
         foreach (PermissionName::cases() as $permissionName) {
-            Permission::findOrCreate($permissionName->value);
+            $permission = Permission::findOrCreate($permissionName->value, 'web');
+            if ($permission->wasRecentlyCreated) {
+                $newPermissionKeys[] = $permissionName->value;
+            }
         }
 
         app(PermissionRegistrar::class)->forgetCachedPermissions();
@@ -101,7 +105,12 @@ class RolesAndPermissionsSeeder extends Seeder
         ];
 
         foreach ($rolePermissions as $roleName => $permissions) {
-            Role::findOrCreate($roleName)->givePermissionTo($permissions);
+            $role = Role::findOrCreate($roleName, 'web');
+            if ($role->wasRecentlyCreated) {
+                $role->givePermissionTo($permissions);
+            } elseif ($roleName === RoleName::Admin->value && in_array(PermissionName::RolesManage->value, $newPermissionKeys, true)) {
+                $role->givePermissionTo(PermissionName::RolesManage->value);
+            }
         }
 
         app(PermissionRegistrar::class)->forgetCachedPermissions();

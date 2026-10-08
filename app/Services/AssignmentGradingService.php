@@ -12,6 +12,8 @@ use Illuminate\Validation\ValidationException;
 
 class AssignmentGradingService
 {
+    public function __construct(private AuditTrail $audit) {}
+
     public function grade(User $reviewer, AssignmentSubmission $submission, string $score, ?string $feedback): AssignmentSubmission
     {
         return $this->recordGrade($reviewer, $submission, $score, $feedback, AssignmentGradingAction::Graded);
@@ -42,6 +44,8 @@ class AssignmentGradingService
                 'graded_by' => $reviewer->id,
                 'graded_at' => now(),
             ]);
+
+            $this->audit->record('assignment.revision_requested', $lockedSubmission, $reviewer);
 
             return $this->loadSubmission($lockedSubmission);
         });
@@ -96,6 +100,8 @@ class AssignmentGradingService
                 'graded_by' => $reviewer->id,
                 'graded_at' => now(),
             ]);
+
+            $this->audit->record($action === AssignmentGradingAction::Corrected ? 'assignment.grade_corrected' : 'assignment.graded', $lockedSubmission, $reviewer);
 
             return $this->loadSubmission($lockedSubmission);
         });

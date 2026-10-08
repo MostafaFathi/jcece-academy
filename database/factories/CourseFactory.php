@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\CourseLevel;
 use App\CourseStatus;
+use App\CourseTrainingType;
 use App\Models\Category;
 use App\Models\Course;
 use App\Models\User;
@@ -32,6 +33,7 @@ class CourseFactory extends Factory
             'short_description' => fake()->sentence(),
             'description' => fake()->paragraphs(4, true),
             'level' => fake()->randomElement(CourseLevel::cases()),
+            'training_type' => CourseTrainingType::Recorded,
             'language' => 'ar',
             'duration_minutes' => fake()->numberBetween(30, 1200),
             'access_duration_days' => fake()->optional()->numberBetween(30, 365),

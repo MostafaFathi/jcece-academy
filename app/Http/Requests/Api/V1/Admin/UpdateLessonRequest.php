@@ -39,9 +39,10 @@ class UpdateLessonRequest extends FormRequest
             'type' => ['sometimes', 'required', Rule::enum(LessonType::class)],
             'description' => ['nullable', 'string'],
             'content' => ['nullable', 'string'],
-            'video_provider' => ['nullable', 'string', 'max:255', Rule::prohibitedIf(fn (): bool => $type !== LessonType::Video->value)],
-            'video_id' => ['nullable', 'string', 'max:255', Rule::prohibitedIf(fn (): bool => $type !== LessonType::Video->value)],
-            'video_url' => ['nullable', 'url', 'max:2048', Rule::prohibitedIf(fn (): bool => ! in_array($type, [LessonType::Video->value, LessonType::Link->value], true))],
+            'video_provider' => ['nullable', 'string', 'max:255', Rule::prohibitedIf(fn (): bool => $type !== LessonType::Video->value || ! $this->boolean('is_preview', $lesson->is_preview))],
+            'video_id' => ['nullable', 'string', 'max:255', Rule::prohibitedIf(fn (): bool => $type !== LessonType::Video->value || ! $this->boolean('is_preview', $lesson->is_preview))],
+            'video_url' => ['nullable', 'url', 'max:2048', Rule::prohibitedIf(fn (): bool => ! in_array($type, [LessonType::Video->value, LessonType::Link->value], true) || ($type === LessonType::Video->value && ! $this->boolean('is_preview', $lesson->is_preview)))],
+            'protected_video_asset_key' => ['prohibited'],
             'duration_seconds' => ['nullable', 'integer', 'min:0'],
             'is_preview' => ['sometimes', 'boolean'],
             'is_published' => ['sometimes', 'boolean'],
@@ -64,13 +65,16 @@ class UpdateLessonRequest extends FormRequest
                 $content = $this->input('content', $lesson->content);
                 $videoId = $this->input('video_id', $lesson->video_id);
                 $videoUrl = $this->input('video_url', $lesson->video_url);
+                if ($lesson->video_provider === 'bunny_stream' && ($type !== LessonType::Video->value || $this->boolean('is_preview', $lesson->is_preview))) {
+                    $validator->errors()->add('type', 'Remove the protected video before changing this lesson type or visibility.');
+                }
 
                 if ($type === LessonType::Text->value && blank($content)) {
                     $validator->errors()->add('content', 'Content is required for text lessons.');
                 }
 
-                if ($type === LessonType::Video->value && blank($videoId) && blank($videoUrl)) {
-                    $validator->errors()->add('video_url', 'A video ID or video URL is required for video lessons.');
+                if ($type === LessonType::Video->value && $this->boolean('is_preview', $lesson->is_preview) && blank($videoId) && blank($videoUrl)) {
+                    $validator->errors()->add('video_url', 'A public preview video URL is required.');
                 }
 
                 if ($type === LessonType::Link->value && blank($videoUrl)) {

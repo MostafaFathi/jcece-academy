@@ -4,6 +4,7 @@ namespace App\Http\Resources\Api\V1;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Gate;
 
 class AdminAssignmentResource extends JsonResource
 {
@@ -30,6 +31,12 @@ class AdminAssignmentResource extends JsonResource
             'due_at' => $this->due_at,
             'allow_late_submissions' => $this->allow_late_submissions,
             'attachments' => AssignmentAttachmentResource::collection($this->whenLoaded('attachments')),
+            'capabilities' => $this->when($request->routeIs('api.v1.instructor.*', 'api.v1.admin.*'), fn (): array => [
+                'can_update' => Gate::forUser($request->user())->allows('update', $this->resource),
+                'can_delete' => Gate::forUser($request->user())->allows('delete', $this->resource),
+                'can_publish' => Gate::forUser($request->user())->allows('publish', $this->resource),
+                'can_review_submissions' => Gate::forUser($request->user())->allows('reviewSubmissions', $this->resource),
+            ]),
         ];
     }
 }

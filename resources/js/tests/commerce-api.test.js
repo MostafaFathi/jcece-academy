@@ -1,12 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { api, downloadBlob } from '../api/client';
 import * as commerce from '../api/commerce';
-vi.mock('../api/client', () => ({ api: { get: vi.fn(), post: vi.fn(), delete: vi.fn() }, downloadBlob: vi.fn() }));
+vi.mock('../api/client', () => ({ api: { get: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() }, downloadBlob: vi.fn() }));
 describe('commerce endpoint adapters', () => {
     beforeEach(() => {
         vi.resetAllMocks();
         api.get.mockResolvedValue({ data: { data: { id: 1 } } });
         api.post.mockResolvedValue({ data: { data: { id: 1 } } });
+        api.put.mockResolvedValue({ data: { data: { id: 1 } } });
         api.delete.mockResolvedValue({ data: { data: { id: 1 } } });
     });
     it('uses actual cart endpoints and minimal purchase payloads', async () => {
@@ -26,6 +27,12 @@ describe('commerce endpoint adapters', () => {
         await commerce.checkout({ idempotency_key: 'uuid' });
         expect(api.get).toHaveBeenLastCalledWith('/api/v1/me/orders/7');
         expect(api.post).toHaveBeenCalledWith('/api/v1/me/checkout', { idempotency_key: 'uuid' });
+    });
+    it('uses scoped cart coupon apply and remove endpoints', async () => {
+        await commerce.applyCartCoupon('SAVE10');
+        await commerce.removeCartCoupon();
+        expect(api.put).toHaveBeenCalledWith('/api/v1/me/cart/coupon', { code: 'SAVE10' });
+        expect(api.delete).toHaveBeenCalledWith('/api/v1/me/cart/coupon');
     });
     it('passes FormData to the authenticated client and uses the private blob helper', async () => {
         const form = new FormData();

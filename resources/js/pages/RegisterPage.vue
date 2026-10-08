@@ -6,7 +6,7 @@ import BaseAlert from '../components/ui/BaseAlert.vue';
 import BaseButton from '../components/ui/BaseButton.vue';
 import BaseInput from '../components/ui/BaseInput.vue';
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const form = reactive({ name: '', email: '', password: '', password_confirmation: '' });
 const errors = ref({});
 const failure = ref(false);
@@ -26,7 +26,7 @@ async function submit() {
 
     loading.value = true;
     try {
-        await register({ ...form, name: form.name.trim(), email: form.email.trim() });
+        await register({ ...form, name: form.name.trim(), email: form.email.trim(), locale: locale.value });
         success.value = true;
     } catch (error) {
         errors.value = Object.fromEntries(Object.entries(error.errors ?? {}).map(([key, messages]) => [key, messages[0]]));

@@ -24,10 +24,13 @@ class CheckoutRequest extends FormRequest
     {
         return [
             'idempotency_key' => ['required', 'uuid'],
+            'expected_total' => ['required', 'regex:/^\\d{1,10}\\.\\d{2}$/'],
+            'expected_coupon_code' => ['nullable', 'string', 'max:64'],
             'customer_name' => ['required', 'string', 'max:255'],
             'customer_email' => ['required', 'email', 'max:255'],
             'customer_phone' => ['required', 'string', 'max:50'],
             'notes' => ['nullable', 'string', 'max:2000'],
+            'locale' => ['sometimes', 'in:ar,en'],
         ];
     }
 }

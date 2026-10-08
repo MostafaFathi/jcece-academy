@@ -27,10 +27,13 @@ class CurriculumPolicyTest extends TestCase
     #[DataProvider('abilities')]
     public function test_curriculum_abilities_require_the_matching_permission(string $policyClass, string $ability, string $permission, string $targetClass): void
     {
-        Permission::findOrCreate($permission);
+        foreach (array_unique(['courses.view', 'curriculum.view', $permission]) as $key) {
+            Permission::findOrCreate($key);
+        }
         $authorizedUser = User::factory()->create();
-        $authorizedUser->givePermissionTo($permission);
+        $authorizedUser->givePermissionTo(array_unique(['courses.view', 'curriculum.view', $permission]));
         $unauthorizedUser = User::factory()->create();
+        $unauthorizedUser->givePermissionTo($permission === 'curriculum.view' ? ['courses.view'] : ['courses.view', 'curriculum.view']);
         $target = $this->createTarget($targetClass);
         $policy = new $policyClass;
 

@@ -9,14 +9,19 @@ use App\Http\Controllers\Api\V1\Admin\AssignmentSubmissionFileDownloadController
 use App\Http\Controllers\Api\V1\Admin\AssignmentSubmissionGradeController;
 use App\Http\Controllers\Api\V1\Admin\AssignmentSubmissionGradeCorrectionController;
 use App\Http\Controllers\Api\V1\Admin\AssignmentSubmissionRevisionController;
+use App\Http\Controllers\Api\V1\Admin\AuditEventController;
 use App\Http\Controllers\Api\V1\Admin\CategoryController as AdminCategoryController;
+use App\Http\Controllers\Api\V1\Admin\CertificateApprovalRequestController as AdminCertificateApprovalRequestController;
 use App\Http\Controllers\Api\V1\Admin\CertificateController as AdminCertificateController;
 use App\Http\Controllers\Api\V1\Admin\CertificateDownloadController as AdminCertificateDownloadController;
 use App\Http\Controllers\Api\V1\Admin\CertificateEligibilityController as AdminCertificateEligibilityController;
 use App\Http\Controllers\Api\V1\Admin\CertificateIssuanceController as AdminCertificateIssuanceController;
 use App\Http\Controllers\Api\V1\Admin\CertificateReissuanceController;
 use App\Http\Controllers\Api\V1\Admin\CertificateRevocationController;
+use App\Http\Controllers\Api\V1\Admin\CouponController;
+use App\Http\Controllers\Api\V1\Admin\CourseCertificateRequirementsController;
 use App\Http\Controllers\Api\V1\Admin\CourseController as AdminCourseController;
+use App\Http\Controllers\Api\V1\Admin\CourseFaqController;
 use App\Http\Controllers\Api\V1\Admin\CourseReviewController as AdminCourseReviewController;
 use App\Http\Controllers\Api\V1\Admin\CourseReviewHidingController;
 use App\Http\Controllers\Api\V1\Admin\CourseReviewPublicationController;
@@ -25,9 +30,11 @@ use App\Http\Controllers\Api\V1\Admin\CourseSectionController;
 use App\Http\Controllers\Api\V1\Admin\CurriculumOrderController;
 use App\Http\Controllers\Api\V1\Admin\DashboardSummaryController;
 use App\Http\Controllers\Api\V1\Admin\EnrollmentAccessController;
+use App\Http\Controllers\Api\V1\Admin\FinancialDocumentController as AdminFinancialDocumentController;
 use App\Http\Controllers\Api\V1\Admin\InstructorController as AdminInstructorController;
 use App\Http\Controllers\Api\V1\Admin\InstructorOptionController;
 use App\Http\Controllers\Api\V1\Admin\LessonController;
+use App\Http\Controllers\Api\V1\Admin\LessonVideoUploadController;
 use App\Http\Controllers\Api\V1\Admin\LessonResourceController;
 use App\Http\Controllers\Api\V1\Admin\LessonResourceDownloadController as AdminLessonResourceDownloadController;
 use App\Http\Controllers\Api\V1\Admin\LessonResourceUploadController;
@@ -47,25 +54,36 @@ use App\Http\Controllers\Api\V1\Admin\QuizController as AdminQuizController;
 use App\Http\Controllers\Api\V1\Admin\QuizPublicationController;
 use App\Http\Controllers\Api\V1\Admin\QuizQuestionController;
 use App\Http\Controllers\Api\V1\Admin\QuizQuestionOrderController;
+use App\Http\Controllers\Api\V1\Admin\RefundController;
+use App\Http\Controllers\Api\V1\Admin\ReportController as AdminReportController;
+use App\Http\Controllers\Api\V1\Admin\RolePermissionController;
+use App\Http\Controllers\Api\V1\Admin\SiteContentController as AdminSiteContentController;
+use App\Http\Controllers\Api\V1\Admin\SupportTicketAssigneeLookupController;
 use App\Http\Controllers\Api\V1\Admin\SupportTicketAssignmentController;
 use App\Http\Controllers\Api\V1\Admin\SupportTicketAttachmentDownloadController as AdminSupportTicketAttachmentDownloadController;
 use App\Http\Controllers\Api\V1\Admin\SupportTicketController as AdminSupportTicketController;
 use App\Http\Controllers\Api\V1\Admin\SupportTicketMessageController as AdminSupportTicketMessageController;
 use App\Http\Controllers\Api\V1\Admin\SupportTicketUpdateController;
+use App\Http\Controllers\Api\V1\Admin\TransactionalDeliveryRetryController;
 use App\Http\Controllers\Api\V1\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\CertificateVerificationController;
+use App\Http\Controllers\Api\V1\ContactController;
 use App\Http\Controllers\Api\V1\CourseController;
 use App\Http\Controllers\Api\V1\CourseReviewController;
+use App\Http\Controllers\Api\V1\Instructor\ReportController as InstructorReportController;
 use App\Http\Controllers\Api\V1\Instructor\WorkspaceController as InstructorWorkspaceController;
+use App\Http\Controllers\Api\V1\InstructorController;
 use App\Http\Controllers\Api\V1\Me\AssignmentAttachmentDownloadController as MeAssignmentAttachmentDownloadController;
 use App\Http\Controllers\Api\V1\Me\AssignmentController as MeAssignmentController;
 use App\Http\Controllers\Api\V1\Me\AssignmentSubmissionController;
 use App\Http\Controllers\Api\V1\Me\AssignmentSubmissionFileController;
 use App\Http\Controllers\Api\V1\Me\AssignmentSubmissionFileDownloadController as MeAssignmentSubmissionFileDownloadController;
 use App\Http\Controllers\Api\V1\Me\AssignmentSubmissionFinalizationController;
+use App\Http\Controllers\Api\V1\Me\AvatarController;
 use App\Http\Controllers\Api\V1\Me\CartController;
 use App\Http\Controllers\Api\V1\Me\CartItemController;
+use App\Http\Controllers\Api\V1\Me\CertificateApprovalRequestController as MeCertificateApprovalRequestController;
 use App\Http\Controllers\Api\V1\Me\CertificateController as MeCertificateController;
 use App\Http\Controllers\Api\V1\Me\CertificateDownloadController as MeCertificateDownloadController;
 use App\Http\Controllers\Api\V1\Me\CertificateEligibilityController as MeCertificateEligibilityController;
@@ -73,11 +91,16 @@ use App\Http\Controllers\Api\V1\Me\CertificateIssuanceController as MeCertificat
 use App\Http\Controllers\Api\V1\Me\CheckoutController;
 use App\Http\Controllers\Api\V1\Me\CourseController as MeCourseController;
 use App\Http\Controllers\Api\V1\Me\CourseReviewController as MeCourseReviewController;
+use App\Http\Controllers\Api\V1\Me\FinancialDocumentController as MeFinancialDocumentController;
 use App\Http\Controllers\Api\V1\Me\LessonProgressController;
 use App\Http\Controllers\Api\V1\Me\LessonResourceDownloadController;
+use App\Http\Controllers\Api\V1\Me\LocalePreferenceController;
 use App\Http\Controllers\Api\V1\Me\OrderController as MeOrderController;
+use App\Http\Controllers\Api\V1\Me\PasswordController;
 use App\Http\Controllers\Api\V1\Me\PaymentController as MePaymentController;
 use App\Http\Controllers\Api\V1\Me\PaymentProofController as MePaymentProofController;
+use App\Http\Controllers\Api\V1\Me\ProfileController;
+use App\Http\Controllers\Api\V1\Me\ProtectedVideoPlaybackController;
 use App\Http\Controllers\Api\V1\Me\QuizAttemptAnswerController;
 use App\Http\Controllers\Api\V1\Me\QuizAttemptController;
 use App\Http\Controllers\Api\V1\Me\QuizAttemptSubmissionController;
@@ -88,7 +111,11 @@ use App\Http\Controllers\Api\V1\Me\SupportTicketMessageController as MeSupportTi
 use App\Http\Controllers\Api\V1\Me\SupportTicketReopeningController;
 use App\Http\Controllers\Api\V1\PackageController;
 use App\Http\Controllers\Api\V1\PolicyPageController;
+use App\Http\Controllers\Api\V1\SiteContentController;
+use App\Http\Controllers\Api\V1\TestimonialController;
+use App\PermissionName;
 use Illuminate\Support\Facades\Route;
+use Spatie\Permission\Middleware\RoleOrPermissionMiddleware;
 
 Route::prefix('v1')->name('api.v1.')->group(function (): void {
     Route::get('categories', [CategoryController::class, 'index'])->name('categories.index');
@@ -96,21 +123,37 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
     Route::get('courses', [CourseController::class, 'index'])->name('courses.index');
     Route::get('courses/{course:slug}', [CourseController::class, 'show'])->name('courses.show');
     Route::get('courses/{course:slug}/reviews', [CourseReviewController::class, 'index'])->name('courses.reviews.index');
+    Route::get('instructors', [InstructorController::class, 'index'])->name('instructors.index');
+    Route::get('instructors/{instructor}', [InstructorController::class, 'show'])->name('instructors.show');
     Route::get('packages', [PackageController::class, 'index'])->name('packages.index');
     Route::get('packages/{package:slug}', [PackageController::class, 'show'])->name('packages.show');
     Route::get('policies/{policyPage:slug}', PolicyPageController::class)->name('policies.show');
+    Route::get('site-pages/{sitePage:slug}', [SiteContentController::class, 'page'])->name('site-pages.show');
+    Route::get('site-faqs', [SiteContentController::class, 'faqs'])->name('site-faqs.index');
+    Route::get('testimonials', TestimonialController::class)->name('testimonials.index');
+    Route::post('contact', ContactController::class)->middleware('throttle:3,1')->name('contact.store');
     Route::get('certificates/verify/{token}', CertificateVerificationController::class)
         ->middleware('throttle:30,1')
         ->name('certificates.verify');
 
     Route::middleware('auth:sanctum')->prefix('me')->name('me.')->group(function (): void {
+        Route::patch('locale', LocalePreferenceController::class)->name('locale.update');
+        Route::get('profile', [ProfileController::class, 'show'])->name('profile.show');
+        Route::patch('profile', [ProfileController::class, 'update'])->name('profile.update');
+        Route::post('avatar', [AvatarController::class, 'store'])->middleware('throttle:5,1')->name('avatar.store');
+        Route::delete('avatar', [AvatarController::class, 'destroy'])->name('avatar.destroy');
+        Route::put('password', PasswordController::class)->middleware('throttle:5,1')->name('password.update');
         Route::get('cart', [CartController::class, 'index'])->name('cart.index');
         Route::delete('cart', [CartController::class, 'destroy'])->name('cart.destroy');
+        Route::put('cart/coupon', [CartController::class, 'applyCoupon'])->name('cart.coupon.update');
+        Route::delete('cart/coupon', [CartController::class, 'removeCoupon'])->name('cart.coupon.destroy');
         Route::post('cart/items', [CartItemController::class, 'store'])->name('cart.items.store');
         Route::delete('cart/items/{cartItem}', [CartItemController::class, 'destroy'])->name('cart.items.destroy');
         Route::post('checkout', CheckoutController::class)->middleware('throttle:10,1')->name('checkout.store');
         Route::get('orders', [MeOrderController::class, 'index'])->name('orders.index');
         Route::get('orders/{order}', [MeOrderController::class, 'show'])->name('orders.show');
+        Route::post('orders/{order}/financial-documents', [MeFinancialDocumentController::class, 'issue'])->middleware('throttle:5,1')->name('orders.financial-documents.issue');
+        Route::get('financial-documents/{document}/download', [MeFinancialDocumentController::class, 'download'])->name('financial-documents.download');
         Route::post('orders/{order}/payments', [MePaymentController::class, 'store'])->middleware('throttle:10,1')->name('orders.payments.store');
         Route::get('payments/{payment}/proof', MePaymentProofController::class)->name('payments.proof.show');
         Route::get('quizzes', [MeQuizController::class, 'index'])->name('quizzes.index');
@@ -132,6 +175,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::get('assignment-submission-files/{file}/download', MeAssignmentSubmissionFileDownloadController::class)->name('assignment-submission-files.download');
 
         Route::scopeBindings()->group(function (): void {
+            Route::post('courses/{course:slug}/lessons/{lesson}/protected-playback', ProtectedVideoPlaybackController::class)->middleware('throttle:30,1')->name('courses.lessons.protected-playback');
             Route::post('assignment-submissions/{submission}/files', [AssignmentSubmissionFileController::class, 'store'])->name('assignment-submissions.files.store');
             Route::delete('assignment-submissions/{submission}/files/{file}', [AssignmentSubmissionFileController::class, 'destroy'])->name('assignment-submissions.files.destroy');
         });
@@ -144,6 +188,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::get('certificates/{certificate}', [MeCertificateController::class, 'show'])->name('certificates.show');
         Route::get('certificates/{certificate}/download', MeCertificateDownloadController::class)->name('certificates.download');
         Route::get('courses/{course:slug}/certificate-eligibility', MeCertificateEligibilityController::class)->name('courses.certificates.eligibility');
+        Route::post('courses/{course:slug}/certificate-approval-request', MeCertificateApprovalRequestController::class)->name('courses.certificates.approval-request');
         Route::post('courses/{course:slug}/certificates', MeCertificateIssuanceController::class)->name('courses.certificates.store');
         Route::get('reviews', [MeCourseReviewController::class, 'index'])->name('reviews.index');
         Route::get('courses/{course:slug}/review', [MeCourseReviewController::class, 'show'])->name('courses.review.show');
@@ -165,6 +210,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
     });
 
     Route::middleware('auth:sanctum')->prefix('instructor')->name('instructor.')->group(function (): void {
+        Route::get('reports/{type}', [InstructorReportController::class, 'show'])->name('reports.show');
         Route::get('dashboard-summary', [InstructorWorkspaceController::class, 'summary'])->name('dashboard-summary.show');
         Route::get('courses', [InstructorWorkspaceController::class, 'courses'])->name('courses.index');
         Route::get('courses/{course}', [InstructorWorkspaceController::class, 'course'])->name('courses.show');
@@ -179,21 +225,50 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::get('courses/{course}/assignments/{assignment}/submissions/{submission}', [InstructorWorkspaceController::class, 'submission'])->name('courses.assignments.submissions.show');
     });
 
-    Route::middleware('auth:sanctum')->prefix('admin')->name('admin.')->group(function (): void {
+    Route::middleware(['auth:sanctum', RoleOrPermissionMiddleware::using(array_merge(
+        ['admin', 'content_manager', 'instructor', 'sales_support'],
+        array_values(array_diff(array_column(PermissionName::cases(), 'value'), [PermissionName::CoursesView->value, PermissionName::CategoriesView->value])),
+    ))])->prefix('admin')->name('admin.')->group(function (): void {
+        Route::get('reports/{type}', [AdminReportController::class, 'show'])->name('reports.show');
+        Route::get('reports/{type}/export/{format}', [AdminReportController::class, 'export'])->middleware('throttle:10,1')->name('reports.export');
+        Route::get('audit-events', AuditEventController::class)->name('audit-events.index');
         Route::get('policy-pages', [AdminPolicyPageController::class, 'index'])->name('policy-pages.index');
+        Route::get('site-content', [AdminSiteContentController::class, 'index'])->name('site-content.index');
+        Route::put('site-pages/{slug}', [AdminSiteContentController::class, 'updatePage'])->name('site-pages.update');
+        Route::post('site-pages/{slug}/publication', [AdminSiteContentController::class, 'publishPage'])->name('site-pages.publish');
+        Route::post('site-faqs', [AdminSiteContentController::class, 'storeFaq'])->name('site-faqs.store');
+        Route::patch('site-faqs/{siteFaq}', [AdminSiteContentController::class, 'updateFaq'])->name('site-faqs.update');
+        Route::delete('site-faqs/{siteFaq}', [AdminSiteContentController::class, 'destroyFaq'])->name('site-faqs.destroy');
+        Route::get('contact-messages', [AdminSiteContentController::class, 'contacts'])->name('contact-messages.index');
         Route::put('policy-pages/{policyPage:slug}', [AdminPolicyPageController::class, 'update'])->name('policy-pages.update');
         Route::post('policy-pages/{policyPage:slug}/publication', [AdminPolicyPageController::class, 'publish'])->name('policy-pages.publish');
         Route::get('dashboard-summary', DashboardSummaryController::class)->name('dashboard-summary.show');
         Route::apiResource('users', AdminUserController::class)->only(['index', 'store', 'show', 'update']);
+        Route::get('roles', [RolePermissionController::class, 'index'])->name('roles.index');
+        Route::get('roles/{role}', [RolePermissionController::class, 'show'])->name('roles.show');
+        Route::put('roles/{role}/permissions', [RolePermissionController::class, 'update'])->middleware('throttle:20,1')->name('roles.permissions.update');
         Route::get('instructor-options', InstructorOptionController::class)->name('instructor-options.index');
         Route::apiResource('instructors', AdminInstructorController::class)->only(['index', 'store', 'show', 'update']);
         Route::apiResource('categories', AdminCategoryController::class);
         Route::apiResource('courses', AdminCourseController::class);
+        Route::get('courses/{course}/faqs', [CourseFaqController::class, 'index'])->name('courses.faqs.index');
+        Route::post('courses/{course}/faqs', [CourseFaqController::class, 'store'])->name('courses.faqs.store');
+        Route::patch('courses/{course}/faqs/{faq}', [CourseFaqController::class, 'update'])->name('courses.faqs.update');
+        Route::delete('courses/{course}/faqs/{faq}', [CourseFaqController::class, 'destroy'])->name('courses.faqs.destroy');
+        Route::get('courses/{course}/certificate-requirements', [CourseCertificateRequirementsController::class, 'show'])->name('courses.certificate-requirements.show');
+        Route::put('courses/{course}/certificate-requirements', [CourseCertificateRequirementsController::class, 'update'])->name('courses.certificate-requirements.update');
         Route::apiResource('packages', AdminPackageController::class);
         Route::post('users/{user}/courses/{course}/access', [EnrollmentAccessController::class, 'store'])->name('users.courses.access.store');
         Route::delete('access-grants/{grant}', [EnrollmentAccessController::class, 'destroy'])->name('access-grants.destroy');
         Route::get('orders', [AdminOrderController::class, 'index'])->name('orders.index');
+        Route::apiResource('coupons', CouponController::class)->only(['index', 'show', 'store', 'update']);
         Route::get('orders/{order}', [AdminOrderController::class, 'show'])->name('orders.show');
+        Route::post('orders/{order}/financial-documents', [AdminFinancialDocumentController::class, 'issue'])->middleware('throttle:5,1')->name('orders.financial-documents.issue');
+        Route::get('financial-documents/{document}/download', [AdminFinancialDocumentController::class, 'download'])->name('financial-documents.download');
+        Route::post('orders/{order}/transactional-deliveries/{delivery}/retry', TransactionalDeliveryRetryController::class)->middleware('throttle:5,1')->name('orders.transactional-deliveries.retry');
+        Route::post('orders/{order}/refunds', [RefundController::class, 'store'])->name('orders.refunds.store');
+        Route::post('orders/{order}/refunds/{refund}/complete', [RefundController::class, 'complete'])->name('orders.refunds.complete');
+        Route::post('orders/{order}/refunds/{refund}/reject', [RefundController::class, 'reject'])->name('orders.refunds.reject');
         Route::patch('orders/{order}/status', OrderStatusController::class)->name('orders.status.update');
         Route::post('orders/{order}/provision-access', OrderAccessProvisioningController::class)->name('orders.access.store');
         Route::get('payments', [AdminPaymentController::class, 'index'])->name('payments.index');
@@ -214,6 +289,11 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
 
             Route::post('sections/{section}/lessons/reorder', [CurriculumOrderController::class, 'lessons'])->name('sections.lessons.reorder');
             Route::apiResource('sections.lessons', LessonController::class);
+            Route::get('lessons/{lesson}/video-uploads', [LessonVideoUploadController::class, 'index'])->name('lessons.video-uploads.index');
+            Route::post('lessons/{lesson}/video-uploads', [LessonVideoUploadController::class, 'store'])->middleware('throttle:10,1')->name('lessons.video-uploads.store');
+            Route::get('lessons/{lesson}/video-uploads/{videoUpload}', [LessonVideoUploadController::class, 'show'])->middleware('throttle:30,1')->name('lessons.video-uploads.show');
+            Route::delete('lessons/{lesson}/video-uploads/{videoUpload}', [LessonVideoUploadController::class, 'destroy'])->middleware('throttle:10,1')->name('lessons.video-uploads.destroy');
+            Route::post('lessons/{lesson}/video-preview', [LessonVideoUploadController::class, 'preview'])->middleware('throttle:30,1')->name('lessons.video-preview');
 
             Route::apiResource('courses.quizzes', AdminQuizController::class);
             Route::apiResource('quizzes.questions', QuizQuestionController::class);
@@ -242,6 +322,8 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::post('assignment-submissions/{submission}/revision', AssignmentSubmissionRevisionController::class)->name('assignment-submissions.revision');
         Route::post('assignment-submissions/{submission}/grade-corrections', AssignmentSubmissionGradeCorrectionController::class)->name('assignment-submissions.grade-corrections.store');
         Route::get('certificates', [AdminCertificateController::class, 'index'])->name('certificates.index');
+        Route::get('certificate-approval-requests', [AdminCertificateApprovalRequestController::class, 'index'])->name('certificate-approval-requests.index');
+        Route::post('certificate-approval-requests/{approvalRequest}/approve', [AdminCertificateApprovalRequestController::class, 'approve'])->name('certificate-approval-requests.approve');
         Route::get('certificates/{certificate}', [AdminCertificateController::class, 'show'])->name('certificates.show');
         Route::get('certificates/{certificate}/download', AdminCertificateDownloadController::class)->name('certificates.download');
         Route::get('users/{user}/courses/{course}/certificate-eligibility', AdminCertificateEligibilityController::class)->name('users.courses.certificates.eligibility');
@@ -253,6 +335,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::post('course-reviews/{review}/publication', CourseReviewPublicationController::class)->name('course-reviews.publication.store');
         Route::post('course-reviews/{review}/rejection', CourseReviewRejectionController::class)->name('course-reviews.rejection.store');
         Route::post('course-reviews/{review}/hiding', CourseReviewHidingController::class)->name('course-reviews.hiding.store');
+        Route::get('support-ticket-assignees', SupportTicketAssigneeLookupController::class)->name('support-ticket-assignees.index');
         Route::get('support-tickets', [AdminSupportTicketController::class, 'index'])->name('support-tickets.index');
         Route::get('support-tickets/{ticket}', [AdminSupportTicketController::class, 'show'])->name('support-tickets.show');
         Route::patch('support-tickets/{ticket}', SupportTicketUpdateController::class)->name('support-tickets.update');

@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted } from 'vue';
+import { onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useCartStore } from '../stores/cart';
 import PageHeading from '../components/ui/PageHeading.vue';
@@ -13,9 +13,12 @@ import CommerceError from '../components/commerce/CommerceError.vue';
 import CartSummary from '../components/commerce/CartSummary.vue';
 const cart = useCartStore();
 const { t } = useI18n();
+const couponCode = ref('');
 async function load() { try { await cart.load(); } catch {} }
 async function remove(id) { try { await cart.remove(id); } catch {} }
 async function clear() { try { await cart.clear(); } catch {} }
+async function applyCoupon() { try { await cart.applyCoupon(couponCode.value); couponCode.value = ''; } catch {} }
+async function removeCoupon() { try { await cart.removeCoupon(); } catch {} }
 onMounted(load);
 </script>
 <template>
@@ -34,7 +37,7 @@ onMounted(load);
                     <div class="flex shrink-0 items-center justify-between gap-4 sm:flex-col sm:items-end"><MoneyAmount v-if="item.product" :amount="item.product.price" :currency="cart.currency" class="font-black text-brand" /><BaseButton variant="secondary" :disabled="cart.mutating || cart.uncertain" :aria-label="t('commerce.removeItem', { title: item.product?.title ?? '' })" @click="remove(item.id)">{{ t('commerce.remove') }}</BaseButton></div>
                 </article>
             </div>
-            <CartSummary><RouterLink v-if="cart.ready && !cart.mutating && !cart.uncertain" :to="{ name: 'student.checkout' }" class="flex min-h-12 items-center justify-center rounded-xl bg-accent px-4 font-black text-brand-dark">{{ t('commerce.checkout') }}</RouterLink><p v-else class="text-sm text-accent">{{ t('commerce.cartNeedsAttention') }}</p></CartSummary>
+            <CartSummary><form class="mb-5 space-y-2" @submit.prevent="applyCoupon"><label for="cart-coupon" class="text-sm font-bold">{{ t('commerce.couponCode') }}</label><div class="flex gap-2"><input id="cart-coupon" v-model="couponCode" maxlength="64" :disabled="cart.mutating || cart.uncertain" class="min-w-0 flex-1 rounded-xl border border-white/30 bg-white px-3 py-2 text-slate-950"><BaseButton type="submit" :disabled="!couponCode.trim() || cart.mutating || cart.uncertain">{{ t('commerce.applyCoupon') }}</BaseButton></div><button v-if="cart.cart?.coupon_code" type="button" class="text-sm font-bold text-accent underline" :disabled="cart.mutating || cart.uncertain" @click="removeCoupon">{{ t('commerce.removeCoupon') }}</button></form><RouterLink v-if="cart.ready && !cart.mutating && !cart.uncertain" :to="{ name: 'student.checkout' }" class="flex min-h-12 items-center justify-center rounded-xl bg-accent px-4 font-black text-brand-dark">{{ t('commerce.checkout') }}</RouterLink><p v-else class="text-sm text-accent">{{ t('commerce.cartNeedsAttention') }}</p></CartSummary>
         </div>
     </div>
 </template>

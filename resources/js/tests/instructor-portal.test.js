@@ -19,13 +19,13 @@ vi.mock('vue-router', async (original) => ({ ...(await original()), useRoute: ()
 vi.mock('../stores/auth', () => ({ useAuthStore: () => ({ can: (permission) => state.permissions.includes(permission), canAny: (permissions) => permissions.some((permission) => state.permissions.includes(permission)), hasAnyRole: (roles) => roles.includes('instructor'), hasRole: (role) => role === 'instructor' }) }));
 vi.mock('../api/instructor', () => Object.fromEntries([
     'fetchInstructorSummary', 'fetchInstructorCourses', 'fetchInstructorCourse', 'updateInstructorCourse', 'fetchInstructorCurriculum',
-    'fetchInstructorQuizzes', 'fetchInstructorQuiz', 'fetchInstructorQuizAttempts', 'fetchInstructorQuizAttempt', 'fetchInstructorAssignments',
-    'fetchInstructorAssignment', 'fetchInstructorSubmissions', 'fetchInstructorSubmission', 'gradeInstructorSubmission',
+    'fetchInstructorQuizzes', 'fetchInstructorQuiz', 'createInstructorQuiz', 'updateInstructorQuiz', 'archiveInstructorQuiz', 'fetchInstructorQuizAttempts', 'fetchInstructorQuizAttempt', 'fetchInstructorAssignments',
+    'fetchInstructorAssignment', 'createInstructorAssignment', 'updateInstructorAssignment', 'archiveInstructorAssignment', 'fetchInstructorSubmissions', 'fetchInstructorSubmission', 'gradeInstructorSubmission',
     'requestInstructorRevision', 'correctInstructorGrade', 'downloadInstructorSubmissionFile', 'downloadInstructorAssignmentAttachment',
 ].map((name) => [name, vi.fn()])));
 
 const collection = (items, lastPage = 1) => ({ items, meta: { current_page: 1, last_page: lastPage } });
-const course = { id: 4, title: 'Owned course', short_description: 'A practical course', description: 'Details', status: 'published', level: 'beginner', category: { name: 'Professional skills' }, updated_at: '2026-09-25T10:00:00Z' };
+const course = { id: 4, title: 'Owned course', short_description: 'A practical course', description: 'Details', status: 'published', level: 'beginner', category: { name: 'Professional skills' }, capabilities: { can_view_curriculum: true, can_create_curriculum: false, can_update_curriculum: false, can_delete_curriculum: false, can_update_course: true }, updated_at: '2026-09-25T10:00:00Z' };
 const assignment = { id: 7, course_id: 4, title: 'Project', status: 'published', submission_type: 'text_and_file', maximum_score: '100.00', max_attempts: 2, attachments: [] };
 const submission = { id: 11, assignment_id: 7, student: { name: 'Learner' }, user_id: 23, attempt_number: 1, status: 'submitted', assignment_title: 'Historic project', assignment_instructions: 'Historic instructions', submission_type: 'text_and_file', maximum_score: '100.00', text_answer: 'Student answer', files: [{ id: 9, original_filename: 'work.pdf' }], score: null, is_late: true, grading_history: [] };
 const render = (component) => mount(component, { global: { plugins: [i18n], stubs: { RouterLink: { props: ['to'], template: '<a><slot /></a>' } } } });
@@ -37,15 +37,21 @@ beforeEach(() => {
     state.permissions = ['courses.view', 'courses.update', 'curriculum.view', 'assignment_submissions.view'];
     instructor.fetchInstructorSummary.mockResolvedValue({ courses: 3, published_courses: 2, draft_courses: 1, awaiting_grading: 4 });
     instructor.fetchInstructorCourses.mockResolvedValue(collection([course], 2));
-    instructor.fetchInstructorCourse.mockResolvedValue(course);
+    instructor.fetchInstructorCourse.mockImplementation(async () => ({ ...course, capabilities: { ...course.capabilities, can_create_quiz: state.permissions.includes('assessments.view') && state.permissions.includes('assessments.create'), can_create_assignment: state.permissions.includes('assignments.view') && state.permissions.includes('assignments.create') } }));
     instructor.updateInstructorCourse.mockResolvedValue(course);
     instructor.fetchInstructorCurriculum.mockResolvedValue(collection([{ id: 1, title: 'Section', lessons: [{ id: 2, title: 'Lesson', type: 'text', resources: [{ id: 3, title: 'Guide', download_available: true }] }] }]));
-    instructor.fetchInstructorQuizzes.mockResolvedValue(collection([{ id: 5, title: 'Quiz', status: 'published' }]));
+    instructor.fetchInstructorQuizzes.mockImplementation(async () => collection([{ id: 5, title: 'Quiz', status: 'published', passing_score: 70, capabilities: { can_update: state.permissions.includes('assessments.view') && state.permissions.includes('assessments.update'), can_delete: state.permissions.includes('assessments.view') && state.permissions.includes('assessments.delete') } }]));
     instructor.fetchInstructorQuiz.mockResolvedValue({ id: 5, title: 'Quiz', status: 'published', max_attempts: 2 });
+    instructor.createInstructorQuiz.mockResolvedValue({ id: 8, title: 'New quiz' });
+    instructor.updateInstructorQuiz.mockResolvedValue({ id: 5, title: 'Updated quiz' });
+    instructor.archiveInstructorQuiz.mockResolvedValue({ id: 5, status: 'archived' });
     instructor.fetchInstructorQuizAttempts.mockResolvedValue(collection([{ id: 6, user_id: 23, student: { name: 'Learner' }, attempt_number: 1, status: 'submitted', score: '1.00', maximum_score: '1.00' }]));
     instructor.fetchInstructorQuizAttempt.mockResolvedValue({ id: 6, student: { name: 'Learner' }, attempt_number: 1, status: 'submitted', score: '1.00', maximum_score: '1.00', questions: [{ id: 30, question_text: 'Historical question', points: '1.00', earned_points: '1.00', selected_option_ids: [31], options: [{ id: 31, answer_text: 'Historic answer', is_correct: true }] }] });
-    instructor.fetchInstructorAssignments.mockResolvedValue(collection([assignment]));
+    instructor.fetchInstructorAssignments.mockImplementation(async () => collection([{ ...assignment, capabilities: { can_update: state.permissions.includes('assignments.view') && state.permissions.includes('assignments.update'), can_delete: state.permissions.includes('assignments.view') && state.permissions.includes('assignments.delete') } }]));
     instructor.fetchInstructorAssignment.mockResolvedValue(assignment);
+    instructor.createInstructorAssignment.mockResolvedValue({ id: 9, title: 'New assignment' });
+    instructor.updateInstructorAssignment.mockResolvedValue({ id: 7, title: 'Updated assignment' });
+    instructor.archiveInstructorAssignment.mockResolvedValue({ id: 7, status: 'archived' });
     instructor.fetchInstructorSubmissions.mockResolvedValue(collection([submission], 2));
     instructor.fetchInstructorSubmission.mockResolvedValue(submission);
     instructor.gradeInstructorSubmission.mockResolvedValue(submission);
@@ -56,15 +62,15 @@ beforeEach(() => {
 });
 
 describe('instructor navigation and scoped routes', () => {
-    it('offers only dashboard and own courses, with role and permission gates', async () => {
-        expect(navigationByArea.instructor.map((item) => item.route)).toEqual(['instructor.dashboard', 'instructor.courses.index']);
+    it('offers dashboard, own reports and own courses, with role and permission gates', async () => {
+        expect(navigationByArea.instructor.map((item) => item.route)).toEqual(['instructor.reports', 'instructor.dashboard', 'instructor.courses.index']);
         expect(visibleNavigation(navigationByArea.instructor, { can: () => false, canAny: () => false, hasAnyRole: () => true })).toEqual([]);
         const route = routes.find((item) => item.path === '/instructor');
-        expect(route.children).toHaveLength(7);
+        expect(route.children).toHaveLength(13);
         expect(route.children.every((item) => item.meta.roles.includes('instructor'))).toBe(true);
         expect(canAccessRoute({ hasAnyRole: () => false, can: () => true }, route.children[1].meta)).toBe(false);
         const instructorAuth = { isAuthenticated: true, initialize: vi.fn().mockResolvedValue(), hasRole: (role) => role === 'instructor', hasAnyRole: (roles) => roles.includes('instructor'), can: () => true, canAny: () => true };
-        expect(await createAccessGuard(instructorAuth)({ path: '/admin', fullPath: '/admin', meta: { requiresAuth: true } })).toEqual({ name: 'forbidden' });
+        expect(await createAccessGuard(instructorAuth)({ path: '/admin', fullPath: '/admin', meta: { requiresAuth: true, roles: ['admin', 'content_manager', 'sales_support'] } })).toEqual({ name: 'forbidden' });
     });
     it('keeps language direction in the workspace', async () => {
         setLocale('ar');
@@ -129,6 +135,36 @@ describe('instructor dashboard and courses', () => {
         const missing = render(InstructorCoursePage);
         await flushPromises();
         expect(missing.text()).toContain('not found in your courses');
+    });
+    it('links to dedicated quiz and assignment editors only with their independent grants', async () => {
+        state.route.params = { courseId: '4' };
+        state.permissions = ['courses.view', 'assessments.view', 'assignments.view'];
+        const readOnly = render(InstructorCoursePage);
+        await flushPromises();
+        expect(readOnly.text()).toContain('Quiz definitions are read-only');
+        expect(readOnly.text()).toContain('Assignment definitions are read-only');
+        expect(readOnly.text()).not.toContain('Create quiz');
+        expect(readOnly.text()).not.toContain('Create assignment');
+        readOnly.unmount();
+
+        state.permissions.push('assessments.create', 'assessments.update', 'assessments.delete', 'assignments.create', 'assignments.update', 'assignments.delete');
+        const granted = render(InstructorCoursePage);
+        await flushPromises();
+        expect(granted.text()).toContain('Create quiz');
+        expect(granted.text()).toContain('Create assignment');
+        expect(granted.find('#instructor-quiz-title').exists()).toBe(false);
+        expect(granted.find('#instructor-assignment-title').exists()).toBe(false);
+        expect(granted.findAll('a').some((link) => link.text() === 'Create quiz')).toBe(true);
+        expect(instructor.createInstructorQuiz).not.toHaveBeenCalled();
+        expect(instructor.createInstructorAssignment).not.toHaveBeenCalled();
+        granted.unmount();
+
+        state.permissions = state.permissions.filter((permission) => permission !== 'assessments.create' && permission !== 'assignments.create');
+        const revoked = render(InstructorCoursePage);
+        await flushPromises();
+        expect(revoked.text()).not.toContain('Create quiz');
+        expect(revoked.text()).not.toContain('Create assignment');
+        expect(revoked.text()).toContain('Edit quiz');
     });
 });
 

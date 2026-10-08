@@ -257,6 +257,11 @@ class CertificateApiTest extends TestCase
     {
         $user = User::factory()->create(['name' => $studentName]);
         $course = Course::factory()->published()->create(['title' => $courseTitle]);
+        $course->forceFill([
+            'certificate_enabled' => true,
+            'certificate_required_lesson_percentage' => '100.00',
+            'certificate_requirements_version' => 1,
+        ])->save();
         $section = CourseSection::factory()->for($course)->create();
         $lessons = Lesson::factory()->count(2)->published()->for($section, 'section')->create();
         $enrollment = Enrollment::factory()->completed()->for($user)->for($course)->create();

@@ -59,9 +59,11 @@ class PackageController extends Controller
 
         $package->load([
             'courseMemberships' => fn (HasMany $query): HasMany => $query->whereHas('course', $publishedCourseConstraint),
-            'courseMemberships.course',
+            'courseMemberships.course.instructor',
+            'courseMemberships.course.category',
         ])->loadCount([
             'courseMemberships' => fn (Builder $query): Builder => $query->whereHas('course', $publishedCourseConstraint),
+            'courseMemberships as total_memberships_count',
         ]);
 
         return new PublicPackageResource($package);

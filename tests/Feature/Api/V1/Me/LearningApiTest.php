@@ -29,7 +29,8 @@ class LearningApiTest extends TestCase
         $this->getJson("/api/v1/me/courses/{$course->slug}/learn")
             ->assertOk()
             ->assertJsonPath('data.curriculum.0.lessons.0.content', $lesson->content)
-            ->assertJsonPath('data.curriculum.0.lessons.0.video_id', $lesson->video_id)
+            ->assertJsonPath('data.curriculum.0.lessons.0.video_id', null)
+            ->assertJsonPath('data.curriculum.0.lessons.0.video_url', null)
             ->assertJsonMissingPath('data.curriculum.0.lessons.0.resources.0.file_path')
             ->assertJsonPath('data.curriculum.0.lessons.0.resources.0.download_available', false);
     }

@@ -8,9 +8,9 @@ import AdminUserFormPage from '../pages/AdminUserFormPage.vue';
 import AdminInstructorsPage from '../pages/AdminInstructorsPage.vue';
 import AdminInstructorFormPage from '../pages/AdminInstructorFormPage.vue';
 
-const state = vi.hoisted(() => ({ route: { params: {}, query: {} }, push: vi.fn(), permissions: [] }));
+const state = vi.hoisted(() => ({ route: { params: {}, query: {} }, push: vi.fn(), permissions: [], roles: ['admin'] }));
 vi.mock('vue-router', async (original) => ({ ...(await original()), useRoute: () => state.route, useRouter: () => ({ push: state.push }) }));
-vi.mock('../stores/auth', () => ({ useAuthStore: () => ({ can: (permission) => state.permissions.includes(permission) }) }));
+vi.mock('../stores/auth', () => ({ useAuthStore: () => ({ can: (permission) => state.permissions.includes(permission), hasRole: (role) => state.roles.includes(role) }) }));
 vi.mock('../api/admin-users', () => Object.fromEntries(['fetchAdminUsers', 'fetchAdminUser', 'createAdminUser', 'updateAdminUser'].map((name) => [name, vi.fn()])));
 vi.mock('../api/admin-instructors', () => Object.fromEntries(['fetchAdminInstructors', 'fetchAdminInstructor', 'createAdminInstructor', 'updateAdminInstructor'].map((name) => [name, vi.fn()])));
 
@@ -19,7 +19,7 @@ const instructor = { id: 10, name: 'Trainer', email: 'trainer@example.test', sta
 function render(component) { return mount(component, { global: { plugins: [i18n], stubs: { RouterLink: { props: ['to'], template: '<a><slot /></a>' } } } }); }
 function deferred() { let resolve; const promise = new Promise((yes) => { resolve = yes; }); return { promise, resolve }; }
 beforeEach(() => {
-    vi.resetAllMocks(); setLocale('en'); state.route = { params: {}, query: {} }; state.permissions = ['users.view', 'users.update', 'users.manage', 'instructors.view', 'instructors.update', 'instructors.manage'];
+    vi.resetAllMocks(); setLocale('en'); state.route = { params: {}, query: {} }; state.roles = ['admin']; state.permissions = ['users.view', 'users.update', 'users.manage', 'roles.manage', 'instructors.view', 'instructors.update', 'instructors.manage'];
     usersApi.fetchAdminUsers.mockResolvedValue({ items: [user], meta: { current_page: 1, last_page: 2 } });
     usersApi.fetchAdminUser.mockResolvedValue(user);
     usersApi.createAdminUser.mockResolvedValue(user); usersApi.updateAdminUser.mockResolvedValue(user);
@@ -47,7 +47,7 @@ describe('admin user management', () => {
     it('creates a validated user with controlled roles and no instructor role', async () => {
         usersApi.createAdminUser.mockRejectedValue({ status: 422, errors: { email: ['Already used.'] } });
         const wrapper = render(AdminUserFormPage); await flushPromises();
-        expect(wrapper.find('input[value="instructor"]').exists()).toBe(false);
+        expect(wrapper.find('#user-add-role option[value="instructor"]').exists()).toBe(false);
         await wrapper.get('#user-name').setValue('New learner'); await wrapper.get('#user-email').setValue('new@example.test'); await wrapper.get('#user-password').setValue('StrongPass123'); await wrapper.get('#user-confirm').setValue('StrongPass123');
         await wrapper.get('form').trigger('submit'); await flushPromises();
         expect(usersApi.createAdminUser).toHaveBeenCalledWith(expect.objectContaining({ roles: ['student'], password: 'StrongPass123' })); expect(wrapper.text()).toContain('Already used.'); wrapper.unmount();
@@ -57,8 +57,19 @@ describe('admin user management', () => {
         expect(wrapper.get('#user-password').element.value).toBe('');
         await wrapper.get('form').trigger('submit'); await flushPromises();
         expect(usersApi.updateAdminUser.mock.calls[0][1]).not.toHaveProperty('password');
-        await wrapper.get('input[value="content_manager"]').setValue(true); await wrapper.get('form').trigger('submit'); await flushPromises();
+        await wrapper.get('#user-add-role').setValue('content_manager'); await wrapper.findAll('button').find((button) => button.text() === 'Add role').trigger('click'); await wrapper.get('form').trigger('submit'); await flushPromises();
         expect(window.confirm).toHaveBeenCalled(); expect(usersApi.updateAdminUser.mock.calls[1][1].roles).toContain('content_manager'); wrapper.unmount();
+    });
+    it('distinguishes inherited and direct permissions on an authorized user detail', async () => {
+        state.route.params.id = 9;
+        usersApi.fetchAdminUser.mockResolvedValueOnce({ ...user, permission_sources: { inherited: ['courses.view'], direct: ['support_tickets.reply'] } });
+        const wrapper = render(AdminUserFormPage);
+        await flushPromises();
+        expect(wrapper.text()).toContain('Inherited from roles');
+        expect(wrapper.text()).toContain('View courses');
+        expect(wrapper.text()).toContain('Reply to support tickets');
+        expect(wrapper.text()).not.toContain('support_tickets.reply');
+        wrapper.unmount();
     });
     it('keeps sensitive controls hidden from an account editor without manage permission', async () => {
         state.route.params.id = 9; state.permissions = ['users.view', 'users.update']; const wrapper = render(AdminUserFormPage); await flushPromises();

@@ -19,6 +19,7 @@ class PublicCourseReviewResource extends JsonResource
             'title' => $this->title,
             'body' => $this->body,
             'reviewer_name' => $this->whenLoaded('user', fn (): string => $this->user->name),
+            'course' => $this->whenLoaded('course', fn (): array => ['title' => $this->course->title, 'slug' => $this->course->slug]),
             'published_at' => $this->published_at,
         ];
     }

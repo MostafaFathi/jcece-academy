@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\Admin\ListOrdersRequest;
 use App\Http\Resources\Api\V1\AdminOrderResource;
 use App\Models\Order;
+use App\PermissionName;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Gate;
@@ -17,7 +18,9 @@ class OrderController extends Controller
         Gate::authorize('viewAny', Order::class);
         $filters = $request->validated();
         $orders = Order::query()
-            ->with('user')
+            ->with(['user', 'refunds', 'payments'])
+            ->when($request->user()->can(PermissionName::FinancialDocumentsView->value), fn (Builder $query) => $query->with('financialDocuments'))
+            ->when($request->user()->can(PermissionName::TransactionalDeliveriesView->value), fn (Builder $query) => $query->with('transactionalDeliveries'))
             ->when($filters['search'] ?? null, fn (Builder $query, string $search) => $query->where(function (Builder $query) use ($search): void {
                 $query->where('order_number', 'like', "%{$search}%")
                     ->orWhere('customer_email', 'like', "%{$search}%");
@@ -36,10 +39,19 @@ class OrderController extends Controller
     {
         Gate::authorize('view', $order);
 
-        return new AdminOrderResource($order->load([
+        $relations = [
             'user',
             'items.packageCourses',
             'payments.approver',
-        ]));
+            'refunds',
+        ];
+        if (request()->user()->can(PermissionName::FinancialDocumentsView->value)) {
+            $relations[] = 'financialDocuments';
+        }
+        if (request()->user()->can(PermissionName::TransactionalDeliveriesView->value)) {
+            $relations[] = 'transactionalDeliveries';
+        }
+
+        return new AdminOrderResource($order->load($relations));
     }
 }

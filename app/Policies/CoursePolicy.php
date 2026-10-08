@@ -29,7 +29,7 @@ class CoursePolicy
     public function view(User $user, Course $course): bool
     {
         return $user->can(PermissionName::CoursesView->value)
-            && (! $this->isInstructorOnly($user) || $course->instructor_id === $user->id);
+            && $this->inScope($user, $course);
     }
 
     /**
@@ -46,7 +46,7 @@ class CoursePolicy
     public function update(User $user, Course $course): bool
     {
         return $user->can(PermissionName::CoursesUpdate->value)
-            && (! $this->isInstructorOnly($user) || $course->instructor_id === $user->id);
+            && $this->inScope($user, $course);
     }
 
     /**
@@ -54,7 +54,7 @@ class CoursePolicy
      */
     public function delete(User $user, Course $course): bool
     {
-        return $user->can(PermissionName::CoursesDelete->value);
+        return $user->can(PermissionName::CoursesDelete->value) && $this->inScope($user, $course);
     }
 
     /**
@@ -70,12 +70,38 @@ class CoursePolicy
      */
     public function forceDelete(User $user, Course $course): bool
     {
-        return $user->can(PermissionName::CoursesDelete->value);
+        return $this->delete($user, $course);
     }
 
     public function publish(User $user, Course $course): bool
     {
-        return $user->can(PermissionName::CoursesPublish->value);
+        return $user->can(PermissionName::CoursesPublish->value) && $this->inScope($user, $course);
+    }
+
+    public function viewCurriculum(User $user, Course $course): bool
+    {
+        return $user->can(PermissionName::CurriculumView->value) && $this->view($user, $course);
+    }
+
+    public function createCurriculum(User $user, Course $course): bool
+    {
+        return $user->can(PermissionName::CurriculumCreate->value) && $this->viewCurriculum($user, $course);
+    }
+
+    public function updateCurriculum(User $user, Course $course): bool
+    {
+        return $user->can(PermissionName::CurriculumUpdate->value) && $this->viewCurriculum($user, $course);
+    }
+
+    public function deleteCurriculum(User $user, Course $course): bool
+    {
+        return $user->can(PermissionName::CurriculumDelete->value) && $this->viewCurriculum($user, $course);
+    }
+
+    public function manageCertificateRequirements(User $user, Course $course): bool
+    {
+        return $this->update($user, $course)
+            && $user->hasAnyRole([RoleName::Admin->value, RoleName::ContentManager->value]);
     }
 
     public function assignInstructor(User $user, int $instructorId): bool
@@ -88,5 +114,10 @@ class CoursePolicy
     {
         return $user->hasRole(RoleName::Instructor->value)
             && ! $user->hasAnyRole([RoleName::ContentManager->value, RoleName::Admin->value]);
+    }
+
+    private function inScope(User $user, Course $course): bool
+    {
+        return ! $this->isInstructorOnly($user) || $course->instructor_id === $user->id;
     }
 }

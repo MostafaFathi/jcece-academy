@@ -13,7 +13,7 @@ vi.mock('../stores/auth', () => ({ useAuthStore: () => ({ can: (permission) => s
 vi.mock('../api/admin-packages', () => Object.fromEntries(['fetchAdminPackages', 'fetchAdminPackage', 'createAdminPackage', 'updateAdminPackage', 'deleteAdminPackage', 'fetchPackageCourses', 'addPackageCourse', 'updatePackageCourse', 'removePackageCourse', 'reorderPackageCourses'].map((name) => [name, vi.fn()])));
 vi.mock('../api/admin', () => ({ fetchAdminCourses: vi.fn() }));
 
-const item = { id: 4, title: 'BIM Path', slug: 'bim-path', type: 'learning_path', status: 'draft', price: '199.50', compare_price: null, currency: 'ILS', description: '', thumbnail: null, access_duration_days: null, is_sequential: true, published_at: null, course_count: 2, updated_at: '2026-09-30T10:00:00Z' };
+const item = { id: 4, title: 'BIM Path', slug: 'bim-path', type: 'learning_path', status: 'draft', price: '199.50', compare_price: null, currency: 'ILS', description: '', thumbnail: null, access_duration_days: null, is_sequential: true, sequential_completion_percentage: '80.00', published_at: null, course_count: 2, updated_at: '2026-09-30T10:00:00Z' };
 const members = [{ id: 31, course_id: 9, course: { id: 9, title: 'BIM 1', status: 'published' }, is_required: true }, { id: 32, course_id: 10, course: { id: 10, title: 'BIM 2', status: 'draft' }, is_required: false }];
 function render(component) { return mount(component, { global: { plugins: [i18n], stubs: { RouterLink: { props: ['to'], template: '<a><slot /></a>' } } } }); }
 function deferred() { let resolve; const promise = new Promise((done) => { resolve = done; }); return { promise, resolve }; }

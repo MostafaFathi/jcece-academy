@@ -22,7 +22,16 @@ function render(component, props = {}) { return mount(component, { props, global
 function deferred() { let resolve; const promise = new Promise((done) => { resolve = done; }); return { promise, resolve }; }
 beforeEach(() => {
     vi.resetAllMocks(); setLocale('en'); state.permissions = ['courses.view', 'courses.update', 'curriculum.view', 'curriculum.create', 'curriculum.update', 'curriculum.delete']; state.roles = ['admin']; state.user = { id: 8 }; state.route = { params: { id: 7 } };
-    admin.fetchAdminCourse.mockResolvedValue({ id: 7, title: 'Safe course', status: 'draft', instructor: { id: 8 } });
+    admin.fetchAdminCourse.mockImplementation(async () => ({
+        id: 7, title: 'Safe course', status: 'draft', instructor: { id: 8 },
+        capabilities: {
+            can_update_course: state.permissions.includes('courses.update'),
+            can_view_curriculum: state.permissions.includes('curriculum.view'),
+            can_create_curriculum: state.permissions.includes('curriculum.create'),
+            can_update_curriculum: state.permissions.includes('curriculum.update'),
+            can_delete_curriculum: state.permissions.includes('curriculum.delete'),
+        },
+    }));
     curriculum.fetchSections.mockImplementation(async () => structuredClone(sections));
     curriculum.fetchLessonResources.mockResolvedValue([]);
     vi.spyOn(window, 'confirm').mockReturnValue(true);
@@ -98,9 +107,13 @@ describe('curriculum builder', () => {
 describe('lesson editor and resources', () => {
     it('shows only fields for the selected type and submits preview state', async () => {
         const wrapper = render(AdminLessonEditor); await wrapper.get('#lesson-title').setValue('Video'); await wrapper.get('#lesson-slug').setValue('video');
-        await wrapper.get('#lesson-type').setValue('video'); expect(wrapper.find('#video-id').exists()).toBe(true); expect(wrapper.find('#lesson-content').exists()).toBe(false);
-        await wrapper.get('#video-id').setValue('abc'); await wrapper.findAll('input[type="checkbox"]').at(1).setValue(true); await wrapper.get('form').trigger('submit');
-        expect(wrapper.emitted('save')[0][0]).toMatchObject({ type: 'video', video_id: 'abc', content: null, is_preview: true });
+        await wrapper.get('#lesson-type').setValue('video'); expect(wrapper.find('#video-id').exists()).toBe(false); expect(wrapper.find('#lesson-content').exists()).toBe(false);
+        expect(wrapper.text()).toContain('Protected video playback is not configured');
+        expect(wrapper.find('#protected-asset-key').exists()).toBe(true);
+        await wrapper.findAll('input[type="checkbox"]').at(1).setValue(true);
+        expect(wrapper.find('#protected-asset-key').exists()).toBe(false);
+        await wrapper.get('#lesson-url').setValue('https://example.test/preview.mp4'); await wrapper.get('form').trigger('submit');
+        expect(wrapper.emitted('save')[0][0]).toMatchObject({ type: 'video', video_url: 'https://example.test/preview.mp4', protected_video_asset_key: null, content: null, is_preview: true });
         await wrapper.get('#lesson-type').setValue('link'); expect(wrapper.find('#video-id').exists()).toBe(false); expect(wrapper.find('#lesson-url').exists()).toBe(true);
         await wrapper.get('#lesson-type').setValue('file'); expect(wrapper.find('#lesson-url').exists()).toBe(false); wrapper.unmount();
     });

@@ -13,11 +13,13 @@ use App\Models\LessonResource;
 use App\Models\Quiz;
 use App\Models\QuizAttempt;
 use App\Models\User;
+use App\PermissionName;
 use App\RoleName;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class InstructorPortalApiTest extends TestCase
@@ -72,6 +74,41 @@ class InstructorPortalApiTest extends TestCase
         $this->getJson("/api/v1/instructor/courses/{$own->id}/assignments")->assertOk()->assertJsonPath('data.0.id', $assignment->id);
         $this->getJson("/api/v1/instructor/courses/{$foreign->id}/assignments/{$foreignAssignment->id}")->assertNotFound();
         $this->getJson("/api/v1/instructor/courses/{$own->id}/assignments/{$foreignAssignment->id}")->assertNotFound();
+    }
+
+    public function test_definition_and_grading_views_follow_separate_role_permissions(): void
+    {
+        $instructor = $this->instructor();
+        $own = Course::factory()->for($instructor, 'instructor')->create();
+        $foreign = Course::factory()->create();
+        $quiz = Quiz::factory()->for($own)->create();
+        $assignment = Assignment::factory()->for($own)->create();
+        $role = Role::query()->where('name', RoleName::Instructor->value)->firstOrFail();
+
+        $role->syncPermissions([PermissionName::CoursesView->value, PermissionName::AssessmentsCreate->value, PermissionName::AssignmentsCreate->value]);
+        $this->getJson("/api/v1/instructor/courses/{$own->id}")->assertOk()
+            ->assertJsonPath('data.capabilities.can_create_quiz', false)
+            ->assertJsonPath('data.capabilities.can_create_assignment', false);
+        $this->postJson("/api/v1/admin/courses/{$own->id}/quizzes", ['title' => 'No view', 'passing_score' => 70])->assertForbidden();
+        $this->postJson("/api/v1/admin/courses/{$own->id}/assignments", ['title' => 'No view', 'submission_type' => 'text', 'maximum_score' => 100])->assertForbidden();
+
+        $role->syncPermissions([PermissionName::CoursesView->value, PermissionName::AssessmentsView->value]);
+        $this->getJson("/api/v1/instructor/courses/{$own->id}/quizzes")->assertOk()->assertJsonPath('data.0.id', $quiz->id);
+        $this->getJson("/api/v1/instructor/courses/{$own->id}/quizzes/{$quiz->id}")->assertOk();
+        $this->getJson("/api/v1/instructor/courses/{$own->id}/quizzes/{$quiz->id}/attempts")->assertForbidden();
+        $this->getJson("/api/v1/instructor/courses/{$own->id}/assignments")->assertForbidden();
+
+        $role->syncPermissions([PermissionName::CoursesView->value, PermissionName::AssignmentsView->value]);
+        $this->getJson("/api/v1/instructor/courses/{$own->id}/quizzes")->assertForbidden();
+        $this->getJson("/api/v1/instructor/courses/{$own->id}/assignments")->assertOk()->assertJsonPath('data.0.id', $assignment->id);
+        $this->getJson("/api/v1/instructor/courses/{$own->id}/assignments/{$assignment->id}")->assertOk();
+        $this->getJson("/api/v1/instructor/courses/{$own->id}/assignments/{$assignment->id}/submissions")->assertForbidden();
+
+        $role->syncPermissions([PermissionName::CoursesView->value, PermissionName::AssignmentSubmissionsView->value]);
+        $this->getJson("/api/v1/instructor/courses/{$own->id}/quizzes")->assertOk();
+        $this->getJson("/api/v1/instructor/courses/{$own->id}/assignments")->assertOk();
+        $this->getJson("/api/v1/instructor/courses/{$foreign->id}/quizzes")->assertNotFound();
+        $this->getJson("/api/v1/instructor/courses/{$foreign->id}/assignments")->assertNotFound();
     }
 
     public function test_existing_admin_curriculum_reads_are_owner_scoped(): void

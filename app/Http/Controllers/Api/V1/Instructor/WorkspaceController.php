@@ -80,12 +80,22 @@ class WorkspaceController extends Controller
 
     public function quizzes(Request $request, int $course): AnonymousResourceCollection
     {
-        return InstructorQuizResource::collection($this->ownedCourse($request, $course)->quizzes()->orderBy('id')->get());
+        $ownedCourse = $this->ownedCourse($request, $course);
+        abort_unless(
+            $request->user()->can(PermissionName::AssessmentsView->value)
+                || $request->user()->can(PermissionName::AssignmentSubmissionsView->value),
+            403,
+        );
+
+        return InstructorQuizResource::collection($ownedCourse->quizzes()->with('course')->withCount('questions')->orderBy('id')->get());
     }
 
     public function quiz(Request $request, int $course, int $quiz): InstructorQuizResource
     {
-        return new InstructorQuizResource($this->ownedQuiz($request, $course, $quiz));
+        $ownedQuiz = $this->ownedQuiz($request, $course, $quiz);
+        abort_unless($request->user()->can('view', $ownedQuiz) || $request->user()->can('viewInstructorResults', $ownedQuiz), 403);
+
+        return new InstructorQuizResource($ownedQuiz->load('course')->loadCount('questions'));
     }
 
     public function quizAttempts(Request $request, int $course, int $quiz): AnonymousResourceCollection
@@ -109,19 +119,27 @@ class WorkspaceController extends Controller
     public function assignments(Request $request, int $course): AnonymousResourceCollection
     {
         $ownedCourse = $this->ownedCourse($request, $course);
-        $this->authorizeInstructor($request, PermissionName::AssignmentSubmissionsView);
+        abort_unless(
+            $request->user()->can(PermissionName::AssignmentsView->value)
+                || $request->user()->can(PermissionName::AssignmentSubmissionsView->value),
+            403,
+        );
 
-        return AdminAssignmentResource::collection($ownedCourse->assignments()->with('attachments')->orderBy('id')->get());
+        return AdminAssignmentResource::collection($ownedCourse->assignments()->with(['attachments', 'course'])->orderBy('id')->get());
     }
 
     public function assignment(Request $request, int $course, int $assignment): AdminAssignmentResource
     {
-        return new AdminAssignmentResource($this->ownedAssignment($request, $course, $assignment)->load('attachments'));
+        $ownedAssignment = $this->ownedAssignment($request, $course, $assignment);
+        abort_unless($request->user()->can('view', $ownedAssignment) || $request->user()->can('reviewSubmissions', $ownedAssignment), 403);
+
+        return new AdminAssignmentResource($ownedAssignment->load(['attachments', 'course']));
     }
 
     public function submissions(Request $request, int $course, int $assignment): AnonymousResourceCollection
     {
         $ownedAssignment = $this->ownedAssignment($request, $course, $assignment);
+        Gate::authorize('reviewSubmissions', $ownedAssignment);
         $filters = $request->validate([
             'status' => ['sometimes', Rule::in(array_column(AssignmentSubmissionStatus::cases(), 'value'))],
             'per_page' => ['sometimes', 'integer', 'between:1,100'],
@@ -156,7 +174,6 @@ class WorkspaceController extends Controller
     private function ownedAssignment(Request $request, int $courseId, int $assignmentId): Assignment
     {
         $ownedCourse = $this->ownedCourse($request, $courseId);
-        $this->authorizeInstructor($request, PermissionName::AssignmentSubmissionsView);
 
         return $ownedCourse->assignments()->findOrFail($assignmentId);
     }

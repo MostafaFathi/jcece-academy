@@ -3,6 +3,10 @@ export function publicMediaUrl(value) {
         return null;
     }
 
+    if (value.startsWith('//') || value.startsWith('\\')) {
+        return null;
+    }
+
     if (/^https?:\/\//i.test(value) || value.startsWith('/')) {
         return value;
     }

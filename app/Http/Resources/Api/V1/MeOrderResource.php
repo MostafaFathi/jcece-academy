@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Api\V1;
 
+use App\Services\RefundService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -24,6 +25,12 @@ class MeOrderResource extends JsonResource
             'discount_total' => $this->discount_total,
             'tax_total' => $this->tax_total,
             'total' => $this->total,
+            'coupon_code' => $this->coupon_code_snapshot,
+            'coupon_type' => $this->coupon_type_snapshot,
+            'coupon_value' => $this->coupon_value_snapshot,
+            'refund_balance' => app(RefundService::class)->balance($this->resource),
+            'refunds' => MeRefundResource::collection($this->whenLoaded('refunds')),
+            'financial_documents' => FinancialDocumentResource::collection($this->whenLoaded('financialDocuments')),
             'customer_name' => $this->customer_name,
             'customer_email' => $this->customer_email,
             'customer_phone' => $this->customer_phone,

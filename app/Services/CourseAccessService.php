@@ -17,6 +17,8 @@ use Illuminate\Validation\ValidationException;
 
 class CourseAccessService
 {
+    public function __construct(private SequentialPackageAccessService $sequentialAccess) {}
+
     public function hasAccess(User $user, Course $course): bool
     {
         $enrollment = $this->enrollmentFor($user, $course);
@@ -34,11 +36,10 @@ class CourseAccessService
 
     public function enrollmentHasAccess(Enrollment $enrollment): bool
     {
-        return $enrollment->status !== EnrollmentStatus::Suspended
-            && $enrollment->accessGrants()->currentlyValid()->exists();
+        return $this->accessMetadata($enrollment)['has_access'];
     }
 
-    /** @return array{has_access: bool, access_state: string, access_expires_at: ?CarbonInterface, is_lifetime: bool} */
+    /** @return array{has_access: bool, access_state: string, access_expires_at: ?CarbonInterface, is_lifetime: bool, sequential: ?array} */
     public function accessMetadata(Enrollment $enrollment): array
     {
         if ($enrollment->status === EnrollmentStatus::Suspended) {
@@ -47,20 +48,42 @@ class CourseAccessService
                 'access_state' => CourseAccessState::Suspended->value,
                 'access_expires_at' => null,
                 'is_lifetime' => false,
+                'sequential' => null,
             ];
         }
 
         $validGrants = $enrollment->relationLoaded('currentAccessGrants')
             ? $enrollment->currentAccessGrants
             : $enrollment->currentAccessGrants()->get();
-        $hasAccess = $validGrants->isNotEmpty();
-        $isLifetime = $hasAccess && $validGrants->contains(fn (EnrollmentAccessGrant $grant): bool => $grant->access_expires_at === null);
+        $hasAccess = false;
+        $hasLifetimeAccess = false;
+        $accessibleGrants = collect();
+        $lockedState = null;
+        $sequentialState = null;
+
+        foreach ($validGrants as $grant) {
+            $state = $this->sequentialAccess->state($grant, $enrollment);
+
+            if ($state === null || $state['unlocked']) {
+                $hasAccess = true;
+                $hasLifetimeAccess = $hasLifetimeAccess || $grant->access_expires_at === null;
+                $accessibleGrants->push($grant);
+                $sequentialState ??= $state;
+
+                continue;
+            }
+
+            $lockedState ??= $state;
+        }
+
+        $isLifetime = $hasLifetimeAccess;
 
         return [
             'has_access' => $hasAccess,
-            'access_state' => ($hasAccess ? CourseAccessState::Active : $this->inactiveAccessState($enrollment))->value,
-            'access_expires_at' => $hasAccess && ! $isLifetime ? $validGrants->max('access_expires_at') : null,
+            'access_state' => ($hasAccess ? CourseAccessState::Active : ($lockedState !== null ? CourseAccessState::Locked : $this->inactiveAccessState($enrollment)))->value,
+            'access_expires_at' => $hasAccess && ! $isLifetime ? $accessibleGrants->max('access_expires_at') : null,
             'is_lifetime' => $isLifetime,
+            'sequential' => $hasAccess ? $sequentialState : $lockedState,
         ];
     }
 

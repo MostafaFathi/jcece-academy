@@ -3,6 +3,7 @@
 namespace App\Policies;
 
 use App\Models\Assignment;
+use App\Models\Course;
 use App\Models\User;
 use App\PermissionName;
 use App\RoleName;
@@ -22,15 +23,17 @@ class AssignmentPolicy
      */
     public function view(User $user, Assignment $assignment): bool
     {
-        return $user->can(PermissionName::AssignmentsView->value);
+        return $user->can(PermissionName::AssignmentsView->value) && $user->can('view', $assignment->course);
     }
 
     /**
      * Determine whether the user can create models.
      */
-    public function create(User $user): bool
+    public function create(User $user, Course $course): bool
     {
-        return $user->can(PermissionName::AssignmentsCreate->value);
+        return $this->viewAny($user)
+            && $user->can(PermissionName::AssignmentsCreate->value)
+            && $user->can('view', $course);
     }
 
     /**
@@ -38,7 +41,7 @@ class AssignmentPolicy
      */
     public function update(User $user, Assignment $assignment): bool
     {
-        return $user->can(PermissionName::AssignmentsUpdate->value);
+        return $user->can(PermissionName::AssignmentsUpdate->value) && $this->view($user, $assignment);
     }
 
     /**
@@ -46,7 +49,7 @@ class AssignmentPolicy
      */
     public function delete(User $user, Assignment $assignment): bool
     {
-        return $user->can(PermissionName::AssignmentsDelete->value);
+        return $user->can(PermissionName::AssignmentsDelete->value) && $this->view($user, $assignment);
     }
 
     /**
@@ -54,7 +57,7 @@ class AssignmentPolicy
      */
     public function restore(User $user, Assignment $assignment): bool
     {
-        return $user->can(PermissionName::AssignmentsUpdate->value);
+        return $this->update($user, $assignment);
     }
 
     /**
@@ -67,7 +70,7 @@ class AssignmentPolicy
 
     public function publish(User $user, Assignment $assignment): bool
     {
-        return $user->can(PermissionName::AssignmentsPublish->value);
+        return $user->can(PermissionName::AssignmentsPublish->value) && $this->view($user, $assignment);
     }
 
     public function reviewSubmissions(User $user, Assignment $assignment): bool

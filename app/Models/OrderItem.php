@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 /**
  * Financial snapshot. Catalog updates must never rewrite these attributes.
  */
-#[Fillable(['order_id', 'purchasable_type', 'purchasable_id', 'title', 'quantity', 'unit_price', 'discount_amount', 'total', 'access_duration_days'])]
+#[Fillable(['order_id', 'purchasable_type', 'purchasable_id', 'title', 'quantity', 'unit_price', 'discount_amount', 'promotional_discount_amount', 'coupon_discount_amount', 'total', 'access_duration_days', 'sequential_completion_percentage'])]
 class OrderItem extends Model
 {
     /** @use HasFactory<OrderItemFactory> */
@@ -40,7 +40,10 @@ class OrderItem extends Model
         return [
             'unit_price' => 'decimal:2',
             'discount_amount' => 'decimal:2',
+            'promotional_discount_amount' => 'decimal:2',
+            'coupon_discount_amount' => 'decimal:2',
             'total' => 'decimal:2',
+            'sequential_completion_percentage' => 'decimal:2',
         ];
     }
 }

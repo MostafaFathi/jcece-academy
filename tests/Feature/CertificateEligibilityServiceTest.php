@@ -39,6 +39,7 @@ class CertificateEligibilityServiceTest extends TestCase
     {
         $user = User::factory()->create();
         $course = Course::factory()->published()->create();
+        $course->forceFill(['certificate_required_lesson_percentage' => '100.00', 'certificate_requirements_version' => 1])->save();
         $enrollment = Enrollment::factory()->for($user)->for($course)->create();
         EnrollmentAccessGrant::factory()->for($enrollment)->lifetime()->create();
 
@@ -83,7 +84,7 @@ class CertificateEligibilityServiceTest extends TestCase
         $this->assertContains('effective_access_missing', $result['reasons']);
     }
 
-    public function test_quizzes_and_assignments_are_not_certificate_requirements(): void
+    public function test_unselected_quizzes_and_assignments_are_not_certificate_requirements(): void
     {
         [$user, $course] = $this->eligibleCourse();
         Quiz::factory()->for($course)->create(['status' => QuizStatus::Published]);
@@ -113,6 +114,7 @@ class CertificateEligibilityServiceTest extends TestCase
     {
         $user = User::factory()->create();
         $course = Course::factory()->published()->create();
+        $course->forceFill(['certificate_required_lesson_percentage' => '100.00', 'certificate_requirements_version' => 1])->save();
         $section = CourseSection::factory()->for($course)->create();
         $lessons = Lesson::factory()->count(2)->published()->for($section, 'section')->create();
         $enrollment = Enrollment::factory()->completed()->for($user)->for($course)->create();

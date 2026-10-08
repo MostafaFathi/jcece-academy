@@ -14,7 +14,7 @@ import CartSummary from '../components/commerce/CartSummary.vue';
 const auth = useAuthStore();
 const cart = useCartStore();
 const router = useRouter();
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const form = reactive({ customer_name: auth.user?.name ?? '', customer_email: auth.user?.email ?? '', customer_phone: auth.user?.phone ?? '', notes: '' });
 const fields = ref({});
 const navigationError = ref(null);
@@ -34,7 +34,7 @@ async function submit() {
     if (form.customer_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.customer_email)) fields.value.customer_email = t('auth.emailInvalid');
     if (Object.keys(fields.value).length || (!cart.ready && !cart.uncertain)) return;
     try {
-        const order = await cart.placeOrder({ ...form });
+        const order = await cart.placeOrder({ ...form, locale: locale.value });
         if (order) {
             createdOrder.value = order;
             await router.push({ name: 'student.orders.show', params: { id: order.id }, query: { created: '1' } });
@@ -61,7 +61,7 @@ onMounted(load);
                 <BaseInput id="customer_email" v-model="form.customer_email" :label="t('common.email')" :error="fields.customer_email" type="email" autocomplete="email" maxlength="255" required :disabled="cart.checkoutLoading || (cart.uncertain && Boolean(cart.intentCustomer))" />
                 <BaseInput id="customer_phone" v-model="form.customer_phone" :label="t('commerce.customerPhone')" :error="fields.customer_phone" type="tel" autocomplete="tel" maxlength="50" required :disabled="cart.checkoutLoading || (cart.uncertain && Boolean(cart.intentCustomer))" />
                 <div><label for="checkout-notes" class="mb-2 block text-sm font-bold text-slate-700">{{ t('commerce.notes') }} ({{ t('common.optional') }})</label><textarea id="checkout-notes" v-model="form.notes" maxlength="2000" rows="3" :disabled="cart.checkoutLoading || (cart.uncertain && Boolean(cart.intentCustomer))" class="w-full rounded-xl border border-slate-300 p-3 focus:border-brand focus:outline-brand" /><p v-if="fields.notes" class="text-sm text-red-700">{{ fields.notes }}</p></div>
-                <p class="rounded-xl bg-slate-50 p-4 text-sm leading-7 text-slate-600">{{ t('commerce.noAccessYet') }}</p>
+                <p class="rounded-xl bg-slate-50 p-4 text-sm leading-7 text-slate-600">{{ cart.total === '0.00' ? t('commerce.freeCheckout') : t('commerce.noAccessYet') }}</p>
                 <nav class="flex flex-wrap gap-3 text-xs font-bold text-brand"><RouterLink :to="{ name: 'policies.privacy' }" target="_blank">{{ t('policies.privacy') }}</RouterLink><RouterLink :to="{ name: 'policies.terms' }" target="_blank">{{ t('policies.terms') }}</RouterLink><RouterLink :to="{ name: 'policies.refund' }" target="_blank">{{ t('policies.refund') }}</RouterLink></nav>
                 <BaseButton type="submit" :loading="cart.checkoutLoading" :disabled="Boolean(createdOrder)" class="w-full">{{ cart.uncertain ? t('commerce.retrySame') : t('commerce.confirmOrder') }}</BaseButton>
                 <RouterLink :to="{ name: 'student.cart' }" class="block text-center text-sm font-bold text-brand">{{ t('commerce.backToCart') }}</RouterLink>

@@ -49,7 +49,7 @@ watch(() => route.fullPath, load, { immediate: true });
         <LoadingState v-if="loading" />
         <BaseAlert v-else-if="error" tone="danger">{{ t(error.status === 403 ? 'instructor.forbidden' : error.status === 404 ? 'instructor.notFound' : 'instructor.loadError') }} <button type="button" class="font-bold underline" @click="load">{{ t('instructor.retry') }}</button></BaseAlert>
         <template v-else-if="assignment">
-            <PageHeading :title="assignment.title" :description="t('instructor.assignmentDefinitionsReadOnly')" />
+            <PageHeading :title="assignment.title" :description="t('instructor.submissions')" />
             <section class="grid gap-4 rounded-3xl border border-slate-200 bg-white p-6 text-sm sm:grid-cols-3"><div><p class="text-slate-500">{{ t('instructor.status') }}</p><p class="font-bold">{{ t(`instructor.statusLabels.${assignment.status}`) }}</p></div><div><p class="text-slate-500">{{ t('instructor.type') }}</p><p class="font-bold">{{ t(`instructor.submissionTypes.${assignment.submission_type}`) }}</p></div><div><p class="text-slate-500">{{ t('instructor.maximum') }}</p><p class="font-bold">{{ assignment.maximum_score }}</p></div><div><p class="text-slate-500">{{ t('instructor.deadline') }}</p><p class="font-bold">{{ formatDate(assignment.due_at, locale) }}</p></div><div><p class="text-slate-500">{{ t('instructor.allowedAttempts') }}</p><p class="font-bold">{{ assignment.max_attempts ?? '—' }}</p></div></section>
             <p v-if="assignment.instructions" class="whitespace-pre-wrap rounded-2xl bg-white p-5 text-sm leading-7">{{ assignment.instructions }}</p>
             <BaseAlert v-if="downloadError" tone="danger">{{ t('instructor.mutationError') }}</BaseAlert>

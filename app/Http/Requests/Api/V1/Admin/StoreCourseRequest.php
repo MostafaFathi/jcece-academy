@@ -4,8 +4,10 @@ namespace App\Http\Requests\Api\V1\Admin;
 
 use App\CourseLevel;
 use App\CourseStatus;
+use App\CourseTrainingType;
 use App\Models\User;
 use App\RoleName;
+use Brick\Math\BigDecimal;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -36,15 +38,17 @@ class StoreCourseRequest extends FormRequest
             'short_description' => ['nullable', 'string', 'max:1000'],
             'description' => ['nullable', 'string'],
             'thumbnail' => ['nullable', 'string', 'max:2048'],
-            'promo_video_url' => ['nullable', 'url', 'max:2048'],
+            'promo_video_url' => ['nullable', 'url:http,https', 'max:2048'],
             'level' => ['required', Rule::enum(CourseLevel::class)],
+            'training_type' => ['sometimes', Rule::enum(CourseTrainingType::class)],
             'language' => ['sometimes', 'string', 'max:10'],
             'duration_minutes' => ['nullable', 'integer', 'min:1'],
             'access_duration_days' => ['nullable', 'integer', 'min:1'],
             'price' => ['sometimes', 'numeric', 'min:0', 'max:9999999999.99'],
             'compare_price' => ['nullable', 'numeric', 'gte:price', 'max:9999999999.99'],
+            'promotional_price' => ['nullable', 'numeric', 'min:0', 'decimal:0,2', 'max:9999999999.99'],
             'discount_starts_at' => ['nullable', 'date'],
-            'discount_ends_at' => ['nullable', 'date', 'after_or_equal:discount_starts_at'],
+            'discount_ends_at' => ['nullable', 'date', 'after:discount_starts_at'],
             'certificate_enabled' => ['sometimes', 'boolean'],
             'discussion_enabled' => ['sometimes', 'boolean'],
             'status' => ['sometimes', Rule::enum(CourseStatus::class)],
@@ -76,6 +80,27 @@ class StoreCourseRequest extends FormRequest
                     $validator->errors()->add('instructor_id', 'The selected user must have the instructor role.');
                 }
             },
+            function (Validator $validator): void {
+                $this->validatePromotion($validator, (string) $this->input('price', '0'), $this->input('promotional_price'), $this->input('discount_starts_at'), $this->input('discount_ends_at'));
+            },
         ];
+    }
+
+    protected function validatePromotion(Validator $validator, string $regular, mixed $promotion, mixed $start, mixed $end): void
+    {
+        if ($validator->errors()->hasAny(['price', 'promotional_price', 'discount_starts_at', 'discount_ends_at'])) {
+            return;
+        }
+        if ($promotion === null && $start === null && $end === null) {
+            return;
+        }
+        if ($promotion === null || $start === null || $end === null) {
+            $validator->errors()->add('promotional_price', 'A promotion requires its price, start and end.');
+
+            return;
+        }
+        if (BigDecimal::of((string) $promotion)->compareTo(BigDecimal::of($regular)) >= 0) {
+            $validator->errors()->add('promotional_price', 'Promotional price must be below the regular price.');
+        }
     }
 }

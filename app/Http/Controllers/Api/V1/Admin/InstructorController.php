@@ -11,6 +11,7 @@ use App\Models\InstructorProfile;
 use App\Models\User;
 use App\PermissionName;
 use App\RoleName;
+use App\Services\RolePermissionManagementService;
 use App\UserStatus;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -18,6 +19,7 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Spatie\Permission\Models\Role;
 
 class InstructorController extends Controller
 {
@@ -73,7 +75,7 @@ class InstructorController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(UpdateInstructorRequest $request, User $instructor): AdminInstructorResource
+    public function update(UpdateInstructorRequest $request, User $instructor, RolePermissionManagementService $roleManagement): AdminInstructorResource
     {
         Gate::authorize('updateAny', InstructorProfile::class);
         abort_unless($instructor->hasRole(RoleName::Instructor->value), 404);
@@ -85,11 +87,21 @@ class InstructorController extends Controller
 
         if ($accountAttributes !== []) {
             Gate::authorize('manageAccount', InstructorProfile::class);
+            if ($instructor->hasRole(RoleName::Admin->value)) {
+                abort_unless($request->user()->hasRole(RoleName::Admin->value), 403);
+            }
         }
 
-        DB::transaction(function () use ($instructor, $attributes, $accountAttributes): void {
+        DB::transaction(function () use ($instructor, $attributes, $accountAttributes, $roleManagement): void {
+            $changesManagerStatus = array_key_exists('status', $accountAttributes) && $instructor->hasRole(RoleName::Admin->value);
+            if ($changesManagerStatus) {
+                Role::query()->where('name', RoleName::Admin->value)->where('guard_name', 'web')->lockForUpdate()->firstOrFail();
+            }
             if ($accountAttributes !== []) {
                 $instructor->update($accountAttributes);
+            }
+            if ($changesManagerStatus) {
+                $roleManagement->assertActiveAdminManagerExists();
             }
             $profileAttributes = Arr::only($attributes, $this->profileFields());
             if ($profileAttributes !== []) {

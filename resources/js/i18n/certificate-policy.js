@@ -1,0 +1,31 @@
+export const en = {
+    contentStatus: { draft: 'Draft', published: 'Published', archived: 'Archived' },
+    title: 'Certificate requirements', description: 'Set the rules for this course. Existing certificates remain valid when these settings change.',
+    enabled: 'Certificates enabled', lessonPercentage: 'Required lesson completion (%)', finalRequired: 'Require a final exam',
+    finalQuiz: 'Final exam quiz', chooseQuiz: 'Choose a quiz', passingPercentage: 'Required final exam score (%)',
+    assignments: 'Required assignments', noAssignments: 'No assignments are required.', approvalRequired: 'Require administrator approval',
+    save: 'Save certificate requirements', saved: 'Certificate requirements saved.', notConfigured: 'Certificate policy has not been configured; new issuance is blocked.',
+    configureAfterCreate: 'Save the course first, then configure its certificate requirements here.',
+    lessonProgress: 'Lessons: {actual}% / required {required}%', finalExamStatus: 'Final exam: {status}',
+    assignmentProgress: 'Required assignments: {completed} / {required}', approvalStatus: 'Administrator approval: {status}',
+    requestApproval: 'Request certificate approval', approvalRequested: 'Approval request sent.', approvals: 'Certificate approvals',
+    approve: 'Approve', pending: 'Pending', approved: 'Approved', not_requested: 'Not requested', not_required: 'Not required',
+    not_completed: 'Not completed', unavailable: 'Unavailable', failed: 'Not passed', passed: 'Passed',
+    empty: 'No certificate approval requests.', validation: 'Review the certificate requirements and try again.',
+};
+
+export const ar = {
+    contentStatus: { draft: 'مسودة', published: 'منشور', archived: 'مؤرشف' },
+    title: 'متطلبات الشهادة', description: 'حدّد شروط هذه الدورة. تبقى الشهادات الصادرة سابقًا سارية عند تغيير الإعدادات.',
+    enabled: 'تفعيل الشهادات', lessonPercentage: 'نسبة إكمال الدروس المطلوبة (%)', finalRequired: 'اشتراط اختبار نهائي',
+    finalQuiz: 'اختبار الدورة النهائي', chooseQuiz: 'اختر اختبارًا', passingPercentage: 'علامة اجتياز الاختبار النهائي (%)',
+    assignments: 'الواجبات الإلزامية للشهادة', noAssignments: 'لا توجد واجبات مطلوبة.', approvalRequired: 'اشتراط موافقة الإدارة',
+    save: 'حفظ متطلبات الشهادة', saved: 'حُفظت متطلبات الشهادة.', notConfigured: 'لم تُضبط سياسة الشهادة؛ إصدار الشهادات الجديدة متوقف.',
+    configureAfterCreate: 'احفظ الدورة أولًا، ثم اضبط متطلبات شهادتها هنا.',
+    lessonProgress: 'الدروس: {actual}% / المطلوب {required}%', finalExamStatus: 'الاختبار النهائي: {status}',
+    assignmentProgress: 'الواجبات المطلوبة: {completed} / {required}', approvalStatus: 'موافقة الإدارة: {status}',
+    requestApproval: 'طلب موافقة إصدار الشهادة', approvalRequested: 'أُرسل طلب الموافقة.', approvals: 'طلبات الموافقة على الشهادات',
+    approve: 'موافقة', pending: 'بانتظار الموافقة', approved: 'تمت الموافقة', not_requested: 'لم يُطلب بعد', not_required: 'غير مطلوب',
+    not_completed: 'لم يُنجز', unavailable: 'غير متاح', failed: 'لم يجتز', passed: 'اجتاز',
+    empty: 'لا توجد طلبات موافقة على الشهادات.', validation: 'راجع متطلبات الشهادة وحاول مجددًا.',
+};

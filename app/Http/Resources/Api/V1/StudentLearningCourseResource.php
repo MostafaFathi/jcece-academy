@@ -28,6 +28,7 @@ class StudentLearningCourseResource extends JsonResource
             'access_state' => $this->resource['access']['access_state'],
             'access_expires_at' => $this->resource['access']['access_expires_at'],
             'is_lifetime' => $this->resource['access']['is_lifetime'],
+            'sequential' => $this->resource['access']['sequential'],
             'completed_lessons' => $this->resource['progress']['completed_lessons'],
             'total_lessons' => $this->resource['progress']['total_lessons'],
             'progress_percentage' => $this->resource['progress']['progress_percentage'],

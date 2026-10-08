@@ -18,13 +18,14 @@ class QuizController extends Controller
     public function index(Course $course): AnonymousResourceCollection
     {
         Gate::authorize('viewAny', Quiz::class);
+        Gate::authorize('view', $course);
 
         return AdminQuizResource::collection($course->quizzes()->with('questions.options')->get());
     }
 
     public function store(StoreQuizRequest $request, Course $course): JsonResponse
     {
-        Gate::authorize('create', Quiz::class);
+        Gate::authorize('create', [Quiz::class, $course]);
         $quiz = $course->quizzes()->create($request->validated() + ['status' => QuizStatus::Draft]);
 
         return (new AdminQuizResource($quiz))->response()->setStatusCode(201);

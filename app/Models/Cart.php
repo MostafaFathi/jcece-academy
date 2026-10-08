@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['user_id'])]
+#[Fillable(['user_id', 'coupon_code'])]
 class Cart extends Model
 {
     /** @use HasFactory<CartFactory> */

@@ -64,6 +64,10 @@ class CourseController extends Controller
         $attributes = $request->validated();
         Gate::authorize('assignInstructor', [Course::class, (int) $attributes['instructor_id']]);
 
+        if (array_key_exists('certificate_enabled', $attributes)) {
+            Gate::authorize('manageCertificateRequirements', new Course);
+        }
+
         if (($attributes['status'] ?? CourseStatus::Draft->value) === CourseStatus::Published->value) {
             Gate::authorize('publish', new Course);
         }
@@ -100,6 +104,10 @@ class CourseController extends Controller
 
         if (array_key_exists('instructor_id', $attributes)) {
             Gate::authorize('assignInstructor', [Course::class, (int) $attributes['instructor_id']]);
+        }
+
+        if (array_key_exists('certificate_enabled', $attributes)) {
+            Gate::authorize('manageCertificateRequirements', $course);
         }
 
         if (($attributes['status'] ?? null) === CourseStatus::Published->value && $course->status !== CourseStatus::Published) {

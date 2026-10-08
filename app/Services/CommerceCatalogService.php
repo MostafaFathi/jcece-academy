@@ -33,7 +33,7 @@ class CommerceCatalogService
 
         $product = $query->find($id);
 
-        if ($product === null) {
+        if (! $this->isPurchasable($product)) {
             throw ValidationException::withMessages([
                 'purchasable_id' => 'The selected product is not currently available for purchase.',
             ]);
@@ -50,7 +50,8 @@ class CommerceCatalogService
 
         return match (true) {
             $product instanceof Course => $product->status === CourseStatus::Published,
-            $product instanceof Package => $product->status === PackageStatus::Published,
+            $product instanceof Package => $product->status === PackageStatus::Published
+                && (! $product->is_sequential || $product->sequential_completion_percentage !== null),
         };
     }
 

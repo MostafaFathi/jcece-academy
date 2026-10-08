@@ -21,7 +21,7 @@ class OrderStatusController extends Controller
         OrderStatusService $statusService,
     ): AdminOrderResource {
         Gate::authorize('manage', $order);
-        $order = $statusService->transition($order, OrderStatus::from($request->validated('status')));
+        $order = $statusService->transition($order, OrderStatus::from($request->validated('status')), $request->user());
 
         return new AdminOrderResource($order);
     }

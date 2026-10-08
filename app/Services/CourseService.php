@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\DB;
 
 class CourseService
 {
+    public function __construct(private AuditTrail $audit) {}
+
     /** @param array<string, mixed> $attributes */
     public function create(array $attributes, User $actor): Course
     {
@@ -41,7 +43,16 @@ class CourseService
         }
 
         return DB::transaction(function () use ($course, $attributes, $actor, $orderedRelations, $relationValues): Course {
+            if ($course->exists) {
+                $course = Course::query()->whereKey($course->id)->lockForUpdate()->firstOrFail();
+            }
+
             $attributes['updated_by'] = $actor->id;
+
+            if ($course->exists && array_key_exists('certificate_enabled', $attributes)
+                && (bool) $attributes['certificate_enabled'] !== $course->certificate_enabled) {
+                $course->certificate_requirements_version++;
+            }
 
             if (! $course->exists) {
                 $attributes['created_by'] = $actor->id;
@@ -51,7 +62,11 @@ class CourseService
                 $attributes['published_at'] = now();
             }
 
+            $previousStatus = $course->status?->value;
             $course->fill($attributes)->save();
+            if ($previousStatus !== $course->status?->value && in_array($course->status, [CourseStatus::Published, CourseStatus::Archived], true)) {
+                $this->audit->record('course.status_changed', $course, $actor, ['from_status' => $previousStatus, 'to_status' => $course->status->value]);
+            }
 
             foreach ($relationValues as $inputKey => $values) {
                 [$relationName, $valueColumn] = $orderedRelations[$inputKey];

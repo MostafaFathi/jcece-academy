@@ -18,13 +18,14 @@ class AssignmentController extends Controller
     public function index(Course $course): AnonymousResourceCollection
     {
         Gate::authorize('viewAny', Assignment::class);
+        Gate::authorize('view', $course);
 
         return AdminAssignmentResource::collection($course->assignments()->with('attachments')->get());
     }
 
     public function store(StoreAssignmentRequest $request, Course $course): JsonResponse
     {
-        Gate::authorize('create', Assignment::class);
+        Gate::authorize('create', [Assignment::class, $course]);
         $assignment = $course->assignments()->create($request->validated() + ['status' => AssignmentStatus::Draft]);
 
         return (new AdminAssignmentResource($assignment->load('attachments')))->response()->setStatusCode(201);

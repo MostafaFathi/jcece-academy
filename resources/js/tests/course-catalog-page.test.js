@@ -10,6 +10,7 @@ const routerMocks = vi.hoisted(() => ({ route: { query: {} }, push: vi.fn() }));
 vi.mock('vue-router', () => ({ useRoute: () => routerMocks.route, useRouter: () => ({ push: routerMocks.push }) }));
 vi.mock('../api/categories', () => ({ fetchCategories: vi.fn() }));
 vi.mock('../api/courses', () => ({ fetchCourses: vi.fn() }));
+vi.mock('../api/public-site', () => ({ fetchInstructors: vi.fn().mockResolvedValue({ items: [], meta: { last_page: 1 } }) }));
 
 const RouterLinkStub = { template: '<a><slot /></a>' };
 const course = { id: 1, title: 'BIM Essentials', slug: 'bim', short_description: 'Course description', price: '20.00', level: 'beginner', rating_summary: { average_rating: 5, review_count: 1 } };
@@ -41,8 +42,8 @@ describe('course catalog page', () => {
         await wrapper.get('input[type="search"]').setValue('Project');
         const selects = wrapper.findAll('select');
         await selects[0].setValue('engineering');
-        await selects[1].setValue('advanced');
-        await selects[2].setValue('title');
+        await selects[2].setValue('advanced');
+        await selects[7].setValue('title');
         await wrapper.get('form').trigger('submit');
         expect(routerMocks.push).toHaveBeenCalledWith({ name: 'courses.index', query: { search: 'Project', category: 'engineering', level: 'advanced', sort: 'title' } });
     });

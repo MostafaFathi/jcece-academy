@@ -6,6 +6,7 @@ use App\CourseStatus;
 use App\Models\Course;
 use App\Models\Package;
 use App\PackageStatus;
+use App\Services\CommercePricingService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -39,7 +40,8 @@ class CartItemResource extends JsonResource
                 'id' => $product->id,
                 'title' => $product->title,
                 'slug' => $product->slug,
-                'price' => $product->price,
+                'price' => app(CommercePricingService::class)->product($product)['active_price'],
+                'pricing' => app(CommercePricingService::class)->product($product),
                 'access_duration_days' => $product->access_duration_days,
                 'thumbnail' => $product->thumbnail,
             ] : null,

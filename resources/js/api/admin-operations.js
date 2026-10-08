@@ -4,6 +4,15 @@ import { unwrapCollection, unwrapResource } from './responses';
 const base = '/api/v1/admin';
 export async function fetchOperationalOrders(params = {}) { return unwrapCollection(await api.get(`${base}/orders`, { params })); }
 export async function fetchOperationalOrder(id) { return unwrapResource(await api.get(`${base}/orders/${id}`)); }
+export async function issueOperationalDocuments(id) { return unwrapCollection(await api.post(`${base}/orders/${id}/financial-documents`)); }
+export function downloadOperationalDocument(id) { return downloadBlob(`${base}/financial-documents/${id}/download`, `jcec-receipt-${id}.pdf`); }
+export async function retryTransactionalDelivery(orderId, deliveryId) { return unwrapResource(await api.post(`${base}/orders/${orderId}/transactional-deliveries/${deliveryId}/retry`)); }
+export async function createOrderRefund(id, payload) { return (await api.post(`${base}/orders/${id}/refunds`, payload)).data; }
+export async function completeOrderRefund(id, refundId) { return (await api.post(`${base}/orders/${id}/refunds/${refundId}/complete`)).data; }
+export async function rejectOrderRefund(id, refundId) { return (await api.post(`${base}/orders/${id}/refunds/${refundId}/reject`)).data; }
+export async function fetchCoupons(params = {}) { return (await api.get(`${base}/coupons`, { params })).data; }
+export async function createCoupon(payload) { return (await api.post(`${base}/coupons`, payload)).data; }
+export async function updateCoupon(id, payload) { return (await api.patch(`${base}/coupons/${id}`, payload)).data; }
 export async function provisionOrderAccess(id) { return unwrapResource(await api.post(`${base}/orders/${id}/provision-access`)); }
 export async function fetchOperationalPayments(params = {}) { return unwrapCollection(await api.get(`${base}/payments`, { params })); }
 export async function fetchOperationalPayment(id) { return unwrapResource(await api.get(`${base}/payments/${id}`)); }

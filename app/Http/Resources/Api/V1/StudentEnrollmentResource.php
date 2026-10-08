@@ -36,6 +36,7 @@ class StudentEnrollmentResource extends JsonResource
             'access_state' => $access['access_state'],
             'access_expires_at' => $access['access_expires_at'],
             'is_lifetime' => $access['is_lifetime'],
+            'sequential' => $access['sequential'],
             'completed_lessons' => $progress['completed_lessons'],
             'total_lessons' => $progress['total_lessons'],
             'progress_percentage' => $progress['progress_percentage'],

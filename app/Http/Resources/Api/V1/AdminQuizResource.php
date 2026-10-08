@@ -4,6 +4,7 @@ namespace App\Http\Resources\Api\V1;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Gate;
 
 class AdminQuizResource extends JsonResource
 {
@@ -32,6 +33,11 @@ class AdminQuizResource extends JsonResource
             'available_from' => $this->available_from,
             'available_until' => $this->available_until,
             'questions' => AdminQuizQuestionResource::collection($this->whenLoaded('questions')),
+            'capabilities' => $this->when($request->user() !== null, fn (): array => [
+                'can_update' => Gate::forUser($request->user())->allows('update', $this->resource),
+                'can_delete' => Gate::forUser($request->user())->allows('delete', $this->resource),
+                'can_publish' => Gate::forUser($request->user())->allows('publish', $this->resource),
+            ]),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

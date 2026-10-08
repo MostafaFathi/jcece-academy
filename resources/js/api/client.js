@@ -37,6 +37,11 @@ api.interceptors.response.use(
     },
 );
 
+api.interceptors.request.use((config) => {
+    config.headers['X-Locale'] = localStorage.getItem('jcec.locale') === 'en' ? 'en' : 'ar';
+    return config;
+});
+
 export async function downloadBlob(url, fallbackFilename = 'download') {
     const response = await api.get(url, { responseType: 'blob' });
     const disposition = response.headers['content-disposition'] ?? '';

@@ -9,8 +9,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
-#[Fillable(['user_id', 'order_number', 'idempotency_key', 'status', 'currency', 'subtotal', 'discount_total', 'tax_total', 'total', 'customer_name', 'customer_email', 'customer_phone', 'notes', 'placed_at', 'paid_at'])]
+#[Fillable(['user_id', 'order_number', 'idempotency_key', 'status', 'currency', 'subtotal', 'discount_total', 'tax_total', 'total', 'coupon_id', 'coupon_code_snapshot', 'coupon_type_snapshot', 'coupon_value_snapshot', 'customer_name', 'customer_email', 'locale_snapshot', 'customer_phone', 'notes', 'placed_at', 'paid_at'])]
 class Order extends Model
 {
     /** @use HasFactory<OrderFactory> */
@@ -36,6 +37,26 @@ class Order extends Model
         return $this->hasMany(SupportTicket::class, 'related_order_id');
     }
 
+    public function refunds(): HasMany
+    {
+        return $this->hasMany(Refund::class)->orderBy('id');
+    }
+
+    public function couponRedemption(): HasOne
+    {
+        return $this->hasOne(CouponRedemption::class);
+    }
+
+    public function financialDocuments(): HasMany
+    {
+        return $this->hasMany(FinancialDocument::class)->orderBy('id');
+    }
+
+    public function transactionalDeliveries(): HasMany
+    {
+        return $this->hasMany(TransactionalDelivery::class)->orderByDesc('id');
+    }
+
     /** @return array<string, string> */
     protected function casts(): array
     {
@@ -45,6 +66,7 @@ class Order extends Model
             'discount_total' => 'decimal:2',
             'tax_total' => 'decimal:2',
             'total' => 'decimal:2',
+            'coupon_value_snapshot' => 'decimal:2',
             'placed_at' => 'datetime',
             'paid_at' => 'datetime',
         ];

@@ -16,7 +16,7 @@ use Throwable;
 
 class SupportTicketMessageService
 {
-    public function __construct(private UploadedFileStorage $uploads) {}
+    public function __construct(private UploadedFileStorage $uploads, private AuditTrail $audit) {}
 
     /** @param list<UploadedFile> $attachments */
     public function post(User $actor, SupportTicket $ticket, string $body, bool $internal, array $attachments = [], bool $applyWorkflow = true): SupportTicketMessage
@@ -30,6 +30,9 @@ class SupportTicketMessageService
                     throw ValidationException::withMessages(['ticket' => 'A closed ticket must be reopened before a reply can be posted.']);
                 }
                 $message = $locked->messages()->create(['user_id' => $actor->id, 'body' => $body, 'is_internal' => $internal]);
+                if ($internal) {
+                    $this->audit->record('support.internal_note_created', $message, $actor);
+                }
                 foreach ($attachments as $file) {
                     $directory = "support-tickets/{$locked->id}/messages/{$message->id}";
                     $path = $this->uploads->store($file, $directory, $disk, 'attachments');

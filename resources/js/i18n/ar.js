@@ -6,16 +6,30 @@ import { ar as admin } from './admin';
 import { ar as adminContent } from './admin-content';
 import { ar as operations } from './operations';
 import { ar as instructor } from './instructor';
+import { ar as certificatePolicy } from './certificate-policy';
+import { ar as path } from './sequential';
+import { ar as audit } from './audit';
+import { ar as phase15f } from './phase15f';
+import { ar as reports } from './reports';
+import { ar as rolePermissions } from './role-permissions';
+import { ar as assessmentAuthoring } from './assessment-authoring';
 
 export default {
     commerce,
     learning,
-    assessments,
+    assessments: { ...assessments, reasons: { ...assessments.reasons, certificate_configuration_missing: 'لم تُضبط سياسة الشهادة لهذه الدورة.', final_exam_unavailable: 'الاختبار النهائي غير متاح.', final_exam_incomplete: 'أكمل الاختبار النهائي أولًا.', final_exam_failed: 'لم تحقق علامة اجتياز الاختبار النهائي.', required_assignments_incomplete: 'أكمل الواجبات المطلوبة واجتز تقييمها.', admin_approval_pending: 'بانتظار موافقة الإدارة على الشهادة.' } },
     ...reviewsSupport,
     admin,
     curriculum: adminContent.curriculum,
     operations,
     instructor,
+    certificatePolicy,
+    path,
+    audit,
+    reports,
+    rolePermissions,
+    assessmentAuthoring,
+    ...phase15f,
     brand: {
         name: 'أكاديمية الجزيرة',
         tagline: 'نتعلّم اليوم... لنَبني مستقبلًا أفضل',
@@ -30,7 +44,7 @@ export default {
         registerTitle: 'أنشئ حساب متدرب', registerSubtitle: 'ابدأ رحلتك التعليمية بحسابك الشخصي.', registerLink: 'إنشاء حساب جديد', name: 'الاسم الكامل', confirmPassword: 'تأكيد كلمة المرور', registerSubmit: 'إنشاء الحساب', registerSuccess: 'تم إنشاء حسابك. يمكنك تسجيل الدخول الآن.', alreadyHaveAccount: 'لديك حساب؟ تسجيل الدخول', forgotLink: 'نسيت كلمة المرور؟', forgotTitle: 'استعادة كلمة المرور', forgotSubtitle: 'أدخل بريدك الإلكتروني وسنرسل رابط الاستعادة إذا كان الحساب موجودًا.', forgotSubmit: 'إرسال رابط الاستعادة', forgotSuccess: 'إذا كان الحساب موجودًا، سيُرسل رابط الاستعادة إلى بريدك الإلكتروني.', resetTitle: 'تعيين كلمة مرور جديدة', resetSubtitle: 'اختر كلمة مرور جديدة لحسابك.', resetSubmit: 'تغيير كلمة المرور', resetSuccess: 'تم تغيير كلمة المرور. سجّل الدخول بكلمتك الجديدة.', resetInvalid: 'الرابط غير صالح أو منتهي الصلاحية. اطلب رابطًا جديدًا.', requestAgain: 'طلب رابط جديد', nameRequired: 'الاسم مطلوب.', confirmRequired: 'تأكيد كلمة المرور مطلوب.', passwordMismatch: 'كلمتا المرور غير متطابقتين.',
     },
     nav: {
-        primary: 'التنقل الرئيسي', mobile: 'التنقل عبر الهاتف', overview: 'نظرة عامة', courses: 'الدورات', packages: 'الباقات والمسارات', howItWorks: 'كيف نتعلّم', learning: 'تعلّمي', content: 'إدارة المحتوى', users: 'المستخدمون', assignments: 'التكليفات', tickets: 'تذاكر الدعم', orders: 'الطلبات', main: 'القائمة الرئيسية',
+        primary: 'التنقل الرئيسي', mobile: 'التنقل عبر الهاتف', overview: 'نظرة عامة', courses: 'الدورات', packages: 'الباقات والمسارات', howItWorks: 'كيف نتعلّم', learning: 'تعلّمي', content: 'إدارة المحتوى', website: 'الموقع والسياسات', users: 'المستخدمون', assignments: 'التكليفات', tickets: 'تذاكر الدعم', orders: 'الطلبات', main: 'القائمة الرئيسية',
     },
     home: {
         eyebrow: 'مهارات اليوم لمستقبل أكثر إشراقًا', heroTitle: 'تعليم مهني مصمم ليقودك من المعرفة إلى الإنجاز', heroDescription: 'اكتشف دورات ومسارات تعليمية متخصصة، بمنهج واضح وتجربة تتكيف مع طموحك المهني.', browseCourses: 'استكشف الدورات', browsePackages: 'استكشف المسارات', recentEyebrow: 'تعلّم بتركيز', recentTitle: 'أحدث الدورات المتاحة', recentDescription: 'محتوى منشور فعليًا من الأكاديمية، مرتب من الأحدث لتبدأ بخيار يناسب هدفك.', categoriesEyebrow: 'اختر مجالك', categoriesTitle: 'مجالات تعليمية تقرّبك من هدفك', categoriesDescription: 'تصفح التصنيفات المتاحة وانتقل مباشرة إلى الدورات المنشورة في المجال.', packagesEyebrow: 'رحلة متكاملة', packagesTitle: 'باقات ومسارات تجمع لك المعرفة', packagesDescription: 'مجموعة دورات مترابطة ضمن تجربة واحدة واضحة.', howEyebrow: 'خطوات بسيطة', howTitle: 'رحلتك التعليمية تبدأ بقرار', howDescription: 'نوفّر لك مسارًا واضحًا من الاستكشاف وحتى التطبيق العملي.', stepExplore: 'استكشف ما يناسبك', stepExploreText: 'قارن الدورات والباقات المنشورة وفق هدفك ومستواك.', stepLearn: 'تعلّم بوتيرتك', stepLearnText: 'تابع منهجًا منظمًا ومعلومات واضحة عن محتوى كل دورة.', stepGrow: 'ابنِ مهارتك', stepGrowText: 'حوّل المعرفة إلى تقدم مهني بخطوات عملية قابلة للقياس.', whyEyebrow: 'لماذا JCEC', whyTitle: 'تجربة تركّز على ما تحتاجه فعلًا', whyPractical: 'تركيز مهني', whyPracticalText: 'برامج مصممة حول مهارات قابلة للتطبيق في بيئة العمل.', whyClear: 'تجربة واضحة', whyClearText: 'معلومات شفافة عن المنهج والمدة والمستوى قبل اتخاذ قرارك.', whyFlexible: 'تعلم مرن', whyFlexibleText: 'الوصول إلى المحتوى وفق مدة كل دورة أو باقة كما تحددها الأكاديمية.', ctaTitle: 'جاهز لتبدأ خطوتك التالية؟', ctaText: 'تصفح المحتوى المنشور واختر التجربة الأقرب إلى طموحك.', emptyCourses: 'لا توجد دورات منشورة حاليًا.', emptyPackages: 'لا توجد باقات منشورة حاليًا.', emptyCategories: 'لا توجد تصنيفات متاحة حاليًا.',

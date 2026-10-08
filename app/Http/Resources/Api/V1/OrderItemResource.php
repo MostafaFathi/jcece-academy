@@ -22,6 +22,8 @@ class OrderItemResource extends JsonResource
             'quantity' => $this->quantity,
             'unit_price' => $this->unit_price,
             'discount_amount' => $this->discount_amount,
+            'promotional_discount_amount' => $this->promotional_discount_amount,
+            'coupon_discount_amount' => $this->coupon_discount_amount,
             'total' => $this->total,
             'access_duration_days' => $this->access_duration_days,
             'package_courses' => OrderItemPackageCourseResource::collection($this->whenLoaded('packageCourses')),

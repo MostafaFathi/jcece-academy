@@ -9,11 +9,13 @@ use App\Http\Requests\Api\V1\ListPackagesRequest;
 use App\Http\Resources\Api\V1\PackageResource;
 use App\Models\Package;
 use App\PackageStatus;
+use App\Services\AuditTrail;
 use App\Services\PackageService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 
 class PackageController extends Controller
@@ -48,7 +50,7 @@ class PackageController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StorePackageRequest $request, PackageService $packageService): JsonResponse
+    public function store(StorePackageRequest $request, PackageService $packageService, AuditTrail $audit): JsonResponse
     {
         Gate::authorize('create', Package::class);
         $attributes = $request->validated();
@@ -57,7 +59,14 @@ class PackageController extends Controller
             Gate::authorize('publish', new Package);
         }
 
-        $package = $packageService->create($attributes);
+        $package = DB::transaction(function () use ($packageService, $attributes, $audit, $request): Package {
+            $package = $packageService->create($attributes);
+            if ($package->status === PackageStatus::Published) {
+                $audit->record('package.published', $package, $request->user());
+            }
+
+            return $package;
+        });
 
         return (new PackageResource($package))->response()->setStatusCode(201);
     }
@@ -75,7 +84,7 @@ class PackageController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(UpdatePackageRequest $request, Package $package, PackageService $packageService): PackageResource
+    public function update(UpdatePackageRequest $request, Package $package, PackageService $packageService, AuditTrail $audit): PackageResource
     {
         Gate::authorize('update', $package);
         $attributes = $request->validated();
@@ -84,7 +93,17 @@ class PackageController extends Controller
             Gate::authorize('publish', $package);
         }
 
-        return new PackageResource($packageService->update($package, $attributes));
+        $package = DB::transaction(function () use ($package, $attributes, $packageService, $audit, $request): Package {
+            $previousStatus = $package->status;
+            $package = $packageService->update($package, $attributes);
+            if ($previousStatus !== $package->status && in_array($package->status, [PackageStatus::Published, PackageStatus::Archived], true)) {
+                $audit->record('package.status_changed', $package, $request->user(), ['from_status' => $previousStatus->value, 'to_status' => $package->status->value]);
+            }
+
+            return $package;
+        });
+
+        return new PackageResource($package);
     }
 
     /**

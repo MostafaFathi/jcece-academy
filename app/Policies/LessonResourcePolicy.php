@@ -6,7 +6,6 @@ use App\Models\Lesson;
 use App\Models\LessonResource;
 use App\Models\User;
 use App\PermissionName;
-use App\RoleName;
 
 class LessonResourcePolicy
 {
@@ -24,9 +23,7 @@ class LessonResourcePolicy
     public function view(User $user, LessonResource $lessonResource): bool
     {
         return $user->can(PermissionName::CurriculumView->value)
-            && (! $user->hasRole(RoleName::Instructor->value)
-                || $user->hasAnyRole([RoleName::Admin->value, RoleName::ContentManager->value])
-                || $lessonResource->lesson()->whereHas('section.course', fn ($query) => $query->where('instructor_id', $user->id))->exists());
+            && $user->can('viewCurriculum', $lessonResource->lesson->section->course);
     }
 
     /**
@@ -34,7 +31,7 @@ class LessonResourcePolicy
      */
     public function create(User $user, Lesson $lesson): bool
     {
-        return $user->can(PermissionName::CurriculumCreate->value);
+        return $user->can('createCurriculum', $lesson->section->course);
     }
 
     /**
@@ -42,7 +39,7 @@ class LessonResourcePolicy
      */
     public function update(User $user, LessonResource $lessonResource): bool
     {
-        return $user->can(PermissionName::CurriculumUpdate->value);
+        return $user->can('updateCurriculum', $lessonResource->lesson->section->course);
     }
 
     /**
@@ -50,7 +47,7 @@ class LessonResourcePolicy
      */
     public function delete(User $user, LessonResource $lessonResource): bool
     {
-        return $user->can(PermissionName::CurriculumDelete->value);
+        return $user->can('deleteCurriculum', $lessonResource->lesson->section->course);
     }
 
     /**
@@ -58,7 +55,7 @@ class LessonResourcePolicy
      */
     public function restore(User $user, LessonResource $lessonResource): bool
     {
-        return $user->can(PermissionName::CurriculumUpdate->value);
+        return $this->update($user, $lessonResource);
     }
 
     /**
@@ -66,11 +63,11 @@ class LessonResourcePolicy
      */
     public function forceDelete(User $user, LessonResource $lessonResource): bool
     {
-        return $user->can(PermissionName::CurriculumDelete->value);
+        return $this->delete($user, $lessonResource);
     }
 
     public function reorder(User $user, Lesson $lesson): bool
     {
-        return $user->can(PermissionName::CurriculumUpdate->value);
+        return $user->can('updateCurriculum', $lesson->section->course);
     }
 }

@@ -37,4 +37,17 @@ class PermissionSeederSafetyTest extends TestCase
         $this->assertFalse(Role::findByName(RoleName::ContentManager->value)->hasPermissionTo(PermissionName::PolicyPagesPublish->value));
         $this->assertFalse(Role::findByName(RoleName::SalesSupport->value)->hasPermissionTo(PermissionName::PolicyPagesView->value));
     }
+
+    public function test_reseeding_preserves_intentional_manual_removal_from_an_existing_role(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+        $support = Role::findByName(RoleName::SalesSupport->value, 'web');
+        $support->revokePermissionTo(PermissionName::PaymentsManage->value);
+
+        $this->seed(RolesAndPermissionsSeeder::class);
+
+        $this->assertFalse($support->fresh()->hasPermissionTo(PermissionName::PaymentsManage->value));
+        $this->assertTrue($support->fresh()->hasPermissionTo(PermissionName::PaymentsView->value));
+        $this->assertTrue(Role::findByName(RoleName::Admin->value, 'web')->hasPermissionTo(PermissionName::RolesManage->value));
+    }
 }

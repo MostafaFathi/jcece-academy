@@ -1,0 +1,23 @@
+<?php
+
+return [
+
+    /*
+    |--------------------------------------------------------------------------
+    | Authentication Language Lines
+    |--------------------------------------------------------------------------
+    |
+    | The following language lines are used during authentication for various
+    | messages that we need to display to the user. You are free to modify
+    | these language lines according to your application's requirements.
+    |
+    */
+
+    'failed' => 'These credentials do not match our records.',
+    'password' => 'The provided password is incorrect.',
+    'throttle' => 'Too many login attempts. Please try again in :seconds seconds.',
+    'reset_invalid' => 'This password reset link is invalid or has expired.',
+    'reset_complete' => 'Password reset. You may sign in now.',
+    'reset_sent_neutral' => 'If an account exists, a reset link will be sent.',
+
+];

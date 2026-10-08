@@ -17,7 +17,7 @@ vi.mock('../api/admin', () => Object.fromEntries(['fetchAdminCategories', 'fetch
 vi.mock('../api/instructor-options', () => ({ fetchInstructorOptions: vi.fn() }));
 
 const category = { id: 2, parent_id: null, name: 'Safety', slug: 'safety', description: '', image: null, icon: null, sort_order: 1, is_active: true };
-const course = { id: 7, title: 'Safety course', slug: 'safety-course', category: { ...category }, instructor: { id: 8, name: 'Teacher' }, price: '123.45', compare_price: null, currency: 'ILS', access_duration_days: null, status: 'draft', level: 'beginner', language: 'ar', duration_minutes: 60, certificate_enabled: false, discussion_enabled: false, is_featured: false, thumbnail: null, promo_video_url: null, published_at: null, discount_starts_at: null, discount_ends_at: null, learning_outcomes: [], requirements: [], target_audiences: [], required_tools: [] };
+const course = { id: 7, title: 'Safety course', slug: 'safety-course', category: { ...category }, instructor: { id: 8, name: 'Teacher' }, capabilities: { can_update_course: true, can_delete_course: true, can_view_curriculum: true, can_create_curriculum: true, can_update_curriculum: true, can_delete_curriculum: true }, price: '123.45', compare_price: null, currency: 'ILS', access_duration_days: null, status: 'draft', level: 'beginner', language: 'ar', duration_minutes: 60, certificate_enabled: false, discussion_enabled: false, is_featured: false, thumbnail: null, promo_video_url: null, published_at: null, discount_starts_at: null, discount_ends_at: null, learning_outcomes: [], requirements: [], target_audiences: [], required_tools: [] };
 function render(component, props = {}) { return mount(component, { props, global: { plugins: [i18n], stubs: { RouterLink: { props: ['to'], template: '<a><slot /></a>' } } } }); }
 function deferred() { let resolve; const promise = new Promise((yes) => { resolve = yes; }); return { promise, resolve }; }
 beforeEach(() => {
@@ -25,7 +25,13 @@ beforeEach(() => {
     api.fetchAdminCategories.mockResolvedValue({ items: [category], meta: { current_page: 1, last_page: 1, total: 1 } });
     api.fetchAdminCategory.mockResolvedValue(category);
     api.fetchAdminCourses.mockResolvedValue({ items: [course], meta: { current_page: 1, last_page: 1, total: 1 } });
-    api.fetchAdminCourse.mockResolvedValue(course);
+    api.fetchAdminCourse.mockImplementation(async () => ({
+        ...course,
+        capabilities: {
+            ...course.capabilities,
+            can_update_course: state.permissions.includes('courses.update') && (!state.roles.includes('instructor') || course.instructor.id === state.user.id),
+        },
+    }));
     instructorApi.fetchInstructorOptions.mockResolvedValue({ items: [{ id: 8, name: 'Teacher' }], meta: { current_page: 1, last_page: 1 } });
     api.fetchAdminDashboardSummary.mockResolvedValue({ total_categories: 1, total_courses: 8, published_courses: 4, draft_courses: 2 });
     api.createAdminCategory.mockResolvedValue(category); api.updateAdminCategory.mockResolvedValue(category); api.updateAdminCourse.mockResolvedValue(course);

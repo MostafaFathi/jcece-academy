@@ -13,6 +13,7 @@ const statusCodes = {
     401: 'unauthenticated',
     403: 'forbidden',
     404: 'not_found',
+    409: 'pricing_changed',
     419: 'csrf_expired',
     422: 'validation',
     429: 'rate_limited',

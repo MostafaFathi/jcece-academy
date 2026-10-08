@@ -13,10 +13,16 @@ export async function updateInstructorCourse(courseId, payload) { return unwrapR
 export async function fetchInstructorCurriculum(courseId) { return unwrapCollection(await api.get(`${course(courseId)}/curriculum`)); }
 export async function fetchInstructorQuizzes(courseId) { return unwrapCollection(await api.get(`${course(courseId)}/quizzes`)); }
 export async function fetchInstructorQuiz(courseId, quizId) { return unwrapResource(await api.get(quiz(courseId, quizId))); }
+export async function createInstructorQuiz(courseId, payload) { return unwrapResource(await api.post(`/api/v1/admin/courses/${courseId}/quizzes`, payload)); }
+export async function updateInstructorQuiz(courseId, quizId, payload) { return unwrapResource(await api.patch(`/api/v1/admin/courses/${courseId}/quizzes/${quizId}`, payload)); }
+export async function archiveInstructorQuiz(courseId, quizId) { return unwrapResource(await api.delete(`/api/v1/admin/courses/${courseId}/quizzes/${quizId}`)); }
 export async function fetchInstructorQuizAttempts(courseId, quizId, page = 1) { return unwrapCollection(await api.get(`${quiz(courseId, quizId)}/attempts`, { params: { page } })); }
 export async function fetchInstructorQuizAttempt(courseId, quizId, attemptId) { return unwrapResource(await api.get(`${quiz(courseId, quizId)}/attempts/${attemptId}`)); }
 export async function fetchInstructorAssignments(courseId) { return unwrapCollection(await api.get(`${course(courseId)}/assignments`)); }
 export async function fetchInstructorAssignment(courseId, assignmentId) { return unwrapResource(await api.get(assignment(courseId, assignmentId))); }
+export async function createInstructorAssignment(courseId, payload) { return unwrapResource(await api.post(`/api/v1/admin/courses/${courseId}/assignments`, payload)); }
+export async function updateInstructorAssignment(courseId, assignmentId, payload) { return unwrapResource(await api.patch(`/api/v1/admin/courses/${courseId}/assignments/${assignmentId}`, payload)); }
+export async function archiveInstructorAssignment(courseId, assignmentId) { return unwrapResource(await api.delete(`/api/v1/admin/courses/${courseId}/assignments/${assignmentId}`)); }
 export async function fetchInstructorSubmissions(courseId, assignmentId, params = {}) { return unwrapCollection(await api.get(`${assignment(courseId, assignmentId)}/submissions`, { params })); }
 export async function fetchInstructorSubmission(courseId, assignmentId, submissionId) { return unwrapResource(await api.get(`${assignment(courseId, assignmentId)}/submissions/${submissionId}`)); }
 export async function gradeInstructorSubmission(submissionId, payload) { return unwrapResource(await api.post(`/api/v1/admin/assignment-submissions/${submissionId}/grade`, payload)); }

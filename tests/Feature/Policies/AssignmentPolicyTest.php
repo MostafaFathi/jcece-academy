@@ -6,6 +6,7 @@ use App\Models\Assignment;
 use App\Models\AssignmentSubmission;
 use App\Models\Course;
 use App\Models\User;
+use App\PermissionName;
 use App\Policies\AssignmentPolicy;
 use App\Policies\AssignmentSubmissionPolicy;
 use App\RoleName;
@@ -27,7 +28,7 @@ class AssignmentPolicyTest extends TestCase
             $manager = User::factory()->create();
             $manager->assignRole($role->value);
             $this->assertTrue($policy->view($manager, $assignment));
-            $this->assertTrue($policy->create($manager));
+            $this->assertTrue($policy->create($manager, $assignment->course));
             $this->assertTrue($policy->update($manager, $assignment));
             $this->assertTrue($policy->delete($manager, $assignment));
             $this->assertTrue($policy->publish($manager, $assignment));
@@ -37,7 +38,7 @@ class AssignmentPolicyTest extends TestCase
         $student = User::factory()->create();
         $student->assignRole(RoleName::Student->value);
         $this->assertFalse($policy->view($student, $assignment));
-        $this->assertFalse($policy->create($student));
+        $this->assertFalse($policy->create($student, $assignment->course));
     }
 
     public function test_instructor_review_and_grade_permissions_are_limited_to_assigned_course(): void
@@ -65,5 +66,31 @@ class AssignmentPolicyTest extends TestCase
         $this->assertTrue($submissionPolicy->update($owner, $ownSubmission));
         $this->assertFalse($submissionPolicy->review($owner, $ownSubmission));
         $this->assertFalse($submissionPolicy->delete($owner, $ownSubmission));
+    }
+
+    public function test_instructor_assignment_definition_permissions_are_limited_to_assigned_course(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+        $instructor = User::factory()->create();
+        $instructor->assignRole(RoleName::Instructor->value);
+        $instructor->givePermissionTo([
+            PermissionName::AssignmentsView->value,
+            PermissionName::AssignmentsCreate->value,
+            PermissionName::AssignmentsUpdate->value,
+            PermissionName::AssignmentsDelete->value,
+        ]);
+        $ownCourse = Course::factory()->for($instructor, 'instructor')->create();
+        $foreignCourse = Course::factory()->create();
+        $ownAssignment = Assignment::factory()->for($ownCourse)->create();
+        $foreignAssignment = Assignment::factory()->for($foreignCourse)->create();
+        $policy = new AssignmentPolicy;
+
+        $this->assertTrue($policy->create($instructor, $ownCourse));
+        $this->assertTrue($policy->update($instructor, $ownAssignment));
+        $this->assertTrue($policy->delete($instructor, $ownAssignment));
+        $this->assertFalse($policy->create($instructor, $foreignCourse));
+        $this->assertFalse($policy->view($instructor, $foreignAssignment));
+        $this->assertFalse($policy->update($instructor, $foreignAssignment));
+        $this->assertFalse($policy->delete($instructor, $foreignAssignment));
     }
 }

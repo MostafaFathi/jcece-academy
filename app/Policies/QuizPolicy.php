@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Models\Course;
 use App\Models\Quiz;
 use App\Models\User;
 use App\PermissionName;
@@ -22,15 +23,17 @@ class QuizPolicy
      */
     public function view(User $user, Quiz $quiz): bool
     {
-        return $user->can(PermissionName::AssessmentsView->value);
+        return $user->can(PermissionName::AssessmentsView->value) && $user->can('view', $quiz->course);
     }
 
     /**
      * Determine whether the user can create models.
      */
-    public function create(User $user): bool
+    public function create(User $user, Course $course): bool
     {
-        return $user->can(PermissionName::AssessmentsCreate->value);
+        return $this->viewAny($user)
+            && $user->can(PermissionName::AssessmentsCreate->value)
+            && $user->can('view', $course);
     }
 
     /**
@@ -38,7 +41,7 @@ class QuizPolicy
      */
     public function update(User $user, Quiz $quiz): bool
     {
-        return $user->can(PermissionName::AssessmentsUpdate->value);
+        return $user->can(PermissionName::AssessmentsUpdate->value) && $this->view($user, $quiz);
     }
 
     /**
@@ -46,7 +49,7 @@ class QuizPolicy
      */
     public function delete(User $user, Quiz $quiz): bool
     {
-        return $user->can(PermissionName::AssessmentsDelete->value);
+        return $user->can(PermissionName::AssessmentsDelete->value) && $this->view($user, $quiz);
     }
 
     /**
@@ -54,7 +57,7 @@ class QuizPolicy
      */
     public function restore(User $user, Quiz $quiz): bool
     {
-        return $user->can(PermissionName::AssessmentsUpdate->value);
+        return $this->update($user, $quiz);
     }
 
     /**
@@ -67,12 +70,12 @@ class QuizPolicy
 
     public function publish(User $user, Quiz $quiz): bool
     {
-        return $user->can(PermissionName::AssessmentsPublish->value);
+        return $user->can(PermissionName::AssessmentsPublish->value) && $this->view($user, $quiz);
     }
 
     public function viewResults(User $user, Quiz $quiz): bool
     {
-        return $user->can(PermissionName::AssessmentResultsView->value);
+        return $user->can(PermissionName::AssessmentResultsView->value) && $user->can('view', $quiz->course);
     }
 
     public function viewInstructorResults(User $user, Quiz $quiz): bool

@@ -22,6 +22,6 @@ class PasswordResetLinkController extends Controller
             report($exception);
         }
 
-        return response()->json(['message' => 'If an account exists, a reset link will be sent.'], 202);
+        return response()->json(['message' => __('auth.reset_sent_neutral')], 202);
     }
 }

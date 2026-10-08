@@ -2,7 +2,7 @@
 
 Source of scope: the five P0 work packages in `docs/requirements-gap-audit.md`, § Prioritized gap plan (3 October 2026). Product authority: `JCEC_Academy_Platform_Requirements_AR.docx`. This plan does not promote any P1–P3 package.
 
-Implementation status: account registration/recovery, lesson-file upload/management download, policy-page draft/public architecture and additive permission initialization are coded and under automated verification. Certificate eligibility/approval is **PRODUCT DECISION REQUIRED** by explicit product-owner instruction and unchanged. Legal copy, production mail, staging environment and authenticated browser signoff are external P0 dependencies. An unchecked manual-QA item is not a claim of failure; it has not been verified.
+Implementation status at the end of Phase 15A: account registration/recovery, lesson-file upload/management download, policy-page draft/public architecture and additive permission initialization were coded. **Superseded on 3 October 2026:** the product owner approved course-level certificate rules; Phase 15B implementation and acceptance status are in `phase-15b-acceptance.md`. The historical deferral below is not the current product status. Legal copy, production mail, staging environment and authenticated browser signoff remain external P0 dependencies.
 
 ## 1. Public registration and password recovery
 

@@ -5,13 +5,12 @@ namespace App\Services;
 use App\Models\Cart;
 use App\Models\User;
 use App\PurchasableType;
-use Brick\Math\BigDecimal;
-use Brick\Math\RoundingMode;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class CartService
 {
-    public function __construct(private CommerceCatalogService $catalog) {}
+    public function __construct(private CommerceCatalogService $catalog, private CommercePricingService $pricing) {}
 
     public function get(User $user): Cart
     {
@@ -52,23 +51,53 @@ class CartService
             $cart = Cart::query()->firstOrCreate(['user_id' => $user->id]);
             $cart = Cart::query()->lockForUpdate()->findOrFail($cart->id);
             $cart->items()->delete();
+            $cart->update(['coupon_code' => null]);
 
             return $this->loadSummary($cart);
         });
     }
 
+    public function applyCoupon(User $user, string $code): Cart
+    {
+        return DB::transaction(function () use ($user, $code): Cart {
+            $cart = Cart::query()->firstOrCreate(['user_id' => $user->id]);
+            $cart = Cart::query()->lockForUpdate()->findOrFail($cart->id);
+            $cart->load('items.purchasable');
+            if ($cart->items->isEmpty()) {
+                throw ValidationException::withMessages(['cart' => 'The cart is empty.']);
+            }
+            $normalized = $this->pricing->normalizeCode($code);
+            $this->pricing->quote($cart->items, $normalized, $user);
+            $cart->update(['coupon_code' => $normalized]);
+
+            return $this->loadSummary($cart);
+        }, 3);
+    }
+
+    public function removeCoupon(User $user): Cart
+    {
+        return DB::transaction(function () use ($user): Cart {
+            $cart = Cart::query()->firstOrCreate(['user_id' => $user->id]);
+            $cart = Cart::query()->lockForUpdate()->findOrFail($cart->id);
+            $cart->update(['coupon_code' => null]);
+
+            return $this->loadSummary($cart);
+        }, 3);
+    }
+
     public function loadSummary(Cart $cart): Cart
     {
         $cart->load('items.purchasable');
-        $total = BigDecimal::zero()->toScale(2);
-
-        foreach ($cart->items as $item) {
-            if ($this->catalog->isPurchasable($item->purchasable)) {
-                $total = $total->plus(BigDecimal::of($item->purchasable->price));
-            }
+        $available = $cart->items->filter(fn ($item) => $this->catalog->isPurchasable($item->purchasable));
+        try {
+            $quote = $this->pricing->quote($available, $cart->coupon_code, $cart->user);
+            $cart->setAttribute('coupon_error', null);
+        } catch (ValidationException $exception) {
+            $quote = $this->pricing->quote($available);
+            $cart->setAttribute('coupon_error', $exception->errors()['coupon_code'][0] ?? 'Coupon is no longer valid.');
         }
-
-        $cart->setAttribute('estimated_total', (string) $total->toScale(2, RoundingMode::Unnecessary));
+        $cart->setAttribute('estimated_total', $quote['total']);
+        $cart->setAttribute('pricing_summary', $quote);
 
         return $cart;
     }

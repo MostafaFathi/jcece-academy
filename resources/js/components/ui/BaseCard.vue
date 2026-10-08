@@ -1,3 +1,3 @@
 <template>
-    <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6"><slot /></section>
+    <section class="rounded-2xl border border-[#ebe4e7] bg-white p-5 shadow-[0_6px_24px_rgba(36,20,28,.045)] sm:p-6"><slot /></section>
 </template>

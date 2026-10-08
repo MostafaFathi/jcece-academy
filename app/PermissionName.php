@@ -24,6 +24,7 @@ enum PermissionName: string
     case UsersView = 'users.view';
     case UsersUpdate = 'users.update';
     case UsersManage = 'users.manage';
+    case RolesManage = 'roles.manage';
     case CurriculumView = 'curriculum.view';
     case CurriculumCreate = 'curriculum.create';
     case CurriculumUpdate = 'curriculum.update';
@@ -34,6 +35,12 @@ enum PermissionName: string
     case OrdersManage = 'orders.manage';
     case PaymentsView = 'payments.view';
     case PaymentsManage = 'payments.manage';
+    case CouponsView = 'coupons.view';
+    case CouponsManage = 'coupons.manage';
+    case RefundsManage = 'refunds.manage';
+    case FinancialDocumentsView = 'financial_documents.view';
+    case TransactionalDeliveriesView = 'transactional_deliveries.view';
+    case TransactionalDeliveriesRetry = 'transactional_deliveries.retry';
     case AssessmentsView = 'assessments.view';
     case AssessmentsCreate = 'assessments.create';
     case AssessmentsUpdate = 'assessments.update';
@@ -58,4 +65,7 @@ enum PermissionName: string
     case PolicyPagesView = 'policy_pages.view';
     case PolicyPagesUpdate = 'policy_pages.update';
     case PolicyPagesPublish = 'policy_pages.publish';
+    case SiteContentManage = 'site_content.manage';
+    case ReportsView = 'reports.view';
+    case ReportsExport = 'reports.export';
 }

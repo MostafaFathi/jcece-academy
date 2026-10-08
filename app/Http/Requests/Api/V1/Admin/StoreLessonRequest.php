@@ -35,9 +35,10 @@ class StoreLessonRequest extends FormRequest
             'type' => ['required', Rule::enum(LessonType::class)],
             'description' => ['nullable', 'string'],
             'content' => ['nullable', 'string'],
-            'video_provider' => ['nullable', 'string', 'max:255', Rule::prohibitedIf(fn (): bool => $this->input('type') !== LessonType::Video->value)],
-            'video_id' => ['nullable', 'string', 'max:255', Rule::prohibitedIf(fn (): bool => $this->input('type') !== LessonType::Video->value)],
-            'video_url' => ['nullable', 'url', 'max:2048', Rule::prohibitedIf(fn (): bool => ! in_array($this->input('type'), [LessonType::Video->value, LessonType::Link->value], true))],
+            'video_provider' => ['nullable', 'string', 'max:255', Rule::prohibitedIf(fn (): bool => $this->input('type') !== LessonType::Video->value || ! $this->boolean('is_preview'))],
+            'video_id' => ['nullable', 'string', 'max:255', Rule::prohibitedIf(fn (): bool => $this->input('type') !== LessonType::Video->value || ! $this->boolean('is_preview'))],
+            'video_url' => ['nullable', 'url', 'max:2048', Rule::prohibitedIf(fn (): bool => ! in_array($this->input('type'), [LessonType::Video->value, LessonType::Link->value], true) || ($this->input('type') === LessonType::Video->value && ! $this->boolean('is_preview')))],
+            'protected_video_asset_key' => ['prohibited'],
             'duration_seconds' => ['nullable', 'integer', 'min:0'],
             'is_preview' => ['sometimes', 'boolean'],
             'is_published' => ['sometimes', 'boolean'],
@@ -60,8 +61,8 @@ class StoreLessonRequest extends FormRequest
                     $validator->errors()->add('content', 'Content is required for text lessons.');
                 }
 
-                if ($type === LessonType::Video->value && ! $this->filled('video_id') && ! $this->filled('video_url')) {
-                    $validator->errors()->add('video_url', 'A video ID or video URL is required for video lessons.');
+                if ($type === LessonType::Video->value && $this->boolean('is_preview') && ! $this->filled('video_id') && ! $this->filled('video_url')) {
+                    $validator->errors()->add('video_url', 'A public preview video URL is required.');
                 }
 
                 if ($type === LessonType::Link->value && ! $this->filled('video_url')) {

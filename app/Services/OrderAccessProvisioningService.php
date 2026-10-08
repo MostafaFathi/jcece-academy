@@ -16,7 +16,7 @@ use Illuminate\Validation\ValidationException;
 
 class OrderAccessProvisioningService
 {
-    public function __construct(private CourseAccessService $courseAccess) {}
+    public function __construct(private CourseAccessService $courseAccess, private AuditTrail $audit, private FinancialDocumentService $documents, private TransactionalDeliveryService $deliveries) {}
 
     /**
      * The database-unique entitlement key identifies an Order Item plus Course
@@ -118,6 +118,13 @@ class OrderAccessProvisioningService
 
             if ($lockedOrder->status === OrderStatus::Paid) {
                 $lockedOrder->update(['status' => OrderStatus::Completed]);
+                $this->audit->record('order.status_changed', $lockedOrder, null, ['from_status' => OrderStatus::Paid->value, 'to_status' => OrderStatus::Completed->value]);
+                $this->documents->schedulePurchase($lockedOrder);
+                $this->deliveries->recordForOrder('purchase_completed', 'Order', $lockedOrder->id, $lockedOrder);
+            }
+
+            if ($created > 0) {
+                $this->audit->record('order.access_provisioned', $lockedOrder, null, ['grants_created' => $created, 'grants_existing' => $existing]);
             }
 
             return [

@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-#[Fillable(['course_section_id', 'title', 'slug', 'type', 'description', 'content', 'video_provider', 'video_id', 'video_url', 'duration_seconds', 'is_preview', 'is_published', 'sort_order'])]
+#[Fillable(['course_section_id', 'title', 'slug', 'type', 'description', 'content', 'video_provider', 'video_id', 'video_url', 'protected_video_asset_key', 'duration_seconds', 'is_preview', 'is_published', 'sort_order'])]
 class Lesson extends Model
 {
     /** @use HasFactory<LessonFactory> */
@@ -40,6 +40,11 @@ class Lesson extends Model
     public function assignments(): HasMany
     {
         return $this->hasMany(Assignment::class);
+    }
+
+    public function videoUploads(): HasMany
+    {
+        return $this->hasMany(LessonVideoUpload::class);
     }
 
     /** @return array<string, string> */

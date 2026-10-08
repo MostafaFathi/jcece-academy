@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n';
 import { fetchCategories } from '../api/categories';
 import { fetchCourses } from '../api/courses';
 import { fetchPackages } from '../api/packages';
+import { fetchInstructors, fetchTestimonials } from '../api/public-site';
 import BaseAlert from '../components/ui/BaseAlert.vue';
 import EmptyState from '../components/ui/EmptyState.vue';
 import CatalogSkeleton from '../components/public/CatalogSkeleton.vue';
@@ -13,6 +14,7 @@ import CourseCard from '../components/public/CourseCard.vue';
 import MediaFrame from '../components/public/MediaFrame.vue';
 import PackageCard from '../components/public/PackageCard.vue';
 import SectionHeading from '../components/public/SectionHeading.vue';
+import ReviewCard from '../components/public/ReviewCard.vue';
 import { usePageMeta } from '../composables/usePageMeta';
 
 const route = useRoute();
@@ -20,8 +22,10 @@ const { locale, t } = useI18n();
 const categories = ref([]);
 const courses = ref([]);
 const packages = ref([]);
-const loading = ref({ categories: true, courses: true, packages: true });
-const errors = ref({ categories: null, courses: null, packages: null });
+const instructors = ref([]);
+const testimonials = ref([]);
+const loading = ref({ categories: true, courses: true, packages: true, instructors: true, testimonials: true });
+const errors = ref({ categories: null, courses: null, packages: null, instructors: null, testimonials: null });
 const startupFailed = computed(() => route.query.startup === 'failed');
 const spotlightCourse = computed(() => courses.value[0] ?? null);
 
@@ -36,6 +40,8 @@ async function loadSection(key, loader) {
         if (key === 'categories') categories.value = result;
         if (key === 'courses') courses.value = result.items;
         if (key === 'packages') packages.value = result.items;
+        if (key === 'instructors') instructors.value = result.items;
+        if (key === 'testimonials') testimonials.value = result.items;
     } catch (error) {
         errors.value[key] = error;
     } finally {
@@ -47,6 +53,8 @@ function loadHomepage() {
     void loadSection('categories', fetchCategories);
     void loadSection('courses', () => fetchCourses({ sort: 'latest', per_page: 6 }));
     void loadSection('packages', () => fetchPackages({ sort: 'latest', per_page: 3 }));
+    void loadSection('instructors', () => fetchInstructors({ per_page: 4 }));
+    void loadSection('testimonials', fetchTestimonials);
 }
 
 onMounted(loadHomepage);
@@ -80,5 +88,7 @@ onMounted(loadHomepage);
         <section class="bg-slate-50 py-20 sm:py-24"><div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"><SectionHeading :eyebrow="t('home.whyEyebrow')" :title="t('home.whyTitle')" centered /><div class="mt-12 grid gap-6 md:grid-cols-3"><article v-for="item in [{ icon: '01', title: t('home.whyPractical'), text: t('home.whyPracticalText') }, { icon: '02', title: t('home.whyClear'), text: t('home.whyClearText') }, { icon: '03', title: t('home.whyFlexible'), text: t('home.whyFlexibleText') }]" :key="item.title" class="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm"><span class="grid size-12 place-items-center rounded-2xl bg-accent text-sm font-black text-brand-dark">{{ item.icon }}</span><h3 class="mt-5 text-xl font-black text-slate-950">{{ item.title }}</h3><p class="mt-3 text-sm leading-7 text-slate-600">{{ item.text }}</p></article></div></div></section>
 
         <section class="bg-white py-20"><div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"><div class="relative overflow-hidden rounded-[2rem] bg-brand p-8 text-white shadow-2xl shadow-brand/20 sm:p-12 lg:flex lg:items-center lg:justify-between lg:gap-10"><div class="absolute -end-20 -top-20 size-64 rounded-full bg-accent/15" /><div class="relative max-w-2xl"><h2 class="text-3xl font-black sm:text-4xl">{{ t('home.ctaTitle') }}</h2><p class="mt-4 leading-7 text-white/70">{{ t('home.ctaText') }}</p></div><RouterLink :to="{ name: 'courses.index' }" class="relative mt-7 inline-flex rounded-2xl bg-accent px-6 py-3 font-black text-brand-dark transition hover:-translate-y-1 lg:mt-0">{{ t('home.browseCourses') }}</RouterLink></div></div></section>
+        <section class="border-t border-slate-200 bg-slate-50 py-20"><div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"><div class="flex flex-wrap items-end justify-between gap-4"><SectionHeading :title="t('discovery.featuredInstructors')" /><RouterLink :to="{ name: 'instructors.index' }" class="font-bold text-brand underline">{{ t('common.viewAll') }}</RouterLink></div><BaseAlert v-if="errors.instructors" tone="danger" class="mt-6">{{ t('catalog.loadError') }}</BaseAlert><div v-else-if="instructors.length" class="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4"><RouterLink v-for="instructor in instructors" :key="instructor.id" :to="{ name: 'instructors.show', params: { id: instructor.id } }" class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 focus-visible:outline-3 focus-visible:outline-brand"><h3 class="font-black text-slate-900">{{ instructor.name }}</h3><p v-if="instructor.profile?.job_title" class="mt-2 text-sm text-brand">{{ instructor.profile.job_title }}</p><p v-if="instructor.profile?.short_bio" class="mt-3 line-clamp-3 text-sm leading-6 text-slate-600">{{ instructor.profile.short_bio }}</p></RouterLink></div><p v-else-if="!loading.instructors" class="mt-6 text-slate-600">{{ t('discovery.noInstructors') }}</p></div></section>
+        <section class="bg-white py-20"><div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"><SectionHeading :title="t('discovery.learnerReviews')" /><BaseAlert v-if="errors.testimonials" tone="danger" class="mt-6">{{ t('catalog.loadError') }}</BaseAlert><div v-else-if="testimonials.length" class="mt-8 grid gap-5 md:grid-cols-2 lg:grid-cols-3"><ReviewCard v-for="review in testimonials" :key="`${review.course?.slug}-${review.published_at}`" :review="review" /></div><p v-else-if="!loading.testimonials" class="mt-6 text-slate-600">{{ t('discovery.noReviews') }}</p></div></section>
     </div>
 </template>

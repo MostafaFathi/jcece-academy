@@ -21,6 +21,6 @@ class PaymentRejectionController extends Controller
     ): AdminPaymentResource {
         Gate::authorize('review', $payment);
 
-        return new AdminPaymentResource($reviewService->reject($payment, $request->validated('rejection_reason')));
+        return new AdminPaymentResource($reviewService->reject($payment, $request->validated('rejection_reason'), $request->user()));
     }
 }

@@ -14,6 +14,7 @@ export function commerceError(error, t) {
     if (error?.status === 401) return t('commerce.sessionExpired');
     if (error?.status === 403) return t('errors.forbiddenText');
     if (error?.status === 404) return t('commerce.notFound');
+    if (error?.status === 409) return t('commerce.pricingChanged');
     if (error?.status === 429) return t('commerce.rateLimited');
     if (error?.status >= 500) return t('errors.server');
     return error?.message || t('errors.generic');

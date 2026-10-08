@@ -8,6 +8,7 @@ use App\Models\Certificate;
 use App\Models\Course;
 use App\Models\User;
 use App\Services\CertificateIssuanceService;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 
 class CertificateIssuanceController extends Controller
@@ -15,10 +16,10 @@ class CertificateIssuanceController extends Controller
     /**
      * Handle the incoming request.
      */
-    public function __invoke(User $user, Course $course, CertificateIssuanceService $issuance): CertificateResource
+    public function __invoke(Request $request, User $user, Course $course, CertificateIssuanceService $issuance): CertificateResource
     {
         Gate::authorize('issue', Certificate::class);
 
-        return new CertificateResource($issuance->issue($user, $course));
+        return new CertificateResource($issuance->issue($user, $course, actor: $request->user()));
     }
 }

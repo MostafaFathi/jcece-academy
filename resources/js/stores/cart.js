@@ -25,7 +25,7 @@ export const useCartStore = defineStore('cart', () => {
     const count = computed(() => cart.value?.item_count ?? 0);
     const total = computed(() => cart.value?.estimated_total ?? null);
     const currency = computed(() => cart.value?.currency ?? null);
-    const ready = computed(() => Boolean(cart.value && count.value && currency.value && items.value.every((item) => item.available && item.product)));
+    const ready = computed(() => Boolean(cart.value && count.value && currency.value && !cart.value.coupon_error && items.value.every((item) => item.available && item.product)));
     const hasItem = (type, id) => items.value.some((item) => item.purchasable_type === type && item.purchasable_id === id);
 
     function accept(result) {
@@ -77,6 +77,8 @@ export const useCartStore = defineStore('cart', () => {
     function add(type, id) { return hasItem(type, id) ? Promise.resolve(cart.value) : mutate(() => commerce.addCartItem(type, id)); }
     function remove(id) { return mutate(() => commerce.removeCartItem(id)); }
     function clear() { return mutate(commerce.clearCart); }
+    function applyCoupon(code) { return mutate(() => commerce.applyCartCoupon(code)); }
+    function removeCoupon() { return mutate(commerce.removeCartCoupon); }
 
     function newIntent() {
         if (checkoutLoading.value) return;
@@ -94,7 +96,7 @@ export const useCartStore = defineStore('cart', () => {
         const currentGeneration = generation;
         try {
             if (!checkoutKey.value) { checkoutKey.value = crypto.randomUUID(); saveIntent(checkoutKey.value); }
-            submittedPayload ??= { ...customer, idempotency_key: checkoutKey.value };
+            submittedPayload ??= { ...customer, idempotency_key: checkoutKey.value, expected_total: cart.value?.estimated_total, expected_coupon_code: cart.value?.coupon_code ?? null };
             intentCustomer.value = { ...submittedPayload };
             const order = await commerce.checkout(submittedPayload);
             if (generation !== currentGeneration) return null;
@@ -112,6 +114,10 @@ export const useCartStore = defineStore('cart', () => {
                 error.value = requestError;
                 uncertain.value = !requestError.status || requestError.status >= 500;
                 if (!uncertain.value) { submittedPayload = null; intentCustomer.value = null; }
+                if (requestError.status === 409 || (requestError.status === 422 && requestError.errors?.coupon_code)) {
+                    await load().catch(() => {});
+                    error.value = requestError;
+                }
             }
             throw requestError;
         } finally {
@@ -130,5 +136,5 @@ export const useCartStore = defineStore('cart', () => {
         if (previousId !== undefined) newIntent();
     }, { flush: 'sync' });
 
-    return { cart, items, count, total, currency, ready, loading, mutating, error, hasItem, load, add, remove, clear, placeOrder, checkoutLoading, checkoutKey, uncertain, intentCustomer, newIntent };
+    return { cart, items, count, total, currency, ready, loading, mutating, error, hasItem, load, add, remove, clear, applyCoupon, removeCoupon, placeOrder, checkoutLoading, checkoutKey, uncertain, intentCustomer, newIntent };
 });

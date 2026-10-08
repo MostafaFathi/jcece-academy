@@ -9,6 +9,7 @@ use App\Models\Course;
 use App\Models\Package;
 use App\Models\PackageCourse;
 use App\Models\User;
+use App\Services\CartService;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -112,8 +113,11 @@ class CheckoutApiTest extends TestCase
 
         $firstResponse = $this->postJson('/api/v1/me/checkout', $payload)->assertCreated();
         $secondResponse = $this->postJson('/api/v1/me/checkout', $payload)->assertOk();
+        $cart->delete();
+        $thirdResponse = $this->postJson('/api/v1/me/checkout', $payload)->assertOk();
 
         $this->assertSame($firstResponse->json('data.id'), $secondResponse->json('data.id'));
+        $this->assertSame($firstResponse->json('data.id'), $thirdResponse->json('data.id'));
         $this->assertDatabaseCount('orders', 1);
         $this->assertDatabaseCount('order_items', 1);
     }
@@ -183,6 +187,7 @@ class CheckoutApiTest extends TestCase
             'customer_name' => 'Sample Student',
             'customer_email' => 'student@example.com',
             'customer_phone' => '+970599000000',
+            'expected_total' => app(CartService::class)->get(auth()->user())->estimated_total,
             'notes' => 'Please review the payment manually.',
         ];
     }

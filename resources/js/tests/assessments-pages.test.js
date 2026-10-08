@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushPromises, mount } from '@vue/test-utils';
 import i18n, { setLocale } from '../i18n';
 import * as api from '../api/assessments';
+import * as certificatePolicy from '../api/certificate-policy';
 import QuizPage from '../pages/QuizPage.vue';
 import AssignmentPage from '../pages/AssignmentPage.vue';
 import CertificatesPage from '../pages/CertificatesPage.vue';
@@ -13,6 +14,7 @@ vi.mock('../api/assessments', () => Object.fromEntries([
     'fetchAssignments', 'fetchAssignment', 'fetchAssignmentSubmissions', 'startAssignmentDraft', 'fetchAssignmentSubmission', 'saveAssignmentDraft', 'uploadAssignmentFiles', 'deleteAssignmentFile', 'submitAssignment', 'downloadAssignmentAttachment', 'downloadSubmissionFile',
     'fetchCertificates', 'fetchCertificate', 'fetchCertificateEligibility', 'issueCertificate', 'downloadCertificate', 'verifyCertificate',
 ].map((name) => [name, vi.fn()])));
+vi.mock('../api/certificate-policy', () => ({ requestCertificateApproval: vi.fn() }));
 
 const quiz = { id: 3, course_id: 2, lesson_id: 9, title: 'Safety quiz', instructions: 'Choose carefully', max_attempts: 2, available_until: null };
 const questions = [
@@ -32,6 +34,7 @@ beforeEach(() => {
     api.fetchQuiz.mockResolvedValue(quiz); api.fetchQuizAttempts.mockResolvedValue([]); api.fetchQuizAttempt.mockResolvedValue(attempt()); api.startQuizAttempt.mockResolvedValue(attempt()); api.saveQuizAnswers.mockResolvedValue(attempt()); api.submitQuizAttempt.mockResolvedValue(attempt({ status: 'submitted' })); api.fetchQuizResult.mockResolvedValue(attempt({ status: 'submitted' }));
     api.fetchAssignment.mockResolvedValue(assignment()); api.fetchAssignmentSubmissions.mockResolvedValue([]); api.fetchAssignmentSubmission.mockResolvedValue(draft()); api.startAssignmentDraft.mockResolvedValue(draft()); api.saveAssignmentDraft.mockResolvedValue(draft({ text_answer: 'My answer' })); api.uploadAssignmentFiles.mockResolvedValue(draft({ files: [{ id: 7, original_filename: 'answer.txt' }] })); api.submitAssignment.mockResolvedValue(draft({ status: 'submitted' }));
     api.fetchCertificates.mockResolvedValue({ items: [certificate()], meta: null }); api.fetchCertificateEligibility.mockResolvedValue({ eligible: false, reasons: ['lessons_incomplete'], certificate_status: null }); api.issueCertificate.mockResolvedValue(certificate()); api.verifyCertificate.mockResolvedValue({ status: 'issued', certificate_number: 'JCEC-TEST', student_name: 'Student', course_title: 'Safety Course', issued_at: '2026-09-30T00:00:00Z' });
+    certificatePolicy.requestCertificateApproval.mockResolvedValue({ id: 9, status: 'pending' });
     api.fetchQuizzes.mockResolvedValue([quiz]); api.fetchAssignments.mockResolvedValue([assignment()]);
 });
 
@@ -212,6 +215,26 @@ describe('certificates and course integration', () => {
         api.fetchCertificateEligibility.mockResolvedValue({ eligible: true, reasons: [], certificate_status: 'revoked' });
         const wrapper = render(CourseAssessments, { courseId: 2, slug: 'safety', lessonId: 9 }); await flushPromises();
         expect(wrapper.text()).toContain('Revoked'); expect(button(wrapper, 'Issue certificate')).toBeUndefined(); wrapper.unmount();
+    });
+    it('shows server-calculated requirements and requests approval without issuing', async () => {
+        api.fetchCertificateEligibility.mockResolvedValueOnce({
+            eligible: false, academic_eligible: true, reasons: ['admin_approval_pending'], certificate_status: null,
+            progress: { progress_percentage: 82 },
+            requirements: { required_lesson_percentage: '80.00', final_exam: { required: true, status: 'passed' }, assignments: { completed_count: 1, required_count: 1 }, approval: { required: true, status: 'not_requested' } },
+        }).mockResolvedValueOnce({
+            eligible: false, academic_eligible: true, reasons: ['admin_approval_pending'], certificate_status: null,
+            progress: { progress_percentage: 82 },
+            requirements: { required_lesson_percentage: '80.00', final_exam: { required: true, status: 'passed' }, assignments: { completed_count: 1, required_count: 1 }, approval: { required: true, status: 'pending' } },
+        });
+        const wrapper = render(CourseAssessments, { courseId: 2, slug: 'safety', lessonId: 9 }); await flushPromises();
+        expect(wrapper.text()).toContain('Lessons: 82% / required 80.00%');
+        expect(wrapper.text()).toContain('Required assignments: 1 / 1');
+        expect(button(wrapper, 'Issue certificate')).toBeUndefined();
+        await button(wrapper, 'Request certificate approval').trigger('click'); await flushPromises();
+        expect(certificatePolicy.requestCertificateApproval).toHaveBeenCalledWith('safety');
+        expect(api.issueCertificate).not.toHaveBeenCalled();
+        expect(wrapper.text()).toContain('Pending');
+        wrapper.unmount();
     });
     it('guards duplicate certificate issuance while the backend responds', async () => {
         api.fetchCertificateEligibility.mockResolvedValue({ eligible: true, reasons: [], certificate_status: null });

@@ -13,7 +13,7 @@ use Illuminate\Validation\ValidationException;
 
 class PaymentReviewService
 {
-    public function __construct(private OrderAccessProvisioningService $provisioning) {}
+    public function __construct(private OrderAccessProvisioningService $provisioning, private AuditTrail $audit, private TransactionalDeliveryService $deliveries) {}
 
     public function approve(Payment $payment, User $approver): Payment
     {
@@ -63,14 +63,16 @@ class PaymentReviewService
             ]);
 
             $this->provisioning->provision($order);
+            $order->couponRedemption()->where('status', 'reserved')->update(['status' => 'consumed', 'consumed_at' => $approvedAt]);
+            $this->audit->record('payment.approved', $lockedPayment, $approver, ['to_status' => PaymentStatus::Paid->value]);
 
             return $lockedPayment->refresh()->load(['order', 'approver']);
         }, 3);
     }
 
-    public function reject(Payment $payment, string $reason): Payment
+    public function reject(Payment $payment, string $reason, ?User $reviewer = null): Payment
     {
-        return DB::transaction(function () use ($payment, $reason): Payment {
+        return DB::transaction(function () use ($payment, $reason, $reviewer): Payment {
             $lockedPayment = Payment::query()->lockForUpdate()->findOrFail($payment->id);
             $order = Order::query()->lockForUpdate()->findOrFail($lockedPayment->order_id);
 
@@ -90,6 +92,9 @@ class PaymentReviewService
             if ($order->status === OrderStatus::AwaitingPayment) {
                 $order->update(['status' => OrderStatus::Pending]);
             }
+
+            $this->audit->record('payment.rejected', $lockedPayment, $reviewer, ['to_status' => PaymentStatus::Rejected->value]);
+            $this->deliveries->recordForOrder('payment_rejected', 'Payment', $lockedPayment->id, $order);
 
             return $lockedPayment->refresh()->load('order');
         }, 3);

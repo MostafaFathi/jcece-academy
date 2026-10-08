@@ -12,11 +12,12 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
-use RuntimeException;
 use Throwable;
 
 class PaymentSubmissionService
 {
+    public function __construct(private UploadedFileStorage $uploads) {}
+
     public function submit(
         Order $order,
         User $user,
@@ -43,11 +44,7 @@ class PaymentSubmissionService
                     ]);
                 }
 
-                $proofPath = $proof->store('payment-proofs', $disk);
-
-                if ($proofPath === false) {
-                    throw new RuntimeException('The payment proof could not be stored.');
-                }
+                $proofPath = $this->uploads->store($proof, 'payment-proofs', $disk, 'payment_proof');
 
                 $payment = $lockedOrder->payments()->create([
                     'transaction_id' => $transactionId,

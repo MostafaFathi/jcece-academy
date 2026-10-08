@@ -18,7 +18,7 @@ import { accessState, canSubmitPayment, moneyText, orderStatuses, paymentStatuse
 
 const router = vi.hoisted(() => ({ push: vi.fn(), resolve: vi.fn(() => ({ fullPath: '/courses/bim' })), route: { query: {} } }));
 vi.mock('vue-router', () => ({ useRouter: () => router, useRoute: () => router.route }));
-vi.mock('../api/commerce', () => ({ fetchCart: vi.fn(), addCartItem: vi.fn(), removeCartItem: vi.fn(), clearCart: vi.fn(), checkout: vi.fn(), fetchOrders: vi.fn(), fetchOrder: vi.fn(), submitPayment: vi.fn(), downloadPaymentProof: vi.fn() }));
+vi.mock('../api/commerce', () => ({ fetchCart: vi.fn(), addCartItem: vi.fn(), removeCartItem: vi.fn(), clearCart: vi.fn(), applyCartCoupon: vi.fn(), removeCartCoupon: vi.fn(), checkout: vi.fn(), fetchOrders: vi.fn(), fetchOrder: vi.fn(), submitPayment: vi.fn(), downloadPaymentProof: vi.fn() }));
 const item = { id: 7, purchasable_type: 'course', purchasable_id: 2, available: true, product: { id: 2, slug: 'bim', title: 'BIM Essentials', price: '10.25', access_duration_days: 90 } };
 const cartData = (items = [item]) => ({ id: 1, items, item_count: items.length, estimated_total: items.length ? '10.25' : '0.00', currency: 'JOD' });
 const order = (status = 'pending', payments = []) => ({ id: 12, order_number: 'JCEC-12', status, currency: 'JOD', subtotal: '10.25', discount_total: '0.00', tax_total: '0.00', total: '10.25', customer_name: 'Student', customer_email: 'student@example.test', customer_phone: '0599000000', payment_proof_max_kilobytes: 1024, items: [{ id: 3, title: 'Historical Package', purchasable_type: 'package', quantity: 1, unit_price: '10.25', total: '10.25', discount_amount: '0.00', access_duration_days: 180, package_courses: [{ id: 9, course_title: 'Historical Course' }] }], payments, created_at: '2026-09-28T00:00:00Z' });
@@ -71,6 +71,26 @@ describe('student commerce UI', () => {
         await flushPromises();
         expect(commerce.removeCartItem).toHaveBeenCalledWith(7);
         expect(wrapper.text()).toContain('Your cart is empty');
+    });
+
+    it('applies and removes a coupon with authoritative totals in both locales', async () => {
+        commerce.applyCartCoupon.mockResolvedValue({ ...cartData(), coupon_code: 'SAVE10', subtotal: '10.25', coupon_discount: '1.00', promotional_savings: '0.00', estimated_total: '9.25' });
+        commerce.removeCartCoupon.mockResolvedValue({ ...cartData(), coupon_code: null, subtotal: '10.25', coupon_discount: '0.00', promotional_savings: '0.00' });
+        const wrapper = render(CartPage);
+        await flushPromises();
+        await wrapper.get('#cart-coupon').setValue('save10');
+        await wrapper.get('form').trigger('submit');
+        await flushPromises();
+        expect(commerce.applyCartCoupon).toHaveBeenCalledWith('save10');
+        expect(wrapper.text()).toContain('SAVE10');
+        expect(wrapper.text()).toContain('9.25');
+        await wrapper.findAll('button').find((button) => button.text().includes('Remove coupon')).trigger('click');
+        await flushPromises();
+        expect(commerce.removeCartCoupon).toHaveBeenCalledOnce();
+        setLocale('ar');
+        await nextTick();
+        expect(wrapper.attributes('dir') || document.documentElement.dir).toBeTruthy();
+        expect(wrapper.text()).toContain('الإجمالي التقديري');
     });
 
     it('renders retryable cart errors and unavailable items without checkout links', async () => {
@@ -138,6 +158,18 @@ describe('student commerce UI', () => {
         await wrapper.get('form').trigger('submit');
         await flushPromises();
         expect(commerce.checkout.mock.calls[2][0].idempotency_key).toBe(commerce.checkout.mock.calls[1][0].idempotency_key);
+    });
+
+    it('refreshes the cart and explains a checkout pricing conflict before retrying', async () => {
+        commerce.checkout.mockRejectedValueOnce({ status: 409, message: 'Pricing changed' });
+        commerce.fetchCart.mockResolvedValueOnce(cartData()).mockResolvedValueOnce({ ...cartData(), estimated_total: '12.00' });
+        const wrapper = render(CheckoutPage);
+        await flushPromises();
+        await wrapper.get('form').trigger('submit');
+        await flushPromises();
+        expect(commerce.checkout.mock.calls[0][0].expected_total).toBe('10.25');
+        expect(wrapper.text()).toContain('Pricing changed');
+        expect(wrapper.text()).toContain('12.00');
     });
 
     it('lists only the received orders and paginates using server metadata', async () => {

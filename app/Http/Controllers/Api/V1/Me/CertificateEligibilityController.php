@@ -25,9 +25,11 @@ class CertificateEligibilityController extends Controller
 
         return response()->json(['data' => [
             'eligible' => $result['eligible'],
+            'academic_eligible' => $result['academic_eligible'],
             'certificate_status' => $certificateStatus,
             'reasons' => $result['reasons'],
             'progress' => $result['progress'],
+            'requirements' => $result['requirements'],
         ]]);
     }
 }

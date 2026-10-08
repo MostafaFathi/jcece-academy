@@ -3,11 +3,13 @@
 namespace App\Http\Requests\Api\V1\Admin;
 
 use App\Models\User;
+use App\RoleName;
 use App\UserStatus;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
+use Illuminate\Validation\Validator;
 
 class UpdateInstructorRequest extends FormRequest
 {
@@ -46,5 +48,17 @@ class UpdateInstructorRequest extends FormRequest
             'website_url' => ['nullable', 'url', 'max:255'],
             'is_featured' => ['sometimes', 'boolean'],
         ];
+    }
+
+    /** @return array<int, callable(Validator): void> */
+    public function after(): array
+    {
+        return [function (Validator $validator): void {
+            /** @var User $instructor */
+            $instructor = $this->route('instructor');
+            if ($instructor->is($this->user()) && $instructor->hasRole(RoleName::Admin->value) && $this->has('status') && $this->input('status') !== UserStatus::Active->value) {
+                $validator->errors()->add('status', 'You cannot deactivate your own administrator account.');
+            }
+        }];
     }
 }

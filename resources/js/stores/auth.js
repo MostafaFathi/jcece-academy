@@ -1,6 +1,7 @@
 import { computed, ref } from 'vue';
 import { defineStore } from 'pinia';
 import * as authApi from '../api/auth';
+import { setLocale } from '../i18n';
 
 let initializationPromise = null;
 
@@ -38,6 +39,9 @@ export const useAuthStore = defineStore('auth', () => {
 
     function setUser(authenticatedUser) {
         user.value = authenticatedUser;
+        if (authenticatedUser?.preferred_locale === 'ar' || authenticatedUser?.preferred_locale === 'en') {
+            setLocale(authenticatedUser.preferred_locale);
+        }
     }
 
     function clearSession() {

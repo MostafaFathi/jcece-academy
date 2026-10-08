@@ -30,7 +30,7 @@ class NewPasswordController extends Controller
         });
 
         if ($status !== Password::PASSWORD_RESET) {
-            throw ValidationException::withMessages(['token' => 'This password reset link is invalid or has expired.']);
+            throw ValidationException::withMessages(['token' => __('auth.reset_invalid')]);
         }
 
         if ($request->user() !== null) {
@@ -39,6 +39,6 @@ class NewPasswordController extends Controller
             $request->session()->regenerateToken();
         }
 
-        return response()->json(['message' => 'Password reset. You may sign in now.']);
+        return response()->json(['message' => __('auth.reset_complete')]);
     }
 }

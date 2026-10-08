@@ -22,7 +22,7 @@ class SessionController extends Controller
         ], $request->boolean('remember'));
 
         if (! $authenticated) {
-            throw ValidationException::withMessages(['email' => 'The provided credentials do not match our records.']);
+            throw ValidationException::withMessages(['email' => __('auth.failed')]);
         }
 
         $request->session()->regenerate();

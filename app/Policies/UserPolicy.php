@@ -38,7 +38,7 @@ class UserPolicy
     public function update(User $user, User $model): bool
     {
         return ($user->can(PermissionName::UsersUpdate->value) || $user->can(PermissionName::UsersManage->value))
-            && (! $model->hasRole(RoleName::Admin->value) || $user->can(PermissionName::UsersManage->value));
+            && (! $model->hasRole(RoleName::Admin->value) || ($user->hasRole(RoleName::Admin->value) && $user->can(PermissionName::UsersManage->value)));
     }
 
     public function manageSensitive(User $user): bool

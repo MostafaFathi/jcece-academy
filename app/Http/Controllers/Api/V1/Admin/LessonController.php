@@ -54,8 +54,15 @@ class LessonController extends Controller
      */
     public function update(UpdateLessonRequest $request, CourseSection $section, Lesson $lesson): LessonApiResource
     {
+        abort_unless($lesson->course_section_id === $section->id, 404);
         Gate::authorize('update', $lesson);
-        $lesson->update($request->validated());
+        $attributes = $request->validated();
+        if ($lesson->is_preview && ($attributes['type'] ?? $lesson->type->value) === 'video' && ($attributes['is_preview'] ?? true) === false) {
+            $attributes['video_provider'] = null;
+            $attributes['video_id'] = null;
+            $attributes['video_url'] = null;
+        }
+        $lesson->update($attributes);
 
         return new LessonApiResource($lesson->refresh());
     }
@@ -65,6 +72,7 @@ class LessonController extends Controller
      */
     public function destroy(CourseSection $section, Lesson $lesson): Response
     {
+        abort_unless($lesson->course_section_id === $section->id, 404);
         Gate::authorize('delete', $lesson);
         $lesson->delete();
 

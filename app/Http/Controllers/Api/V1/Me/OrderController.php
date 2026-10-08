@@ -17,6 +17,7 @@ class OrderController extends Controller
     {
         $orders = Order::query()
             ->whereBelongsTo($request->user())
+            ->with(['refunds', 'payments', 'financialDocuments'])
             ->latest()
             ->orderByDesc('id')
             ->paginate(15);
@@ -31,6 +32,6 @@ class OrderController extends Controller
     {
         abort_unless($order->user_id === $request->user()->id, 404);
 
-        return new MeOrderResource($order->load(['items.packageCourses', 'payments']));
+        return new MeOrderResource($order->load(['items.packageCourses', 'payments', 'refunds', 'financialDocuments']));
     }
 }

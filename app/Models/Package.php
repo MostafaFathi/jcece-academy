@@ -17,7 +17,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * Phase 5 commerce must copy the purchased course set into immutable,
  * order-item-specific snapshot rows when an order is created.
  */
-#[Fillable(['title', 'slug', 'description', 'thumbnail', 'type', 'price', 'compare_price', 'access_duration_days', 'is_sequential', 'status', 'published_at'])]
+#[Fillable(['title', 'slug', 'description', 'thumbnail', 'type', 'price', 'compare_price', 'promotional_price', 'discount_starts_at', 'discount_ends_at', 'access_duration_days', 'is_sequential', 'sequential_completion_percentage', 'status', 'published_at'])]
 class Package extends Model
 {
     /** @use HasFactory<PackageFactory> */
@@ -45,7 +45,11 @@ class Package extends Model
             'type' => PackageType::class,
             'price' => 'decimal:2',
             'compare_price' => 'decimal:2',
+            'promotional_price' => 'decimal:2',
+            'discount_starts_at' => 'datetime',
+            'discount_ends_at' => 'datetime',
             'is_sequential' => 'boolean',
+            'sequential_completion_percentage' => 'decimal:2',
             'status' => PackageStatus::class,
             'published_at' => 'datetime',
         ];
