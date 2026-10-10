@@ -1,0 +1,23 @@
+import { api } from './client';
+import { unwrapCollection, unwrapResource } from './responses';
+const base = '/api/v1/messaging';
+export const fetchMessagingCourses = async () => (await api.get(`${base}/courses`)).data.data;
+export const fetchMessagingStudents = async (course, params = {}) => unwrapCollection(await api.get(`${base}/courses/${course}/students`, { params }));
+export const fetchConversations = async (params = {}) => unwrapCollection(await api.get(`${base}/conversations`, { params }));
+export const fetchConversation = async (id) => unwrapResource(await api.get(`${base}/conversations/${id}`));
+export const startPrivate = async (course, student) => unwrapResource(await api.post(`${base}/courses/${course}/private`, student ? { student_id: student } : {}));
+export const createGroup = async (course, payload) => unwrapResource(await api.post(`${base}/courses/${course}/groups`, payload));
+export const updateMembers = async (id, student_ids) => unwrapResource(await api.put(`${base}/conversations/${id}/members`, { student_ids }));
+export const fetchMessages = async (id, params = {}) => unwrapCollection(await api.get(`${base}/conversations/${id}/messages`, { params }));
+export const fetchMessage = async (id) => unwrapResource(await api.get(`${base}/messages/${id}`));
+export const fetchEvents = async (id, after) => (await api.get(`${base}/conversations/${id}/events`, { params: { after } })).data;
+export const sendMessage = async (id, payload, attachment) => {
+    const form = new FormData();
+    for (const [key, value] of Object.entries(payload)) if (value != null && value !== '') form.append(key, value);
+    if (attachment) form.append('attachment', attachment);
+    return unwrapResource(await api.post(`${base}/conversations/${id}/messages`, form));
+};
+export const markRead = async (id, message_id) => api.post(`${base}/conversations/${id}/read`, { message_id });
+export const deleteMessage = async (id) => api.delete(`${base}/messages/${id}`);
+export const reactToMessage = async (id, emoji) => api.post(`${base}/messages/${id}/reactions`, { emoji });
+export const fetchMessageNotifications = async () => (await api.get(`${base}/notifications`)).data;

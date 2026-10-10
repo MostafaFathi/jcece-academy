@@ -34,10 +34,10 @@ use App\Http\Controllers\Api\V1\Admin\FinancialDocumentController as AdminFinanc
 use App\Http\Controllers\Api\V1\Admin\InstructorController as AdminInstructorController;
 use App\Http\Controllers\Api\V1\Admin\InstructorOptionController;
 use App\Http\Controllers\Api\V1\Admin\LessonController;
-use App\Http\Controllers\Api\V1\Admin\LessonVideoUploadController;
 use App\Http\Controllers\Api\V1\Admin\LessonResourceController;
 use App\Http\Controllers\Api\V1\Admin\LessonResourceDownloadController as AdminLessonResourceDownloadController;
 use App\Http\Controllers\Api\V1\Admin\LessonResourceUploadController;
+use App\Http\Controllers\Api\V1\Admin\LessonVideoUploadController;
 use App\Http\Controllers\Api\V1\Admin\OrderAccessProvisioningController;
 use App\Http\Controllers\Api\V1\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Api\V1\Admin\OrderStatusController;
@@ -345,3 +345,5 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::get('support-ticket-attachments/{attachment}/download', AdminSupportTicketAttachmentDownloadController::class)->name('support-ticket-attachments.download');
     });
 });
+
+require __DIR__.'/messaging.php';

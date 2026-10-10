@@ -1,3 +1,4 @@
+import { ar as messaging } from './messaging';
 import { ar as commerce } from './commerce';
 import { ar as learning } from './learning';
 import { ar as assessments } from './assessments';
@@ -15,6 +16,7 @@ import { ar as rolePermissions } from './role-permissions';
 import { ar as assessmentAuthoring } from './assessment-authoring';
 
 export default {
+    messaging,
     commerce,
     learning,
     assessments: { ...assessments, reasons: { ...assessments.reasons, certificate_configuration_missing: 'لم تُضبط سياسة الشهادة لهذه الدورة.', final_exam_unavailable: 'الاختبار النهائي غير متاح.', final_exam_incomplete: 'أكمل الاختبار النهائي أولًا.', final_exam_failed: 'لم تحقق علامة اجتياز الاختبار النهائي.', required_assignments_incomplete: 'أكمل الواجبات المطلوبة واجتز تقييمها.', admin_approval_pending: 'بانتظار موافقة الإدارة على الشهادة.' } },

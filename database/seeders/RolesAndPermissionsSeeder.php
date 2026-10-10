@@ -101,7 +101,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 PermissionName::SupportTicketsManage->value,
                 PermissionName::SupportTicketsReply->value,
             ],
-            RoleName::Admin->value => array_column(PermissionName::cases(), 'value'),
+            RoleName::Admin->value => array_values(array_filter(array_column(PermissionName::cases(), 'value'), fn (string $key): bool => ! str_starts_with($key, 'messaging.'))),
         ];
 
         foreach ($rolePermissions as $roleName => $permissions) {

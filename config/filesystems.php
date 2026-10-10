@@ -29,6 +29,13 @@ return [
     */
 
     'disks' => [
+        'course_messaging' => [
+            'driver' => 'local',
+            'root' => storage_path('app/private/course-messaging'),
+            'visibility' => 'private',
+            'serve' => false,
+            'throw' => true,
+        ],
 
         'lesson_resources' => [
             'driver' => 'local',

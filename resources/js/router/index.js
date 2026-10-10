@@ -58,6 +58,7 @@ export const routes = [
         component: StudentLayout,
         meta: { requiresAuth: true, roles: ['student'] },
         children: [
+            { path: 'messages', name: 'student.messages', component: () => import('../pages/MessagingInboxPage.vue'), meta: { requiresAuth: true, roles: [], permissions: ['messaging.view'], title: 'messaging.title' } },
             { path: '', name: 'student.dashboard', component: DashboardPage, meta: { requiresAuth: true, roles: ['student'], title: 'pages.student' } },
             { path: 'cart', name: 'student.cart', component: () => import('../pages/CartPage.vue'), meta: { requiresAuth: true, roles: [], title: 'commerce.cart' } },
             { path: 'checkout', name: 'student.checkout', component: () => import('../pages/CheckoutPage.vue'), meta: { requiresAuth: true, roles: [], title: 'commerce.checkout' } },
@@ -131,6 +132,7 @@ export const routes = [
         component: InstructorLayout,
         meta: { requiresAuth: true, roles: ['instructor'] },
         children: [
+            { path: 'messages', name: 'instructor.messages', component: () => import('../pages/MessagingInboxPage.vue'), meta: { requiresAuth: true, roles: ['instructor'], permissions: ['messaging.view'], title: 'messaging.title' } },
             { path: 'reports', name: 'instructor.reports', component: () => import('../pages/ReportsPage.vue'), props: { scope: 'instructor' }, meta: { requiresAuth: true, roles: ['instructor'], permissions: ['courses.view'], title: 'reports.title' } },
             { path: '', name: 'instructor.dashboard', component: () => import('../pages/InstructorDashboardPage.vue'), meta: { requiresAuth: true, roles: ['instructor'], permissions: ['courses.view'], title: 'instructor.dashboard' } },
             { path: 'courses', name: 'instructor.courses.index', component: () => import('../pages/InstructorCoursesPage.vue'), meta: { requiresAuth: true, roles: ['instructor'], permissions: ['courses.view'], title: 'instructor.myCourses' } },

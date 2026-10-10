@@ -1,3 +1,4 @@
+import { en as messaging } from './messaging';
 import { en as commerce } from './commerce';
 import { en as learning } from './learning';
 import { en as assessments } from './assessments';
@@ -15,6 +16,7 @@ import { en as rolePermissions } from './role-permissions';
 import { en as assessmentAuthoring } from './assessment-authoring';
 
 export default {
+    messaging,
     commerce,
     learning,
     assessments: { ...assessments, reasons: { ...assessments.reasons, certificate_configuration_missing: 'Certificate requirements have not been configured.', final_exam_unavailable: 'The final exam is unavailable.', final_exam_incomplete: 'Complete the final exam first.', final_exam_failed: 'The final exam passing score has not been met.', required_assignments_incomplete: 'Complete and pass the required assignments.', admin_approval_pending: 'Administrator approval is pending.' } },

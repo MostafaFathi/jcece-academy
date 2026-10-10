@@ -1,5 +1,6 @@
 <script setup>
 import { computed, ref, watch } from 'vue';
+import CourseMessagingPanel from '../components/messaging/CourseMessagingPanel.vue';
 import { useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useCourseLearning } from '../composables/useCourseLearning';
@@ -47,6 +48,7 @@ async function select(id) { videoRenderer.value?.pause?.(); await selectLesson(i
                 </article>
             </div>
             <CourseAssessments :key="slug" :course-id="course.course.id" :slug="slug" :lesson-id="activeLesson?.id ?? null" :completed-lessons="summary?.completed_lessons ?? 0" @access-lost="load(slug, activeLesson?.id)" />
+            <CourseMessagingPanel v-if="course.course.id" :course-id="course.course.id" />
             <CourseReviewPanel :key="slug" :slug="slug" :has-access="true" />
         </template>
     </div>

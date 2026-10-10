@@ -68,4 +68,7 @@ enum PermissionName: string
     case SiteContentManage = 'site_content.manage';
     case ReportsView = 'reports.view';
     case ReportsExport = 'reports.export';
+    case MessagingView = 'messaging.view';
+    case MessagingSend = 'messaging.send';
+    case MessagingGroupsManage = 'messaging.groups.manage';
 }

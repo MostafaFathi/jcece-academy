@@ -63,10 +63,10 @@ beforeEach(() => {
 
 describe('instructor navigation and scoped routes', () => {
     it('offers dashboard, own reports and own courses, with role and permission gates', async () => {
-        expect(navigationByArea.instructor.map((item) => item.route)).toEqual(['instructor.reports', 'instructor.dashboard', 'instructor.courses.index']);
+        expect(navigationByArea.instructor.map((item) => item.route)).toEqual(['instructor.messages', 'instructor.reports', 'instructor.dashboard', 'instructor.courses.index']);
         expect(visibleNavigation(navigationByArea.instructor, { can: () => false, canAny: () => false, hasAnyRole: () => true })).toEqual([]);
         const route = routes.find((item) => item.path === '/instructor');
-        expect(route.children).toHaveLength(13);
+        expect(route.children).toHaveLength(14);
         expect(route.children.every((item) => item.meta.roles.includes('instructor'))).toBe(true);
         expect(canAccessRoute({ hasAnyRole: () => false, can: () => true }, route.children[1].meta)).toBe(false);
         const instructorAuth = { isAuthenticated: true, initialize: vi.fn().mockResolvedValue(), hasRole: (role) => role === 'instructor', hasAnyRole: (roles) => roles.includes('instructor'), can: () => true, canAny: () => true };
