@@ -1,1 +1,0 @@
-import{o as e}from"./app-BbZbBaYY.js";import{t}from"./responses-BrlSr86X.js";async function n(){return t(await e.get(`api/v1/categories`)).items}export{n as t};

@@ -29,6 +29,7 @@ const sendErrorText = computed(() => {
 });
 const mimeKind = computed(() => attachment.value?.type.startsWith('image/') ? 'image' : 'voice');
 let clientId = null;
+let fileSelection = 0;
 
 defineExpose({ focus: () => textarea.value?.focus() });
 watch([body, attachment, () => props.reply?.id], () => { clientId = null; });
@@ -38,14 +39,39 @@ watch(attachment, (file) => {
     preview.value = file ? URL.createObjectURL(file) : '';
 });
 
-function choose(event) {
+function audioDuration(file) {
+    return new Promise((resolve) => {
+        const audio = document.createElement('audio');
+        const url = URL.createObjectURL(file);
+        const timeout = window.setTimeout(() => finish(null), 10000);
+        function finish(value) {
+            window.clearTimeout(timeout);
+            audio.onloadedmetadata = null;
+            audio.onerror = null;
+            URL.revokeObjectURL(url);
+            resolve(value);
+        }
+        audio.preload = 'metadata';
+        audio.onloadedmetadata = () => finish(audio.duration);
+        audio.onerror = () => finish(null);
+        audio.src = url;
+    });
+}
+
+async function choose(event) {
     const file = event.target.files?.[0];
     event.target.value = '';
     validation.value = null;
     if (!file) return;
+    const selection = ++fileSelection;
     const image = ['image/jpeg', 'image/png', 'image/webp'].includes(file.type);
     const audio = /^(audio\/(webm|ogg|mp4|x-m4a|wav|x-wav)|video\/webm)$/.test(file.type);
     if ((!image && !audio) || file.size > (image ? 5 : 10) * 1024 * 1024) { validation.value = 'fileError'; return; }
+    if (audio) {
+        const seconds = await audioDuration(file);
+        if (selection !== fileSelection) return;
+        if (!Number.isFinite(seconds) || seconds <= 0 || seconds > 120) { validation.value = 'voiceDurationInvalid'; return; }
+    }
     attachment.value = file;
 }
 

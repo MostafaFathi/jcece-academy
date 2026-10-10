@@ -292,6 +292,29 @@ describe('composer', () => {
         const wrapper = render(MessageComposer, { sendError: { status: 422, errors: { attachment: ['Voice must be valid audio of at most 120 seconds. Server media validation must be available.'] } } });
         expect(wrapper.get('[role="alert"]').text()).toContain('خدمة التحقق من الصوت غير متاحة');
     });
+    it('checks selected voice duration in the browser before enabling send', async () => {
+        const wrapper = render(MessageComposer);
+        const nativeCreateElement = document.createElement.bind(document);
+        let audio;
+        const createElement = vi.spyOn(document, 'createElement').mockImplementation((tag, ...args) => {
+            const element = nativeCreateElement(tag, ...args);
+            if (tag === 'audio') audio = element;
+            return element;
+        });
+        const input = wrapper.get('input[type="file"]');
+        const file = new File(['RIFFvoice'], 'voice.wav', { type: 'audio/wav' });
+        Object.defineProperty(input.element, 'files', { configurable: true, value: [file] });
+
+        await input.trigger('change');
+        Object.defineProperty(audio, 'duration', { configurable: true, value: 121 });
+        audio.dispatchEvent(new Event('loadedmetadata'));
+        await flushPromises();
+
+        expect(wrapper.get('[role="alert"]').text()).toContain('120 seconds');
+        expect(wrapper.find('audio[controls]').exists()).toBe(false);
+        expect(wrapper.get('button[type="submit"]').attributes('disabled')).toBeDefined();
+        createElement.mockRestore();
+    });
     it('prevents empty sends and displays unsupported microphone handling', async () => {
         const wrapper = render(MessageComposer); await wrapper.find('form').trigger('submit'); expect(wrapper.emitted('send')).toBeUndefined();
         await wrapper.find('button[aria-label="Record voice"]').trigger('click'); await flushPromises(); expect(wrapper.text()).toContain('unavailable in this browser');

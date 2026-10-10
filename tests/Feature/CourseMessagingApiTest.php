@@ -294,6 +294,57 @@ class CourseMessagingApiTest extends TestCase
         $this->post("/api/v1/messaging/conversations/{$id}/messages", ['client_id' => (string) Str::uuid(), 'attachment' => UploadedFile::fake()->image('big.jpg')->size(6000)], ['Accept' => 'application/json'])->assertUnprocessable();
     }
 
+    public function test_portable_voice_upload_works_without_ffprobe_but_does_not_claim_a_verified_duration(): void
+    {
+        [$course, $instructor, $student] = $this->course();
+        $id = $this->privateChat($course, $student);
+        Storage::fake('course_messaging');
+        $samples = str_repeat("\0", 16000);
+        $wav = 'RIFF'.pack('V', 36 + strlen($samples)).'WAVEfmt '.pack('VvvVVvv', 16, 1, 1, 8000, 16000, 2, 16).'data'.pack('V', strlen($samples)).$samples;
+        config()->set('messaging.ffprobe', 'C:/missing/ffprobe.exe');
+        config()->set('messaging.voice_validation', 'portable');
+
+        $this->post("/api/v1/messaging/conversations/{$id}/messages", ['client_id' => (string) Str::uuid(), 'attachment' => UploadedFile::fake()->createWithContent('voice.wav', $wav)], ['Accept' => 'application/json'])
+            ->assertCreated()->assertJsonPath('data.attachments.0.kind', 'voice')->assertJsonPath('data.attachments.0.duration', null);
+        $this->assertDatabaseHas('course_message_attachments', ['kind' => 'voice', 'duration_seconds' => null]);
+
+        config()->set('messaging.voice_validation', 'strict');
+
+        $this->post("/api/v1/messaging/conversations/{$id}/messages", ['client_id' => (string) Str::uuid(), 'attachment' => UploadedFile::fake()->createWithContent('voice.wav', $wav)], ['Accept' => 'application/json'])
+            ->assertUnprocessable()->assertJsonValidationErrors('attachment');
+    }
+
+    public function test_portable_voice_upload_accepts_audio_only_webm_recording_without_ffprobe(): void
+    {
+        [$course, $instructor, $student] = $this->course();
+        $id = $this->privateChat($course, $student);
+        Storage::fake('course_messaging');
+        config()->set('messaging.ffprobe', 'C:/missing/ffprobe.exe');
+        config()->set('messaging.voice_validation', 'portable');
+        $webm = base64_decode(<<<'WEBM'
+GkXfowEAAAAAAAAfQoaBAUL3gQFC8oEEQvOBCEKChHdlYm1Ch4EEQoWBAhhTgGcB/////////+wB
+AAAAAAAA3AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAV
+SalmAQAAAAAAACcq17GDD0JATYCNTGF2ZjU4LjI0LjEwMVdBjUxhdmY1OC4yNC4xMDEWVK5rAQAA
+AAAAAGKuAQAAAAAAAFnXgQFzxYEBnIEAIrWcg3VuZIaGQV9PUFVTVqqDEIfFVruEBMS0AIOBAuEB
+AAAAAAAAEZ+BAbWIQL9AAAAAAABiZIEQY6KTT3B1c0hlYWQBATQAQB8AAAAAABJUw2cBAAAAAAAA
+fHNzAQAAAAAAAC5jwAEAAAAAAAAAZ8gBAAAAAAAAGkWjh0VOQ09ERVJEh41MYXZmNTguMjQuMTAx
+c3MBAAAAAAAAOmPAAQAAAAAAAARjxYEBZ8gBAAAAAAAAIkWjh0VOQ09ERVJEh5VMYXZjNTguNDIu
+MTAyIGxpYm9wdXMfQ7Z1AQAAAAAAAUzngQCji4EAAIAIC+Y7I6tgo4qBABWACAissw7Go4qBACmA
+CAissw7Go4qBAD2ACAissw7Go4qBAFGACAissw7Go4qBAGWACAissw7Go4qBAHmACAissw7Go4qB
+AI2ACAissw7Go4qBAKGACAissw7Go4qBALWACAissw7Go4qBAMmACAissw7Go4qBAN2ACAissw7G
+o4qBAPGACAissw7Go4qBAQWACAissw7Go4qBARmACAissw7Go4qBAS2ACAissw7Go4qBAUGACAis
+sw7Go4qBAVWACAissw7Go4qBAWmACAissw7Go4qBAZGACAissw7Go4qBAaWA
+CAissw7Go4qBAbmACAissw7Go4qBAc2ACAissw7Go4qBAeGACAissw7GoAEAAAAAAAAToYqBAfUA
+CAissw7GdaKEAM3+YA==
+WEBM, true);
+
+        $this->post("/api/v1/messaging/conversations/{$id}/messages", ['client_id' => (string) Str::uuid(), 'attachment' => UploadedFile::fake()->createWithContent('voice.webm', $webm)], ['Accept' => 'application/json'])
+            ->assertCreated()->assertJsonPath('data.attachments.0.kind', 'voice')->assertJsonPath('data.attachments.0.duration', null);
+    }
+
     public function test_effective_permissions_revocation_inactive_users_and_no_admin_private_visibility(): void
     {
         [$course, $instructor, $student] = $this->course();

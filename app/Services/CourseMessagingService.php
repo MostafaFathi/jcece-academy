@@ -141,6 +141,21 @@ class CourseMessagingService
         if (! in_array($mime, ['audio/webm', 'video/webm', 'audio/ogg', 'application/ogg', 'audio/mp4', 'video/mp4', 'audio/x-m4a', 'audio/wav', 'audio/x-wav'], true)) {
             throw ValidationException::withMessages(['attachment' => 'Only JPEG, PNG, WebP and supported voice files are allowed.']);
         }
+        if (config('messaging.voice_validation') === 'portable') {
+            $header = file_get_contents($file->getPathname(), false, null, 0, 12);
+            $hasExpectedSignature = match ($mime) {
+                'audio/webm', 'video/webm' => str_starts_with($header ?: '', "\x1A\x45\xDF\xA3"),
+                'audio/ogg', 'application/ogg' => str_starts_with($header ?: '', 'OggS'),
+                'audio/mp4', 'video/mp4', 'audio/x-m4a' => substr($header ?: '', 4, 4) === 'ftyp',
+                'audio/wav', 'audio/x-wav' => str_starts_with($header ?: '', 'RIFF') && substr($header ?: '', 8, 4) === 'WAVE',
+                default => false,
+            };
+            if (! $hasExpectedSignature) {
+                throw ValidationException::withMessages(['attachment' => 'Upload a supported voice file no larger than 10 MB.']);
+            }
+
+            return ['kind' => 'voice', 'mime' => $mime === 'video/webm' ? 'audio/webm' : ($mime === 'video/mp4' ? 'audio/mp4' : $mime), 'duration' => null];
+        }
         try {
             $probe = new Process([(string) config('messaging.ffprobe'), '-v', 'error', '-show_entries', 'format=duration:stream=codec_type,duration:packet=pts_time,duration_time', '-of', 'json', $file->getPathname()]);
             $probe->setTimeout(5)->mustRun();
