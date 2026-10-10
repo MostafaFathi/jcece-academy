@@ -91,7 +91,7 @@ class CourseMessagingController extends Controller
         $owned = $this->service->conversation($request->user(), $conversation);
         $filters = $request->validate(['before' => ['nullable', 'integer', 'min:1'], 'search' => ['nullable', 'string', 'max:120']]);
 
-        return CourseMessageResource::collection($owned->messages()->with(['user:id,name', 'attachments', 'reply', 'reactions', 'conversation.course'])
+        return CourseMessageResource::collection($owned->messages()->with(['user:id,name', 'attachments', 'reply.attachments', 'reactions', 'conversation.course'])
             ->when($filters['before'] ?? null, fn (Builder $query, int $before) => $query->where('id', '<', $before))
             ->when($filters['search'] ?? null, fn (Builder $query, string $search) => $query->whereNull('deleted_at')->where('body', 'like', '%'.$search.'%'))
             ->orderByDesc('id')->paginate(50));

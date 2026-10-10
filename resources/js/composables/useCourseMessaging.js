@@ -11,7 +11,7 @@ export function mergeMessages(current, incoming) {
 }
 
 export function useCourseMessaging() {
-    const conversations = ref([]), selected = ref(null), messages = ref([]), error = ref(null), loading = ref(false), sending = ref(false);
+    const conversations = ref([]), selected = ref(null), messages = ref([]), error = ref(null), sendError = ref(null), loading = ref(false), sending = ref(false);
     const activeSearch = ref('');
     const online = ref(navigator.onLine), hasOlder = ref(false), notificationCount = ref(0), page = ref(1), lastPage = ref(1);
     let listGeneration = 0, generation = 0, echoChannel = null, timer, disposed = false, backoff = 5000, filters = {}, version = 0, syncing = false;
@@ -33,7 +33,7 @@ export function useCourseMessaging() {
     async function select(conversation) {
         if (echoChannel && globalThis.Echo) globalThis.Echo.leave(echoChannel);
         echoChannel = null;
-        const token = ++generation; selected.value = conversation; messages.value = []; error.value = null; loading.value = true;
+        const token = ++generation; selected.value = conversation; messages.value = []; error.value = null; sendError.value = null; loading.value = true;
         version = 0; activeSearch.value = '';
         try {
             const detail = await api.fetchConversation(conversation.id);
@@ -102,18 +102,18 @@ export function useCourseMessaging() {
     async function send(payload, attachment, user) {
         if (!selected.value || sending.value) return false;
         const token = generation, id = selected.value.id;
-        sending.value = true; error.value = null;
+        sending.value = true; error.value = null; sendError.value = null;
         messages.value = mergeMessages(messages.value, [{ ...payload, id: null, user, pending: true, attachments: [], reactions: [] }]);
         try {
             const posted = await api.sendMessage(id, payload, attachment);
             if (token === generation) { messages.value = mergeMessages(messages.value, [posted]); await readVisible(); await sync(); }
             return true;
         } catch (failure) {
-            if (token === generation) { error.value = failure; messages.value = messages.value.map((message) => message.client_id === payload.client_id ? { ...message, pending: false, failed: true } : message); }
+            if (token === generation) { error.value = failure; sendError.value = failure; messages.value = messages.value.map((message) => message.client_id === payload.client_id ? { ...message, pending: false, failed: true } : message); }
             return false;
         } finally { sending.value = false; }
     }
     onMounted(() => { document.addEventListener('visibilitychange', resume); window.addEventListener('online', resume); window.addEventListener('offline', resume); loop(); });
     onBeforeUnmount(() => { disposed = true; generation++; if (echoChannel && globalThis.Echo) globalThis.Echo.leave(echoChannel); clearTimeout(timer); document.removeEventListener('visibilitychange', resume); window.removeEventListener('online', resume); window.removeEventListener('offline', resume); });
-    return { conversations, selected, messages, error, loading, sending, online, hasOlder, notificationCount, page, lastPage, list, select, older, searchMessages, sync, send };
+    return { conversations, selected, messages, error, sendError, loading, sending, online, hasOlder, notificationCount, page, lastPage, list, select, older, searchMessages, sync, send };
 }

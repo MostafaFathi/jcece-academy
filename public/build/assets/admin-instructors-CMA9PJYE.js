@@ -1,0 +1,1 @@
+import{o as e}from"./app-BbZbBaYY.js";import{n as t,t as n}from"./responses-BrlSr86X.js";var r=`/api/v1/admin/instructors`;async function i(t={}){return n(await e.get(r,{params:t}))}async function a(n){return t(await e.get(`${r}/${n}`))}async function o(n){return t(await e.post(r,n))}async function s(n,i){return t(await e.patch(`${r}/${n}`,i))}export{s as i,a as n,i as r,o as t};

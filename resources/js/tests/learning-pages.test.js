@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushPromises, mount } from '@vue/test-utils';
 import { nextTick } from 'vue';
+import { createPinia, setActivePinia } from 'pinia';
 import i18n, { setLocale } from '../i18n';
 import * as api from '../api/learning';
 import MyCoursesPage from '../pages/MyCoursesPage.vue';
@@ -12,6 +13,7 @@ import TextLesson from '../components/learning/TextLesson.vue';
 import LinkLesson from '../components/learning/LinkLesson.vue';
 import ProgressSummary from '../components/learning/ProgressSummary.vue';
 import { safeLearningUrl } from '../utils/learning';
+import { useAuthStore } from '../stores/auth';
 
 const route = vi.hoisted(() => ({ query: {} }));
 vi.mock('vue-router', () => ({ useRoute: () => route }));
@@ -27,6 +29,7 @@ function button(wrapper, text) { return wrapper.findAll('button').find((item) =>
 
 beforeEach(() => {
     vi.resetAllMocks(); setLocale('en'); route.query = {};
+    setActivePinia(createPinia());
     vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => {});
     api.fetchMyCourses.mockResolvedValue({ items: [], meta: null });
     api.fetchLearningCourse.mockImplementation(async () => details());
@@ -100,6 +103,18 @@ describe('Learning player', () => {
     it('falls back to the first incomplete lesson when resume is absent', async () => {
         api.fetchCourseProgress.mockResolvedValue(progress({ resume: null }, [{ lesson_id: 1, status: 'completed' }]));
         const wrapper = await player(); expect(wrapper.getComponent(VideoLesson).props('lesson').id).toBe(2);
+    });
+    it('links the enrolled course to its dedicated conversations only with messaging access', async () => {
+        const data = details(); data.course.id = 17;
+        const withoutAccess = await player(data);
+        expect(withoutAccess.findAll('a').some((link) => link.text() === 'Conversations')).toBe(false);
+        withoutAccess.unmount();
+
+        useAuthStore().setUser({ id: 1, roles: ['student'], permissions: ['messaging.view'] });
+        const withAccess = await player(data);
+        const conversationLink = withAccess.findAllComponents({ name: 'RouterLink' }).find((link) => link.text() === 'Conversations');
+        expect(conversationLink.props('to')).toEqual({ name: 'student.messages', query: { course: 17 } });
+        expect(withAccess.findComponent({ name: 'CourseMessenger' }).exists()).toBe(false);
     });
     it('navigates previous/next and rechecks access before selecting lessons', async () => {
         const wrapper = await player();

@@ -6,6 +6,7 @@ use App\EnrollmentStatus;
 use App\Models\Course;
 use App\Models\CourseConversation;
 use App\Models\CourseMessage;
+use App\Models\CourseMessageAttachment;
 use App\Models\Enrollment;
 use App\Models\EnrollmentAccessGrant;
 use App\Models\User;
@@ -242,6 +243,42 @@ class CourseMessagingApiTest extends TestCase
         $this->deleteJson("/api/v1/messaging/messages/{$message}")->assertOk();
         $this->getJson("/api/v1/messaging/attachments/{$file}")->assertNotFound();
         $this->assertDatabaseCount('course_message_attachments', 1);
+    }
+
+    public function test_reply_metadata_includes_protected_image_or_voice_preview_and_hides_deleted_media(): void
+    {
+        [$course, , $student] = $this->course();
+        $conversation = $this->privateChat($course, $student);
+        Storage::fake('course_messaging');
+        $image = $this->post("/api/v1/messaging/conversations/{$conversation}/messages", [
+            'client_id' => (string) Str::uuid(),
+            'attachment' => UploadedFile::fake()->image('reply.png'),
+        ], ['Accept' => 'application/json'])->assertCreated();
+        $imageMessageId = $image->json('data.id');
+        $imageFileId = $image->json('data.attachments.0.id');
+
+        $imageReply = $this->postJson("/api/v1/messaging/conversations/{$conversation}/messages", [
+            'client_id' => (string) Str::uuid(), 'body' => 'Seen', 'reply_to_id' => $imageMessageId,
+        ])->assertCreated();
+        $imageReply->assertJsonPath('data.reply.attachment.kind', 'image')
+            ->assertJsonPath('data.reply.attachment.id', $imageFileId)
+            ->assertJsonPath('data.reply.attachment.url', route('messaging.attachments.show', $imageFileId));
+
+        $voiceMessageId = $this->postMessage($conversation, 'Voice note');
+        $voice = CourseMessageAttachment::factory()->create([
+            'course_message_id' => $voiceMessageId, 'kind' => 'voice', 'mime_type' => 'audio/webm', 'original_filename' => 'note.webm',
+        ]);
+        $voiceReplyId = $this->postJson("/api/v1/messaging/conversations/{$conversation}/messages", [
+            'client_id' => (string) Str::uuid(), 'body' => 'Heard', 'reply_to_id' => $voiceMessageId,
+        ])->assertCreated()->json('data.id');
+        $this->getJson("/api/v1/messaging/messages/{$voiceReplyId}")
+            ->assertJsonPath('data.reply.attachment.kind', 'voice')
+            ->assertJsonPath('data.reply.attachment.id', $voice->id);
+
+        $this->deleteJson("/api/v1/messaging/messages/{$imageMessageId}")->assertOk();
+        $this->getJson("/api/v1/messaging/messages/{$imageReply->json('data.id')}")
+            ->assertJsonPath('data.reply.deleted', true)
+            ->assertJsonPath('data.reply.attachment', null);
     }
 
     public function test_actual_voice_file_is_probed_and_fake_or_oversized_media_is_rejected(): void

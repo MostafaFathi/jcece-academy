@@ -3,7 +3,6 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 import LanguageSwitcher from './LanguageSwitcher.vue';
-import MessageNotificationBadge from '../messaging/MessageNotificationBadge.vue';
 import UserMenu from './UserMenu.vue';
 
 const props = defineProps({ area: { type: String, required: true } });
@@ -28,7 +27,6 @@ const pageLabel = computed(() => {
                 <p class="truncate text-sm font-extrabold text-slate-900 sm:text-base">{{ pageLabel }}</p>
             </div>
             <div class="ms-auto flex shrink-0 items-center gap-2 border-s border-[#eee8eb] ps-2 sm:ps-4">
-                <MessageNotificationBadge :area="area" />
                 <LanguageSwitcher />
                 <UserMenu />
             </div>

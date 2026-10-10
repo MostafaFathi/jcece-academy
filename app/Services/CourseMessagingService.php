@@ -289,7 +289,7 @@ class CourseMessagingService
     /** @return array<string, mixed> */
     public function describeMessage(User $actor, CourseMessage $message): array
     {
-        $message->loadMissing(['user:id,name', 'reply', 'attachments', 'reactions', 'conversation.course']);
+        $message->loadMissing(['user:id,name', 'reply.attachments', 'attachments', 'reactions', 'conversation.course']);
         $readers = User::query()->where('status', UserStatus::Active)->whereIn('id', CourseReadCursor::query()->where('course_conversation_id', $message->course_conversation_id)->where('last_read_message_id', '>=', $message->id)->where('user_id', '!=', $message->user_id)->select('user_id'))->get();
         $readerCount = $readers->filter(fn (User $user): bool => $this->policy->view($user, $message->conversation))->count();
 
@@ -297,7 +297,14 @@ class CourseMessagingService
             'id' => $message->id, 'client_id' => $message->client_id, 'user' => ['id' => $message->user_id, 'name' => $message->user?->name ?? ''],
             'body' => $message->deleted_at ? null : $message->body, 'deleted' => $message->deleted_at !== null,
             'created_at' => $message->created_at->toIso8601String(),
-            'reply' => $message->reply ? ['id' => $message->reply->id, 'body' => $message->reply->deleted_at ? null : $message->reply->body, 'deleted' => $message->reply->deleted_at !== null] : null,
+            'reply' => $message->reply ? [
+                'id' => $message->reply->id,
+                'body' => $message->reply->deleted_at ? null : $message->reply->body,
+                'deleted' => $message->reply->deleted_at !== null,
+                'attachment' => $message->reply->deleted_at ? null : $message->reply->attachments->take(1)->map(fn (CourseMessageAttachment $file): array => [
+                    'id' => $file->id, 'name' => $file->original_filename, 'kind' => $file->kind, 'url' => route('messaging.attachments.show', $file->id),
+                ])->first(),
+            ] : null,
             'attachments' => $message->deleted_at ? [] : $message->attachments->map(fn (CourseMessageAttachment $file): array => ['id' => $file->id, 'name' => $file->original_filename, 'kind' => $file->kind, 'mime' => $file->mime_type, 'size' => $file->file_size, 'duration' => $file->duration_seconds, 'url' => route('messaging.attachments.show', $file->id)]),
             'reactions' => $message->deleted_at ? [] : $message->reactions->groupBy('emoji')->map(fn ($reactions, string $emoji): array => ['emoji' => $emoji, 'count' => $reactions->count(), 'mine' => $reactions->contains('user_id', $actor->id)])->values(),
             'reader_count' => $readerCount,

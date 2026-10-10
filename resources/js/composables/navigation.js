@@ -1,6 +1,5 @@
 export const navigationByArea = {
     student: [
-        { label: 'messaging.title', route: 'student.messages', permissions: ['messaging.view'] },
         { label: 'commerce.cart', route: 'student.cart' },
         { label: 'commerce.myOrders', route: 'student.orders.index' },
         { label: 'nav.overview', route: 'student.dashboard' },
@@ -29,7 +28,6 @@ export const navigationByArea = {
         { label: 'site.manage', route: 'admin.site-content', permissions: ['site_content.manage'], group: 'nav.website' },
     ],
     instructor: [
-        { label: 'messaging.title', route: 'instructor.messages', permissions: ['messaging.view'] },
         { label: 'reports.title', route: 'instructor.reports', roles: ['instructor'], permissions: ['courses.view'] },
         { label: 'instructor.dashboard', route: 'instructor.dashboard', permissions: ['courses.view'] },
         { label: 'instructor.myCourses', route: 'instructor.courses.index', permissions: ['courses.view'] },

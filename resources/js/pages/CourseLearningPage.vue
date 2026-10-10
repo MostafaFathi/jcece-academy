@@ -1,8 +1,8 @@
 <script setup>
 import { computed, ref, watch } from 'vue';
-import CourseMessagingPanel from '../components/messaging/CourseMessagingPanel.vue';
 import { useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
+import { useAuthStore } from '../stores/auth';
 import { useCourseLearning } from '../composables/useCourseLearning';
 import LoadingState from '../components/ui/LoadingState.vue';
 import EmptyState from '../components/ui/EmptyState.vue';
@@ -17,10 +17,12 @@ import FileLesson from '../components/learning/FileLesson.vue';
 import LinkLesson from '../components/learning/LinkLesson.vue';
 import CourseAssessments from '../components/learning/CourseAssessments.vue';
 import CourseReviewPanel from '../components/reviews/CourseReviewPanel.vue';
+import MessagingIcon from '../components/messaging/MessagingIcon.vue';
 
 const props = defineProps({ slug: { type: String, required: true } });
 const route = useRoute();
 const { t, locale } = useI18n();
+const auth = useAuthStore();
 const { course, summary, activeLesson, activeIndex, lessons, loading, busy, error, actionError, saved, downloadingId, load, selectLesson, complete, savePosition, download } = useCourseLearning();
 const renderer = computed(() => ({ video: VideoLesson, text: TextLesson, file: FileLesson, link: LinkLesson })[activeLesson.value?.type]);
 const videoRenderer = ref(null);
@@ -34,7 +36,7 @@ async function select(id) { videoRenderer.value?.pause?.(); await selectLesson(i
         <LoadingState v-if="loading" />
         <LearningError v-else-if="error" :error="error"><BaseButton class="mt-3" variant="secondary" @click="load(slug, route.query.lesson)">{{ t('common.retry') }}</BaseButton></LearningError>
         <template v-else-if="course">
-            <header class="overflow-hidden rounded-3xl bg-brand-dark p-6 text-white sm:p-8"><p class="mb-3 text-xs font-bold uppercase tracking-widest text-accent">JCEC ACADEMY · {{ t('learning.continue') }}</p><h1 class="break-words text-2xl font-black sm:text-3xl">{{ course.course.title }}</h1><p v-if="course.course.instructor" class="mt-3 text-sm text-white/75">{{ course.course.instructor.name }}</p><div class="mt-6 max-w-2xl"><ProgressSummary :summary="summary" /></div></header>
+            <header class="overflow-hidden rounded-3xl bg-brand-dark p-6 text-white sm:p-8"><p class="mb-3 text-xs font-bold uppercase tracking-widest text-accent">JCEC ACADEMY · {{ t('learning.continue') }}</p><h1 class="break-words text-2xl font-black sm:text-3xl">{{ course.course.title }}</h1><p v-if="course.course.instructor" class="mt-3 text-sm text-white/75">{{ course.course.instructor.name }}</p><div class="mt-6 max-w-2xl"><ProgressSummary :summary="summary" /></div><RouterLink v-if="auth.can('messaging.view') && course.course.id" :to="{ name: 'student.messages', query: { course: course.course.id } }" class="mt-6 inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-4 text-sm font-bold text-white transition hover:bg-white/20 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-accent"><MessagingIcon name="messages" class="size-5" />{{ t('messaging.conversations') }}</RouterLink></header>
             <LearningError :error="actionError"><BaseButton variant="secondary" class="mt-3" @click="load(slug, activeLesson?.id)">{{ t('common.retry') }}</BaseButton></LearningError>
             <p v-if="saved" role="status" class="text-sm font-bold text-emerald-700">{{ t('learning.saved') }}</p>
             <EmptyState v-if="!lessons.length" :title="t('learning.noLessons')" :description="t('learning.noLessonsDescription')" />
@@ -48,7 +50,6 @@ async function select(id) { videoRenderer.value?.pause?.(); await selectLesson(i
                 </article>
             </div>
             <CourseAssessments :key="slug" :course-id="course.course.id" :slug="slug" :lesson-id="activeLesson?.id ?? null" :completed-lessons="summary?.completed_lessons ?? 0" @access-lost="load(slug, activeLesson?.id)" />
-            <CourseMessagingPanel v-if="course.course.id" :course-id="course.course.id" />
             <CourseReviewPanel :key="slug" :slug="slug" :has-access="true" />
         </template>
     </div>

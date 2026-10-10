@@ -28,7 +28,7 @@ const collection = (items, lastPage = 1) => ({ items, meta: { current_page: 1, l
 const course = { id: 4, title: 'Owned course', short_description: 'A practical course', description: 'Details', status: 'published', level: 'beginner', category: { name: 'Professional skills' }, capabilities: { can_view_curriculum: true, can_create_curriculum: false, can_update_curriculum: false, can_delete_curriculum: false, can_update_course: true }, updated_at: '2026-09-25T10:00:00Z' };
 const assignment = { id: 7, course_id: 4, title: 'Project', status: 'published', submission_type: 'text_and_file', maximum_score: '100.00', max_attempts: 2, attachments: [] };
 const submission = { id: 11, assignment_id: 7, student: { name: 'Learner' }, user_id: 23, attempt_number: 1, status: 'submitted', assignment_title: 'Historic project', assignment_instructions: 'Historic instructions', submission_type: 'text_and_file', maximum_score: '100.00', text_answer: 'Student answer', files: [{ id: 9, original_filename: 'work.pdf' }], score: null, is_late: true, grading_history: [] };
-const render = (component) => mount(component, { global: { plugins: [i18n], stubs: { RouterLink: { props: ['to'], template: '<a><slot /></a>' } } } });
+const render = (component) => mount(component, { global: { plugins: [i18n], stubs: { RouterLink: { name: 'RouterLink', props: ['to'], template: '<a><slot /></a>' } } } });
 
 beforeEach(() => {
     vi.resetAllMocks();
@@ -63,7 +63,7 @@ beforeEach(() => {
 
 describe('instructor navigation and scoped routes', () => {
     it('offers dashboard, own reports and own courses, with role and permission gates', async () => {
-        expect(navigationByArea.instructor.map((item) => item.route)).toEqual(['instructor.messages', 'instructor.reports', 'instructor.dashboard', 'instructor.courses.index']);
+        expect(navigationByArea.instructor.map((item) => item.route)).toEqual(['instructor.reports', 'instructor.dashboard', 'instructor.courses.index']);
         expect(visibleNavigation(navigationByArea.instructor, { can: () => false, canAny: () => false, hasAnyRole: () => true })).toEqual([]);
         const route = routes.find((item) => item.path === '/instructor');
         expect(route.children).toHaveLength(14);
@@ -135,6 +135,20 @@ describe('instructor dashboard and courses', () => {
         const missing = render(InstructorCoursePage);
         await flushPromises();
         expect(missing.text()).toContain('not found in your courses');
+    });
+    it('opens the course conversations in the dedicated inbox only with messaging access', async () => {
+        state.route.params = { courseId: '4' };
+        const withoutAccess = render(InstructorCoursePage);
+        await flushPromises();
+        expect(withoutAccess.findAll('a').some((link) => link.text() === 'Conversations')).toBe(false);
+        withoutAccess.unmount();
+
+        state.permissions.push('messaging.view');
+        const withAccess = render(InstructorCoursePage);
+        await flushPromises();
+        const conversationLink = withAccess.findAllComponents({ name: 'RouterLink' }).find((link) => link.text() === 'Conversations');
+        expect(conversationLink.props('to')).toEqual({ name: 'instructor.messages', query: { course: 4 } });
+        expect(withAccess.findComponent({ name: 'CourseMessenger' }).exists()).toBe(false);
     });
     it('links to dedicated quiz and assignment editors only with their independent grants', async () => {
         state.route.params = { courseId: '4' };

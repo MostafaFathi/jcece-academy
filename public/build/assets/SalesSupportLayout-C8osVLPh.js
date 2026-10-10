@@ -1,1 +1,0 @@
-import{D as e,L as t}from"./app-BaxCWbOh.js";import{t as n}from"./AppShellLayout-DdLc_G2i.js";var r={__name:`SalesSupportLayout`,setup(r){return(r,i)=>(t(),e(n,{area:`support`}))}};export{r as default};
