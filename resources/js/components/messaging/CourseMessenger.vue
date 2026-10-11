@@ -33,6 +33,21 @@ const mobile = ref(mobileQuery?.matches ?? false);
 const viewportStyle = ref({});
 let conversationTrigger = null;
 let restorePage = null;
+const overlayHistoryKey = 'jcecConversationOverlay';
+const overlayHistoryToken = `${Date.now()}-${Math.random()}`;
+let overlayHistoryActive = false;
+
+function releaseOverlayHistory() {
+    if (!overlayHistoryActive) return;
+    overlayHistoryActive = false;
+    if (window.history.state?.[overlayHistoryKey] === overlayHistoryToken) window.history.back();
+}
+
+function onPopState(event) {
+    if (!overlayHistoryActive || event.state?.[overlayHistoryKey] === overlayHistoryToken) return;
+    overlayHistoryActive = false;
+    if (mobile.value && selected.value) void closeConversation();
+}
 
 function updateViewport() {
     const viewport = window.visualViewport;
@@ -63,6 +78,7 @@ function lockPage() {
 }
 
 async function closeConversation() {
+    releaseOverlayHistory();
     closeReactionMenu();
     wizard.value = null;
     reply.value = null;
@@ -85,11 +101,15 @@ function onDialogKeydown(event) {
 }
 
 watch([mobile, () => selected.value?.id], async ([isMobile, id]) => {
-    if (!isMobile || !id) { unlockPage(); return; }
+    if (!isMobile || !id) { unlockPage(); releaseOverlayHistory(); return; }
     await nextTick();
     if (!mobile.value || !selected.value) return;
     updateViewport();
     lockPage();
+    if (!overlayHistoryActive) {
+        window.history.pushState({ ...(window.history.state ?? {}), [overlayHistoryKey]: overlayHistoryToken }, '', window.location.href);
+        overlayHistoryActive = true;
+    }
     closeButton.value?.focus({ preventScroll: true });
 });
 const deleteDialog = ref(null);
@@ -231,6 +251,7 @@ function replyAttachment(message) {
 }
 
 onMounted(() => {
+    window.addEventListener('popstate', onPopState);
     mobileQuery?.addEventListener('change', updateMobile);
     window.visualViewport?.addEventListener('resize', updateViewport);
     window.visualViewport?.addEventListener('scroll', updateViewport);
@@ -241,6 +262,7 @@ onMounted(() => {
     window.addEventListener('resize', dismissReactionMenu);
 });
 onBeforeUnmount(() => {
+    window.removeEventListener('popstate', onPopState);
     unlockPage();
     mobileQuery?.removeEventListener('change', updateMobile);
     window.visualViewport?.removeEventListener('resize', updateViewport);
@@ -465,5 +487,8 @@ async function searchHistory() {
     max-height: 45%;
     overflow-y: auto;
     overscroll-behavior: contain;
+}
+.mobile-conversation .conversation-composer.emoji-board-open {
+    max-height: 70%;
 }
 </style>

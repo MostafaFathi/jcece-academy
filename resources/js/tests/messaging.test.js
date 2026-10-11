@@ -248,11 +248,31 @@ describe('mobile conversation dialog', () => {
         vi.stubGlobal('matchMedia', () => query);
         vi.stubGlobal('visualViewport', viewport);
         vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
-        return { viewport, query };
+        const back = vi.spyOn(window.history, 'back').mockImplementation(() => {});
+        return { viewport, query, back };
     }
 
+    it('uses the first browser Back to close the conversation instead of leaving the page', async () => {
+        const { back } = mobileBrowser();
+        const wrapper = render(CourseMessenger, { courseId: 1 }, { attachTo: document.body });
+        await flushPromises();
+        await wrapper.get('nav button').trigger('click');
+        await flushPromises();
+        const pageUrl = window.location.href;
+
+        expect(window.history.state.jcecConversationOverlay).toBeTruthy();
+        expect(document.querySelector('[aria-modal="true"]')).not.toBeNull();
+        window.dispatchEvent(new PopStateEvent('popstate', { state: null }));
+        await flushPromises();
+
+        expect(document.querySelector('[aria-modal="true"]')).toBeNull();
+        expect(window.location.href).toBe(pageUrl);
+        expect(document.body.style.position).toBe('');
+        expect(back).not.toHaveBeenCalled();
+    });
+
     it.each(['private', 'selected', 'all'])('opens %s conversations from the inbox in a labelled dialog and restores focus on close', async (kind) => {
-        mobileBrowser();
+        const { back } = mobileBrowser();
         api.fetchConversations.mockResolvedValue({ items: [{ ...conversation, kind }], meta: {} });
         api.fetchConversation.mockResolvedValue({ ...conversation, kind });
         const wrapper = render(CourseMessenger, {}, { attachTo: document.body });
@@ -278,6 +298,7 @@ describe('mobile conversation dialog', () => {
         expect(document.body.style.position).toBe('');
         expect(wrapper.element.parentElement.inert).toBeFalsy();
         expect(document.activeElement).toBe(trigger.element);
+        expect(back).toHaveBeenCalledOnce();
     });
 
     it('resizes to the visible viewport above the keyboard and returns to inline layout on desktop', async () => {
@@ -345,6 +366,34 @@ describe('mobile conversation dialog', () => {
 });
 
 describe('composer', () => {
+    it('shows mobile emoji choices in place of the keyboard and keeps them open after each selection', async () => {
+        const viewport = Object.assign(new EventTarget(), { width: 390, height: 844, offsetTop: 0, offsetLeft: 0 });
+        vi.stubGlobal('visualViewport', viewport);
+        const wrapper = render(MessageComposer, { compact: true }, { attachTo: document.body });
+        const textarea = wrapper.get('textarea');
+        textarea.element.focus();
+        await wrapper.get('button[aria-label="Emoji"]').trigger('click');
+
+        const picker = wrapper.get('#course-emoji-picker');
+        expect(picker.element.closest('form')).toBe(wrapper.element);
+        expect(picker.classes()).not.toContain('fixed');
+        expect(wrapper.classes()).toContain('emoji-board-open');
+        expect(document.activeElement).not.toBe(textarea.element);
+        viewport.dispatchEvent(new Event('resize'));
+        await nextTick();
+        expect(wrapper.find('#course-emoji-picker').exists()).toBe(true);
+
+        await picker.findAll('button').find((button) => button.attributes('aria-label') === '😊').trigger('click');
+        await picker.findAll('button').find((button) => button.attributes('aria-label') === '😂').trigger('click');
+        await nextTick();
+        expect(textarea.element.value).toBe('😊😂');
+        expect(wrapper.find('#course-emoji-picker').exists()).toBe(true);
+        expect(document.activeElement).not.toBe(textarea.element);
+
+        textarea.element.focus();
+        await nextTick();
+        expect(wrapper.find('#course-emoji-picker').exists()).toBe(false);
+    });
     it('keeps text and client UUID across retries, clears only after acknowledgment, supports emoji and replies', async () => {
         const wrapper = render(MessageComposer, { reply: message });
         await wrapper.find('textarea').setValue('Hello'); await wrapper.find('form').trigger('submit');

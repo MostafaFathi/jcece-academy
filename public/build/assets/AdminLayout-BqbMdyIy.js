@@ -1,0 +1,1 @@
+import{D as e,R as t}from"./app-DdoWNRqD.js";import{t as n}from"./AppShellLayout-CJ9VyzDC.js";var r={__name:`AdminLayout`,setup(r){return(r,i)=>(t(),e(n,{area:`admin`}))}};export{r as default};
