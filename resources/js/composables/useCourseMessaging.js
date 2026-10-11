@@ -112,14 +112,18 @@ export function useCourseMessaging() {
     }
     async function loop() { clearTimeout(timer); await sync(); if (!disposed) { clearTimeout(timer); timer = setTimeout(loop, backoff); } }
     function resume() { if (document.hidden || !navigator.onLine) releasePresence(); online.value = navigator.onLine; if (!document.hidden && online.value) { clearTimeout(timer); loop(); } }
-    async function send(payload, attachment, user) {
+    async function send(payload, attachment, user, quotedMessage = null) {
         if (!selected.value || sending.value) return false;
         const token = generation, id = selected.value.id;
         sending.value = true; error.value = null; sendError.value = null;
-        messages.value = mergeMessages(messages.value, [{ ...payload, id: null, user, pending: true, attachments: [], reactions: [] }]);
+        messages.value = mergeMessages(messages.value, [{ ...payload, id: null, user, pending: true, created_at: new Date().toISOString(), reply: quotedMessage, attachments: [], reactions: [], attachment_name: attachment?.name ?? null, attachment_kind: attachment ? (attachment.type.startsWith('image/') ? 'image' : 'voice') : null }]);
         try {
             const posted = await api.sendMessage(id, payload, attachment);
-            if (token === generation) { messages.value = mergeMessages(messages.value, [posted]); await readVisible(); await sync(); }
+            if (token === generation) {
+                messages.value = mergeMessages(messages.value, [posted]);
+                void readVisible().catch(() => {});
+                void sync();
+            }
             return true;
         } catch (failure) {
             if (token === generation) { error.value = failure; sendError.value = failure; messages.value = messages.value.map((message) => message.client_id === payload.client_id ? { ...message, pending: false, failed: true } : message); }

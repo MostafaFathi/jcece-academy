@@ -30,6 +30,7 @@ const sendErrorText = computed(() => {
 const mimeKind = computed(() => attachment.value?.type.startsWith('image/') ? 'image' : 'voice');
 let clientId = null;
 let fileSelection = 0;
+let awaitingAcknowledgment = false;
 
 defineExpose({ focus: () => textarea.value?.focus() });
 watch([body, attachment, () => props.reply?.id], () => { clientId = null; });
@@ -77,11 +78,26 @@ async function choose(event) {
 }
 
 function send() {
-    if (props.sending || props.disabled || voice.recording.value || (!body.value.trim() && !attachment.value)) return;
+    if (awaitingAcknowledgment || props.sending || props.disabled || voice.recording.value || (!body.value.trim() && !attachment.value)) return;
     try { clientId ??= createRequestId(); }
     catch { validation.value = 'secureIdUnavailable'; return; }
+    const draft = { clientId, body: body.value, attachment: attachment.value };
     validation.value = null;
-    emit('send', { payload: { client_id: clientId, body: body.value.trim(), reply_to_id: props.reply?.id }, attachment: attachment.value, acknowledge: () => { body.value = ''; attachment.value = null; clientId = null; emit('cancel-reply'); } });
+    awaitingAcknowledgment = true;
+    body.value = '';
+    attachment.value = null;
+    emit('send', {
+        payload: { client_id: draft.clientId, body: draft.body.trim(), reply_to_id: props.reply?.id },
+        attachment: draft.attachment,
+        acknowledge: () => { awaitingAcknowledgment = false; emit('cancel-reply'); },
+        reject: async () => {
+            body.value = draft.body;
+            attachment.value = draft.attachment;
+            awaitingAcknowledgment = false;
+            await nextTick();
+            clientId = draft.clientId;
+        },
+    });
 }
 
 function onComposerKeydown(event) {

@@ -20,6 +20,9 @@ const paths = {
     close: 'M5 5l14 14 M19 5 5 19',
     chevron: 'm9 18 6-6-6-6',
     check: 'm4 12 5 5L20 6',
+    doubleCheck: 'm2 12 4 4L16 6 M9 16l2 2L22 7',
+    clock: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z M12 7v5l3 2',
+    alert: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z M12 7v6 M12 17h.01',
     wifi: 'M3 9a14 14 0 0 1 18 0 M6 12a10 10 0 0 1 12 0 M9 15a5 5 0 0 1 6 0 M12 19h.01',
 };
 </script>

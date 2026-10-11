@@ -250,6 +250,13 @@ function replyAttachment(message) {
     return message?.attachment ?? message?.attachments?.[0] ?? null;
 }
 
+function sendStatus(message) {
+    if (message.failed) return t('messaging.failedRetry');
+    if (message.pending || !message.id) return t('messaging.sending');
+    if (message.reader_count > 0) return selected.value?.kind === 'private' ? t('messaging.read') : t('messaging.readers', { count: message.reader_count });
+    return t('messaging.sent');
+}
+
 onMounted(() => {
     window.addEventListener('popstate', onPopState);
     mobileQuery?.addEventListener('change', updateMobile);
@@ -321,12 +328,15 @@ async function start() {
 }
 
 async function done(conversation) { wizard.value = null; await load(); await select(conversation); }
-async function send({ payload, attachment, acknowledge }) {
-    if (await chat.send(payload, attachment, auth.user)) {
+async function send({ payload, attachment, acknowledge, reject }) {
+    const result = chat.send(payload, attachment, auth.user, reply.value);
+    await nextTick();
+    if (feed.value) feed.value.scrollTop = feed.value.scrollHeight;
+    if (await result) {
         acknowledge();
         await nextTick();
         if (feed.value) feed.value.scrollTop = feed.value.scrollHeight;
-    }
+    } else await reject();
 }
 async function react(message, reaction) {
     if (!selected.value?.can_send || pendingReactionIds.value.has(message.id)) return;
@@ -436,8 +446,9 @@ async function searchHistory() {
                                     </div>
                                 </blockquote>
                                 <p v-if="message.deleted || message.body" class="whitespace-pre-wrap break-words text-sm leading-8 text-slate-900" :class="message.deleted ? 'italic text-slate-500' : ''"><template v-for="(part, index) in messageSegments(message.deleted ? t('messaging.deleted') : message.body)" :key="index"><span :class="part.emoji ? 'inline-block align-middle text-[1.65rem] leading-none' : ''">{{ part.text }}</span></template></p>
+                                <div v-if="message.attachment_name" class="flex min-w-0 items-center gap-2 rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-xs font-semibold text-slate-700"><MessagingIcon :name="message.attachment_kind === 'voice' ? 'microphone' : 'paperclip'" class="size-4 shrink-0" /><span class="min-w-0 truncate">{{ message.attachment_name }}</span></div>
                                 <div v-for="attachment in message.attachments" :key="attachment.id" class="min-w-0"><a v-if="attachment.kind === 'image'" :href="attachment.url" target="_blank" rel="noopener"><img :src="attachment.url" :alt="attachment.name" loading="lazy" class="max-h-64 max-w-full rounded-xl border border-slate-200"></a><div v-else><audio :src="attachment.url" controls preload="none" class="max-w-full" /><p class="text-xs text-slate-500">{{ Math.round(attachment.duration) }}s</p></div><a :href="attachment.url" :download="attachment.name" class="inline-flex min-h-11 max-w-full items-center gap-1.5 break-all text-xs font-bold text-brand underline underline-offset-2"><MessagingIcon name="download" class="size-4 shrink-0" />{{ t('messaging.download') }}: {{ attachment.name }}</a></div>
-                                <div class="flex flex-wrap items-center gap-2 text-xs"><span v-if="message.pending" role="status" class="font-bold text-amber-800">{{ t('messaging.sending') }}</span><span v-if="message.failed" role="status" class="font-bold text-red-700">{{ t('messaging.failedRetry') }}</span><span v-if="message.user.id === auth.user?.id && message.id" class="inline-flex items-center gap-1 text-slate-500"><MessagingIcon name="check" class="size-3.5" />{{ t('messaging.readers', { count: message.reader_count ?? 0 }) }}</span></div>
+                                <div v-if="message.user.id === auth.user?.id" class="flex justify-end text-xs"><span :role="message.pending || message.failed ? 'status' : undefined" :aria-label="sendStatus(message)" :title="sendStatus(message)" class="inline-flex items-center gap-1" :class="message.failed ? 'text-red-700' : message.reader_count > 0 && message.id ? 'text-sky-600' : 'text-slate-500'"><MessagingIcon :name="message.failed ? 'alert' : message.pending || !message.id ? 'clock' : message.reader_count > 0 ? 'doubleCheck' : 'check'" class="size-4" /><span v-if="message.failed" class="font-semibold">{{ t('messaging.notSent') }}</span></span></div>
                                 </article>
                                 <div v-if="!message.deleted && visibleReactions(message).length" class="relative z-10 -mt-2 flex flex-wrap gap-1 px-3" :class="message.user.id === auth.user?.id ? 'justify-end' : 'justify-start'">
                                     <button v-for="reaction in visibleReactions(message)" :key="reaction.emoji" type="button" dir="ltr" class="inline-flex min-h-9 min-w-11 items-center justify-center gap-1 rounded-full border bg-white px-2.5 text-xs font-bold shadow-[0_2px_7px_rgba(25,14,20,.12)] transition hover:-translate-y-0.5 hover:border-brand/40 focus-visible:outline-3 focus-visible:outline-brand disabled:cursor-default" :class="reaction.mine ? 'border-brand/35 text-brand' : 'border-slate-200 text-slate-700'" :aria-label="`${reaction.emoji} · ${reaction.count}`" :aria-pressed="reaction.mine" :disabled="!selected.can_send || pendingReactionIds.has(message.id)" @click="react(message, reaction.emoji)"><span aria-hidden="true" class="text-base leading-none">{{ reaction.emoji }}</span><span class="tabular-nums">{{ reaction.count }}</span></button>

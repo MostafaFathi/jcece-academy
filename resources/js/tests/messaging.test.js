@@ -48,6 +48,88 @@ describe('message reconciliation', () => {
 });
 
 describe('shared messenger', () => {
+    it.each(['button', 'enter'])('shows a clock immediately after %s send, a check on server acceptance and blue double checks after reading', async (method) => {
+        const pending = deferred();
+        api.sendMessage.mockReturnValue(pending.promise);
+        const wrapper = render(CourseMessenger, { courseId: 1 });
+        await flushPromises();
+        await wrapper.find('nav button').trigger('click');
+        await flushPromises();
+        const feed = wrapper.get('.conversation-feed').element;
+        Object.defineProperty(feed, 'scrollHeight', { configurable: true, value: 640 });
+        const textarea = wrapper.get('textarea');
+        await textarea.setValue('New message');
+
+        if (method === 'enter') await textarea.trigger('keydown', { key: 'Enter' });
+        else await wrapper.findAll('form').at(-1).trigger('submit');
+        await nextTick();
+
+        const latest = () => wrapper.findAll('article').at(-1);
+        const status = () => latest().findAll('span').find((item) => ['Sending…', 'Sent', 'Read'].includes(item.attributes('title')));
+        expect(latest().text()).toContain('New message');
+        expect(status().find('svg').exists()).toBe(true);
+        const clockPath = status().get('svg path').attributes('d');
+        expect(textarea.element.value).toBe('');
+        expect(feed.scrollTop).toBe(640);
+
+        const clientId = api.sendMessage.mock.calls[0][1].client_id;
+        const posted = { ...message, id: 9, client_id: clientId, user: { id: 1, name: 'Student' }, body: 'New message' };
+        pending.resolve(posted);
+        await flushPromises();
+        expect(wrapper.findAll('article')).toHaveLength(2);
+        expect(status().attributes('title')).toBe('Sent');
+        const sentPath = status().get('svg path').attributes('d');
+        expect(sentPath).not.toBe(clockPath);
+
+        api.fetchEvents.mockResolvedValue({ data: [{ version: 2, kind: 'read', subject_id: 2 }], version: 2 });
+        api.fetchMessages.mockResolvedValue({ items: [message, { ...posted, reader_count: 1 }], meta: {} });
+        await vi.advanceTimersByTimeAsync(5000);
+        await flushPromises();
+        expect(status().attributes('title')).toBe('Read');
+        expect(status().classes()).toContain('text-sky-600');
+        expect(status().get('svg path').attributes('d')).not.toBe(sentPath);
+    });
+    it('keeps a failed optimistic message visible and restores its draft for a retry', async () => {
+        const pending = deferred();
+        api.sendMessage.mockReturnValue(pending.promise);
+        const wrapper = render(CourseMessenger, { courseId: 1 });
+        await flushPromises();
+        await wrapper.find('nav button').trigger('click');
+        await flushPromises();
+        await wrapper.get('textarea').setValue('Retry me');
+        await wrapper.findAll('form').at(-1).trigger('submit');
+        await nextTick();
+
+        pending.reject({ status: 500 });
+        await flushPromises();
+
+        expect(wrapper.findAll('article').at(-1).text()).toContain('Retry me');
+        expect(wrapper.findAll('article').at(-1).text()).toContain('Not sent');
+        expect(wrapper.get('textarea').element.value).toBe('Retry me');
+        const originalId = api.sendMessage.mock.calls[0][1].client_id;
+        api.sendMessage.mockResolvedValue({ ...message, id: 9, client_id: originalId, user: { id: 1, name: 'Student' }, body: 'Retry me' });
+        await wrapper.findAll('form').at(-1).trigger('submit');
+        await flushPromises();
+        expect(api.sendMessage.mock.calls[1][1].client_id).toBe(originalId);
+        expect(wrapper.findAll('article')).toHaveLength(2);
+    });
+    it('keeps the sent check when a later read-cursor request fails', async () => {
+        const wrapper = render(CourseMessenger, { courseId: 1 });
+        await flushPromises();
+        await wrapper.find('nav button').trigger('click');
+        await flushPromises();
+        api.markRead.mockRejectedValue({ status: 500 });
+        api.sendMessage.mockImplementation((id, payload) => Promise.resolve({ ...message, id: 9, client_id: payload.client_id, user: { id: 1, name: 'Student' }, body: payload.body }));
+        await wrapper.get('textarea').setValue('Delivered');
+
+        await wrapper.findAll('form').at(-1).trigger('submit');
+        await flushPromises();
+
+        const latest = wrapper.findAll('article').at(-1);
+        expect(latest.text()).toContain('Delivered');
+        expect(latest.findAll('span').some((item) => item.attributes('title') === 'Sent')).toBe(true);
+        expect(latest.text()).not.toContain('Not sent');
+    });
     it.each(['ar', 'en'])('renders safe UTF-8 text with %s direction, real unread state and course scope', async (locale) => {
         setLocale(locale); const wrapper = render(CourseMessenger, { courseId: 1 }); await flushPromises();
         expect(wrapper.attributes('dir')).toBe(locale === 'ar' ? 'rtl' : 'ltr');
@@ -394,13 +476,23 @@ describe('composer', () => {
         await nextTick();
         expect(wrapper.find('#course-emoji-picker').exists()).toBe(false);
     });
-    it('keeps text and client UUID across retries, clears only after acknowledgment, supports emoji and replies', async () => {
+    it('clears the composer immediately, blocks duplicate submits and restores the same draft on failure', async () => {
         const wrapper = render(MessageComposer, { reply: message });
         await wrapper.find('textarea').setValue('Hello'); await wrapper.find('form').trigger('submit');
         await wrapper.find('form').trigger('submit');
-        const events = wrapper.emitted('send'); expect(events[0][0].payload.client_id).toBe(events[1][0].payload.client_id);
-        expect(events[0][0].payload.reply_to_id).toBe(8); expect(wrapper.find('textarea').element.value).toBe('Hello');
-        events[0][0].acknowledge(); await flushPromises(); expect(wrapper.find('textarea').element.value).toBe('');
+        const first = wrapper.emitted('send')[0][0];
+        expect(wrapper.emitted('send')).toHaveLength(1);
+        expect(first.payload.reply_to_id).toBe(8);
+        expect(wrapper.find('textarea').element.value).toBe('');
+
+        await first.reject();
+        expect(wrapper.find('textarea').element.value).toBe('Hello');
+        await wrapper.find('form').trigger('submit');
+        const second = wrapper.emitted('send')[1][0];
+        expect(second.payload.client_id).toBe(first.payload.client_id);
+        second.acknowledge(); await flushPromises();
+        expect(wrapper.find('textarea').element.value).toBe('');
+        expect(wrapper.emitted('cancel-reply')).toHaveLength(1);
         await wrapper.find('button[aria-label="Emoji"]').trigger('click');
         [...document.querySelectorAll('#course-emoji-picker button')].find((item) => item.getAttribute('aria-label') === '😊').click(); await nextTick();
         expect(wrapper.find('textarea').element.value).toBe('😊');

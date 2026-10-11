@@ -1,0 +1,1 @@
+import{D as e,R as t}from"./app-C1OLo7LQ.js";import{t as n}from"./AppShellLayout-BammPYl_.js";var r={__name:`SalesSupportLayout`,setup(r){return(r,i)=>(t(),e(n,{area:`support`}))}};export{r as default};
