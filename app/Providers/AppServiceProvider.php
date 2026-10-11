@@ -4,9 +4,31 @@ namespace App\Providers;
 
 use App\Contracts\CertificatePdfGenerator;
 use App\Contracts\ProtectedVideoProvider;
+use App\Models\Assignment;
+use App\Models\AssignmentSubmission;
+use App\Models\AuditEvent;
+use App\Models\Certificate;
+use App\Models\CertificateApprovalRequest;
 use App\Models\Course;
+use App\Models\CourseMessage;
+use App\Models\CourseReadCursor;
+use App\Models\CourseReview;
+use App\Models\Enrollment;
+use App\Models\EnrollmentAccessGrant;
+use App\Models\Lesson;
+use App\Models\LessonProgress;
+use App\Models\LessonVideoUpload;
+use App\Models\Order;
 use App\Models\Package;
+use App\Models\Payment;
+use App\Models\Quiz;
+use App\Models\QuizAttempt;
+use App\Models\Refund;
+use App\Models\SupportTicket;
+use App\Models\SupportTicketMessage;
+use App\Models\TransactionalDelivery;
 use App\Models\User;
+use App\Observers\NotificationWorkflowObserver;
 use App\Services\BunnyProtectedVideoProvider;
 use App\Services\MpdfCertificatePdfGenerator;
 use App\Services\UnconfiguredProtectedVideoProvider;
@@ -36,6 +58,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Persist inbox/outbox rows inside the originating transaction. External delivery waits for commit.
+        foreach ([AuditEvent::class, Course::class, Lesson::class, Quiz::class, QuizAttempt::class, Assignment::class, AssignmentSubmission::class, Enrollment::class, EnrollmentAccessGrant::class, Certificate::class, CertificateApprovalRequest::class, Payment::class, Refund::class, Order::class, SupportTicket::class, SupportTicketMessage::class, CourseMessage::class, CourseReadCursor::class, CourseReview::class, LessonVideoUpload::class, LessonProgress::class, User::class, TransactionalDelivery::class] as $model) {
+            $model::observe(NotificationWorkflowObserver::class);
+        }
         foreach (['send' => 30, 'reaction' => 60, 'group' => 10, 'private' => 10] as $action => $limit) {
             RateLimiter::for('messaging-'.$action, fn (Request $request) => Limit::perMinute($limit)->by((string) $request->user()?->id));
         }

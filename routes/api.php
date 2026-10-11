@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\Admin\AnnouncementManagementController;
 use App\Http\Controllers\Api\V1\Admin\AssignmentAttachmentController;
 use App\Http\Controllers\Api\V1\Admin\AssignmentAttachmentDownloadController as AdminAssignmentAttachmentDownloadController;
 use App\Http\Controllers\Api\V1\Admin\AssignmentController as AdminAssignmentController;
@@ -38,6 +39,7 @@ use App\Http\Controllers\Api\V1\Admin\LessonResourceController;
 use App\Http\Controllers\Api\V1\Admin\LessonResourceDownloadController as AdminLessonResourceDownloadController;
 use App\Http\Controllers\Api\V1\Admin\LessonResourceUploadController;
 use App\Http\Controllers\Api\V1\Admin\LessonVideoUploadController;
+use App\Http\Controllers\Api\V1\Admin\NotificationManagementController;
 use App\Http\Controllers\Api\V1\Admin\OrderAccessProvisioningController;
 use App\Http\Controllers\Api\V1\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Api\V1\Admin\OrderStatusController;
@@ -66,6 +68,7 @@ use App\Http\Controllers\Api\V1\Admin\SupportTicketMessageController as AdminSup
 use App\Http\Controllers\Api\V1\Admin\SupportTicketUpdateController;
 use App\Http\Controllers\Api\V1\Admin\TransactionalDeliveryRetryController;
 use App\Http\Controllers\Api\V1\Admin\UserController as AdminUserController;
+use App\Http\Controllers\Api\V1\AnnouncementController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\CertificateVerificationController;
 use App\Http\Controllers\Api\V1\ContactController;
@@ -109,6 +112,7 @@ use App\Http\Controllers\Api\V1\Me\SupportTicketAttachmentDownloadController as 
 use App\Http\Controllers\Api\V1\Me\SupportTicketController as MeSupportTicketController;
 use App\Http\Controllers\Api\V1\Me\SupportTicketMessageController as MeSupportTicketMessageController;
 use App\Http\Controllers\Api\V1\Me\SupportTicketReopeningController;
+use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\PackageController;
 use App\Http\Controllers\Api\V1\PolicyPageController;
 use App\Http\Controllers\Api\V1\SiteContentController;
@@ -347,3 +351,24 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
 });
 
 require __DIR__.'/messaging.php';
+
+Route::middleware(['auth:sanctum', 'throttle:120,1'])->prefix('v1')->group(function (): void {
+    Route::get('notifications', [NotificationController::class, 'index']);
+    Route::get('notification-preferences', [NotificationController::class, 'preferences']);
+    Route::put('notification-preferences', [NotificationController::class, 'updatePreferences']);
+    Route::post('notifications/read-all', [NotificationController::class, 'readAll']);
+    Route::post('notifications/{notification}/read', [NotificationController::class, 'read']);
+    Route::post('notifications/{notification}/open', [NotificationController::class, 'open']);
+    Route::match(['PUT', 'DELETE'], 'notification-presence', [NotificationController::class, 'presence']);
+    Route::get('announcements/{announcement}', [AnnouncementController::class, 'show']);
+    Route::get('admin/notification-management', [NotificationManagementController::class, 'index']);
+    Route::put('admin/notification-management/policies', [NotificationManagementController::class, 'update']);
+    Route::post('admin/notification-management/deliveries/{delivery}/retry', [NotificationManagementController::class, 'retry'])->middleware('throttle:10,1');
+    Route::post('admin/notification-management/transactional-deliveries/{delivery}/retry', [NotificationManagementController::class, 'retryTransactional'])->middleware('throttle:10,1');
+    Route::get('admin/announcements', [AnnouncementManagementController::class, 'index']);
+    Route::post('admin/announcements', [AnnouncementManagementController::class, 'store'])->middleware('throttle:10,1');
+    Route::post('admin/announcements/preview', [AnnouncementManagementController::class, 'preview'])->middleware('throttle:10,1');
+    Route::put('admin/announcements/{announcement}', [AnnouncementManagementController::class, 'update']);
+    Route::post('admin/announcements/{announcement}/publish', [AnnouncementManagementController::class, 'publish'])->middleware('throttle:5,1');
+    Route::post('admin/announcements/{announcement}/archive', [AnnouncementManagementController::class, 'archive']);
+});

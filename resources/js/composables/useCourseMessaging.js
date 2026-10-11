@@ -25,12 +25,15 @@ export function useCourseMessaging() {
         const notifications = await api.fetchMessageNotifications();
         if (!disposed && listToken === listGeneration) notificationCount.value = notifications.unread_count;
     }
+    function releasePresence() { if (selected.value && api.clearNotificationPresence) void api.clearNotificationPresence(selected.value.id).catch(() => {}); }
     async function readVisible() {
         if (!selected.value || activeSearch.value || document.hidden || !online.value) return;
+        if (api.setNotificationPresence) await api.setNotificationPresence(selected.value.id).catch(() => {});
         const last = messages.value.filter((message) => message.id).at(-1);
         if (last) await api.markRead(selected.value.id, last.id);
     }
     function close() {
+        releasePresence();
         generation++;
         if (echoChannel && globalThis.Echo) globalThis.Echo.leave(echoChannel);
         echoChannel = null;
@@ -39,6 +42,7 @@ export function useCourseMessaging() {
         version = 0;
     }
     async function select(conversation) {
+        releasePresence();
         if (echoChannel && globalThis.Echo) globalThis.Echo.leave(echoChannel);
         echoChannel = null;
         const token = ++generation; selected.value = conversation; messages.value = []; error.value = null; sendError.value = null; loading.value = true;
@@ -107,7 +111,7 @@ export function useCourseMessaging() {
         } finally { syncing = false; }
     }
     async function loop() { clearTimeout(timer); await sync(); if (!disposed) { clearTimeout(timer); timer = setTimeout(loop, backoff); } }
-    function resume() { online.value = navigator.onLine; if (!document.hidden && online.value) { clearTimeout(timer); loop(); } }
+    function resume() { if (document.hidden || !navigator.onLine) releasePresence(); online.value = navigator.onLine; if (!document.hidden && online.value) { clearTimeout(timer); loop(); } }
     async function send(payload, attachment, user) {
         if (!selected.value || sending.value) return false;
         const token = generation, id = selected.value.id;
@@ -123,6 +127,6 @@ export function useCourseMessaging() {
         } finally { sending.value = false; }
     }
     onMounted(() => { document.addEventListener('visibilitychange', resume); window.addEventListener('online', resume); window.addEventListener('offline', resume); loop(); });
-    onBeforeUnmount(() => { disposed = true; generation++; if (echoChannel && globalThis.Echo) globalThis.Echo.leave(echoChannel); clearTimeout(timer); document.removeEventListener('visibilitychange', resume); window.removeEventListener('online', resume); window.removeEventListener('offline', resume); });
+    onBeforeUnmount(() => { releasePresence(); disposed = true; generation++; if (echoChannel && globalThis.Echo) globalThis.Echo.leave(echoChannel); clearTimeout(timer); document.removeEventListener('visibilitychange', resume); window.removeEventListener('online', resume); window.removeEventListener('offline', resume); });
     return { conversations, selected, messages, error, sendError, loading, sending, online, hasOlder, notificationCount, page, lastPage, list, select, close, older, searchMessages, sync, send };
 }

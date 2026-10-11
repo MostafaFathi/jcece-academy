@@ -10,7 +10,8 @@ import * as api from '../api/messaging';
 import CourseMessenger from '../components/messaging/CourseMessenger.vue';
 import MessageComposer from '../components/messaging/MessageComposer.vue';
 import GroupWizard from '../components/messaging/GroupWizard.vue';
-vi.mock('../api/messaging', () => ({ fetchMessagingCourses: vi.fn(), fetchMessagingStudents: vi.fn(), fetchConversations: vi.fn(), fetchConversation: vi.fn(), startPrivate: vi.fn(), createGroup: vi.fn(), updateMembers: vi.fn(), fetchMessages: vi.fn(), fetchMessage: vi.fn(), fetchEvents: vi.fn(), sendMessage: vi.fn(), markRead: vi.fn(), deleteMessage: vi.fn(), reactToMessage: vi.fn(), fetchMessageNotifications: vi.fn() }));
+vi.mock('../api/messaging', () => ({
+    setNotificationPresence: vi.fn().mockResolvedValue({}), clearNotificationPresence: vi.fn().mockResolvedValue({}), fetchMessagingCourses: vi.fn(), fetchMessagingStudents: vi.fn(), fetchConversations: vi.fn(), fetchConversation: vi.fn(), startPrivate: vi.fn(), createGroup: vi.fn(), updateMembers: vi.fn(), fetchMessages: vi.fn(), fetchMessage: vi.fn(), fetchEvents: vi.fn(), sendMessage: vi.fn(), markRead: vi.fn(), deleteMessage: vi.fn(), reactToMessage: vi.fn(), fetchMessageNotifications: vi.fn() }));
 const conversation = { id: 3, title: 'Private', course: { id: 1, title: 'BIM' }, kind: 'private', can_send: true, can_manage: false, version: 1, unread_count: 1 };
 const message = { id: 8, client_id: '123', body: '<script>alert(1)</script> مرحبا', user: { id: 2, name: 'Teacher' }, attachments: [], reactions: [], reader_count: 0, can_delete: false };
 let wrappers = [];
@@ -29,6 +30,7 @@ beforeEach(() => {
     api.fetchMessageNotifications.mockResolvedValue({ data: [], unread_count: 1 });
     api.fetchEvents.mockResolvedValue({ data: [], version: 1 });
     api.markRead.mockResolvedValue({});
+    api.setNotificationPresence.mockResolvedValue({}); api.clearNotificationPresence.mockResolvedValue({});
     api.fetchMessagingStudents.mockResolvedValue({ items: [{ id: 7, name: 'Eligible student' }], meta: { last_page: 1 } });
     URL.createObjectURL = vi.fn(() => 'blob:test'); URL.revokeObjectURL = vi.fn();
 });

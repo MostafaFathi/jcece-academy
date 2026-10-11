@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 import LanguageSwitcher from './LanguageSwitcher.vue';
 import UserMenu from './UserMenu.vue';
+import NotificationBell from '../notifications/NotificationBell.vue';
 
 const props = defineProps({ area: { type: String, required: true } });
 defineEmits(['open-menu']);
@@ -27,7 +28,7 @@ const pageLabel = computed(() => {
                 <p class="truncate text-sm font-extrabold text-slate-900 sm:text-base">{{ pageLabel }}</p>
             </div>
             <div class="ms-auto flex shrink-0 items-center gap-2 border-s border-[#eee8eb] ps-2 sm:ps-4">
-                <LanguageSwitcher />
+                <NotificationBell /><LanguageSwitcher />
                 <UserMenu />
             </div>
         </div>

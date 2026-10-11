@@ -1,6 +1,8 @@
 import { api } from './client';
 import { unwrapCollection, unwrapResource } from './responses';
 const base = '/api/v1/messaging';
+export const setNotificationPresence = (id) => api.put('/api/v1/notification-presence', { conversation_id: id });
+export const clearNotificationPresence = (id) => api.delete('/api/v1/notification-presence', { data: { conversation_id: id } });
 export const fetchMessagingCourses = async () => (await api.get(`${base}/courses`)).data.data;
 export const fetchMessagingStudents = async (course, params = {}) => unwrapCollection(await api.get(`${base}/courses/${course}/students`, { params }));
 export const fetchConversations = async (params = {}) => unwrapCollection(await api.get(`${base}/conversations`, { params }));
