@@ -3,6 +3,7 @@ import { flushPromises, mount } from '@vue/test-utils';
 import { createPinia } from 'pinia';
 import HomePage from '../pages/HomePage.vue';
 import CategoryCard from '../components/public/CategoryCard.vue';
+import { fetchInstructors, fetchTestimonials } from '../api/public-site';
 import i18n, { setLocale } from '../i18n';
 import { fetchCategories } from '../api/categories';
 import { fetchCourses } from '../api/courses';
@@ -12,6 +13,7 @@ vi.mock('vue-router', () => ({ useRoute: () => ({ query: {} }), useRouter: () =>
 vi.mock('../api/categories', () => ({ fetchCategories: vi.fn() }));
 vi.mock('../api/courses', () => ({ fetchCourses: vi.fn() }));
 vi.mock('../api/packages', () => ({ fetchPackages: vi.fn() }));
+vi.mock('../api/public-site', () => ({ fetchInstructors: vi.fn(), fetchTestimonials: vi.fn() }));
 
 const RouterLinkStub = { props: ['to'], template: '<a><slot /></a>' };
 
@@ -22,6 +24,8 @@ function mountPage() {
 describe('homepage', () => {
     beforeEach(() => {
         setLocale('ar');
+        fetchInstructors.mockResolvedValue({ items: [{ id: 2, name: 'محاضر', profile: { job_title: 'مهندس' } }] });
+        fetchTestimonials.mockResolvedValue({ items: [] });
         fetchCategories.mockResolvedValue([{ id: 1, name: 'الهندسة', slug: 'engineering', children: [] }]);
         fetchCourses.mockResolvedValue({ items: [{ id: 1, title: 'دورة BIM', slug: 'bim', short_description: 'وصف حقيقي', price: '50.00', level: 'beginner', rating_summary: { average_rating: 4.5, review_count: 2 } }], meta: {} });
         fetchPackages.mockResolvedValue({ items: [{ id: 1, title: 'مسار BIM', slug: 'bim-path', type: 'learning_path', price: '100.00', course_count: 1 }], meta: {} });
@@ -33,10 +37,20 @@ describe('homepage', () => {
         expect(wrapper.text()).toContain('دورة BIM');
         expect(wrapper.text()).toContain('الهندسة');
         expect(wrapper.text()).toContain('مسار BIM');
-        expect(fetchCourses).toHaveBeenCalledWith({ sort: 'latest', per_page: 6 });
+        expect(fetchCourses).toHaveBeenCalledWith({ sort: 'latest', per_page: 12 });
         const categoryCard = wrapper.findComponent(CategoryCard);
-        expect(categoryCard.element.parentElement.classList.contains('justify-center')).toBe(true);
-        expect(categoryCard.classes()).toContain('w-full');
+        expect(categoryCard.props('compact')).toBe(true);
+        expect(wrapper.findAll('section > div > header h2').map((heading) => heading.text())).toEqual(['التصنيفات', 'الباكدجات المجمعة', 'الكورسات المنفصلة', 'المحاضرين', 'آراء العملاء']);
+        expect(fetchPackages).toHaveBeenCalledWith({ sort: 'latest', per_page: 12 });
+    });
+
+    it('renders the same section order in English', async () => {
+        setLocale('en');
+        const wrapper = mountPage();
+        await flushPromises();
+
+        expect(wrapper.findAll('section > div > header h2').map((heading) => heading.text())).toEqual(['Categories', 'Course bundles', 'Individual courses', 'Instructors', 'Customer reviews']);
+        expect(wrapper.text()).toContain('View more');
     });
 
     it('keeps successful sections when one request fails', async () => {

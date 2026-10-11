@@ -86,6 +86,6 @@ onMounted(() => load());
         </div>
         <button v-if="page < lastPage" type="button" class="min-h-11 text-sm font-bold text-brand underline" :disabled="disabled || loading" @click="load()">{{ t('curriculum.loadMoreOptions') }}</button>
         <p v-if="error" role="alert" class="text-sm text-red-700">{{ t('admin.loadError') }} <button type="button" class="underline" @click="load()">{{ t('common.retry') }}</button></p>
-        <ul v-if="multiple && selectedChoices.length" class="flex flex-wrap gap-2"><li v-for="item in selectedChoices" :key="item.id" class="flex max-w-full items-center gap-2 rounded-full bg-brand/10 px-3 py-1 text-sm"><span class="truncate">{{ optionLabel(item) }}</span><button type="button" :aria-label="`${t('commerce.remove')} ${optionLabel(item)}`" class="font-black text-red-700" @click="remove(Number(item.id))">×</button></li></ul>
+        <ul v-if="multiple && selectedChoices.length" class="flex flex-wrap gap-2"><li v-for="item in selectedChoices" :key="item.id" class="flex max-w-full items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-sm"><span class="truncate">{{ optionLabel(item) }}</span><button type="button" :aria-label="`${t('commerce.remove')} ${optionLabel(item)}`" class="font-black text-red-700" @click="remove(Number(item.id))">×</button></li></ul>
     </div>
 </template>

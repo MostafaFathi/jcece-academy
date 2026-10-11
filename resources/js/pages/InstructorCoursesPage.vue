@@ -48,7 +48,7 @@ watch(() => route.query, load, { immediate: true, deep: true });
             <input id="instructor-course-search" v-model="filters.search" type="search" :placeholder="t('instructor.search')" class="min-h-11 min-w-48 flex-1 rounded-xl border border-slate-300 px-4">
             <label class="sr-only" for="instructor-course-status">{{ t('instructor.status') }}</label>
             <select id="instructor-course-status" v-model="filters.status" class="min-h-11 rounded-xl border border-slate-300 px-4"><option value="">{{ t('instructor.allStatuses') }}</option><option v-for="status in ['draft', 'published', 'hidden', 'coming_soon', 'archived']" :key="status" :value="status">{{ t(`instructor.statusLabels.${status}`) }}</option></select>
-            <button type="submit" class="min-h-11 rounded-xl bg-brand px-5 font-bold text-white">{{ t('instructor.searchButton') }}</button>
+            <button type="submit" class="min-h-11 rounded-xl bg-primary px-5 font-bold text-brand-dark">{{ t('instructor.searchButton') }}</button>
         </form>
         <LoadingState v-if="loading" />
         <BaseAlert v-else-if="error" tone="danger">{{ t('instructor.loadError') }} <button type="button" class="font-bold underline" @click="load">{{ t('instructor.retry') }}</button></BaseAlert>

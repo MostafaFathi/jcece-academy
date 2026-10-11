@@ -54,7 +54,7 @@ function selectVideoFile(event) {
 </script>
 
 <template>
-    <form class="space-y-5 rounded-2xl border border-brand/20 bg-brand/5 p-5" @submit.prevent="submit">
+    <form class="space-y-5 rounded-2xl border border-brand/20 bg-primary/5 p-5" @submit.prevent="submit">
         <h3 class="text-lg font-black text-slate-950">{{ t(lesson ? 'curriculum.editLesson' : 'curriculum.addLesson') }}</h3>
         <BaseAlert v-if="error" tone="danger">{{ t(error.status === 422 ? 'admin.validation' : 'admin.saveError') }}</BaseAlert>
         <div class="grid gap-4 sm:grid-cols-2"><div><label class="mb-1 block text-sm font-bold" for="lesson-title">{{ t('admin.title') }}</label><input id="lesson-title" v-model="form.title" required maxlength="255" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3"><p v-if="error?.errors?.title" role="alert" class="text-sm text-red-700">{{ error.errors.title[0] }}</p></div><div><label class="mb-1 block text-sm font-bold" for="lesson-slug">{{ t('admin.slug') }}</label><input id="lesson-slug" v-model="form.slug" required maxlength="255" pattern="[A-Za-z0-9_-]+" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3"><p v-if="error?.errors?.slug" role="alert" class="text-sm text-red-700">{{ error.errors.slug[0] }}</p></div><div><label class="mb-1 block text-sm font-bold" for="lesson-type">{{ t('curriculum.type') }}</label><select id="lesson-type" v-model="form.type" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3"><option v-for="type in types" :key="type" :value="type">{{ t(`curriculum.types.${type}`) }}</option></select></div><div><label class="mb-1 block text-sm font-bold" for="lesson-duration">{{ t('curriculum.durationSeconds') }}</label><input id="lesson-duration" v-model="form.duration_seconds" type="number" min="0" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3"><p v-if="error?.errors?.duration_seconds" role="alert" class="text-sm text-red-700">{{ error.errors.duration_seconds[0] }}</p></div></div>
@@ -65,7 +65,7 @@ function selectVideoFile(event) {
             <div v-else class="space-y-3 rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
                 <div class="space-y-1"><h4 class="font-black text-slate-950">{{ t('curriculum.videoUploadHeading') }}</h4><p class="text-sm text-slate-600">{{ t('curriculum.videoChooseBeforeCreate') }}</p></div>
                 <label class="block text-sm font-bold text-slate-900" for="lesson-video-file-new">{{ t('curriculum.videoChooseFile') }}</label>
-                <input id="lesson-video-file-new" type="file" accept=".mp4,.mov,.webm,video/mp4,video/quicktime,video/webm" class="min-w-0 max-w-full text-sm file:me-3 file:rounded-xl file:border-0 file:bg-brand/10 file:px-3 file:py-2 file:font-bold file:text-brand" :disabled="busy" @change="selectVideoFile">
+                <input id="lesson-video-file-new" type="file" accept=".mp4,.mov,.webm,video/mp4,video/quicktime,video/webm" class="min-w-0 max-w-full text-sm file:me-3 file:rounded-xl file:border-0 file:bg-primary/10 file:px-3 file:py-2 file:font-bold file:text-brand" :disabled="busy" @change="selectVideoFile">
                 <p v-if="videoFileError" role="alert" class="text-sm text-red-700">{{ t('curriculum.videoInvalidFile') }}</p>
             </div>
         </div>

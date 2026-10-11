@@ -7,8 +7,8 @@ import { fetchCourses } from '../api/courses';
 import { fetchPackages } from '../api/packages';
 import { fetchInstructors, fetchTestimonials } from '../api/public-site';
 import BaseAlert from '../components/ui/BaseAlert.vue';
-import EmptyState from '../components/ui/EmptyState.vue';
-import CatalogSkeleton from '../components/public/CatalogSkeleton.vue';
+import HomeCatalogSection from '../components/public/HomeCatalogSection.vue';
+import MediaFrame from '../components/public/MediaFrame.vue';
 import CategoryCard from '../components/public/CategoryCard.vue';
 import CourseCard from '../components/public/CourseCard.vue';
 import PackageCard from '../components/public/PackageCard.vue';
@@ -49,8 +49,8 @@ async function loadSection(key, loader) {
 
 function loadHomepage() {
     void loadSection('categories', fetchCategories);
-    void loadSection('courses', () => fetchCourses({ sort: 'latest', per_page: 6 }));
-    void loadSection('packages', () => fetchPackages({ sort: 'latest', per_page: 3 }));
+    void loadSection('courses', () => fetchCourses({ sort: 'latest', per_page: 12 }));
+    void loadSection('packages', () => fetchPackages({ sort: 'latest', per_page: 12 }));
     void loadSection('instructors', () => fetchInstructors({ per_page: 4 }));
     void loadSection('testimonials', fetchTestimonials);
 }
@@ -60,16 +60,16 @@ onMounted(loadHomepage);
 
 <template>
     <div class="overflow-hidden">
-        <section class="relative isolate bg-slate-950 text-white">
-            <div class="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_15%_15%,rgba(255,210,30,0.18),transparent_26%),radial-gradient(circle_at_85%_35%,rgba(139,35,66,0.58),transparent_34%),linear-gradient(135deg,#16080d_0%,#35101d_48%,#6b1d32_100%)]" />
+        <section class="relative isolate bg-charcoal text-white">
+            <div class="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_15%_15%,rgba(245,189,22,0.08),transparent_26%),radial-gradient(circle_at_85%_35%,rgba(107,29,50,0.16),transparent_34%),linear-gradient(135deg,#151515_0%,#252525_48%,#1c1c1c_100%)]" />
             <div class="absolute inset-0 -z-10 opacity-[0.08] [background-image:linear-gradient(rgba(255,255,255,.35)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.35)_1px,transparent_1px)] [background-size:48px_48px]" />
-            <div class="mx-auto grid min-h-[680px] max-w-7xl items-center gap-14 px-4 py-20 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:px-8 lg:py-28">
+            <div class="mx-auto grid min-h-[600px] max-w-7xl items-center gap-10 px-4 py-14 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:px-8 lg:py-20">
                 <div class="max-w-3xl">
                     <BaseAlert v-if="startupFailed" tone="danger" class="mb-6"><strong>{{ t('errors.startupTitle') }}</strong> {{ t('errors.startupText') }}</BaseAlert>
                     <p class="mb-6 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-black tracking-wider text-accent backdrop-blur"><span class="size-2 rounded-full bg-accent shadow-[0_0_18px_#FFD21E]" />{{ t('home.eyebrow') }}</p>
-                    <h1 class="text-4xl font-black leading-[1.15] tracking-tight sm:text-6xl lg:text-7xl">{{ t('home.heroTitle') }}</h1>
-                    <p class="mt-7 max-w-2xl text-base leading-8 text-white/70 sm:text-xl">{{ t('home.heroDescription') }}</p>
-                    <div class="mt-9 flex flex-wrap gap-3"><RouterLink :to="{ name: 'courses.index' }" class="inline-flex min-h-13 items-center gap-3 rounded-2xl bg-accent px-6 py-3 font-black text-brand-dark shadow-xl shadow-black/20 transition hover:-translate-y-1 hover:bg-yellow-300 focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-white">{{ t('home.browseCourses') }} <span aria-hidden="true">{{ locale === 'ar' ? '←' : '→' }}</span></RouterLink><RouterLink :to="{ name: 'packages.index' }" class="inline-flex min-h-13 items-center rounded-2xl border border-white/20 bg-white/10 px-6 py-3 font-black text-white backdrop-blur transition hover:-translate-y-1 hover:bg-white/15 focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-accent">{{ t('home.browsePackages') }}</RouterLink></div>
+                    <h1 class="text-4xl font-black leading-[1.15] tracking-tight sm:text-5xl lg:text-6xl">{{ t('home.heroTitle') }}</h1>
+                    <p class="mt-7 max-w-2xl text-base leading-8 text-white/80 sm:text-xl">{{ t('home.heroDescription') }}</p>
+                    <div class="mt-9 flex flex-wrap gap-3"><RouterLink :to="{ name: 'courses.index' }" class="inline-flex min-h-13 items-center gap-3 rounded-2xl bg-primary px-6 py-3 font-black text-brand-dark shadow-xl shadow-black/20 transition hover:-translate-y-1 hover:bg-primary-hover focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-accent">{{ t('home.browseCourses') }} <span aria-hidden="true">{{ locale === 'ar' ? '←' : '→' }}</span></RouterLink><RouterLink :to="{ name: 'packages.index' }" class="inline-flex min-h-13 items-center rounded-2xl border border-white/20 bg-white/10 px-6 py-3 font-black text-white backdrop-blur transition hover:-translate-y-1 hover:bg-white/15 focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-accent">{{ t('home.browsePackages') }}</RouterLink></div>
                 </div>
                 <div class="relative mx-auto w-full max-w-xl">
                     <div class="absolute -inset-6 rounded-[2.5rem] bg-accent/15 blur-3xl" />
@@ -80,28 +80,30 @@ onMounted(loadHomepage);
             </div>
         </section>
 
-        <section class="bg-white py-20 sm:py-24"><div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"><div class="flex flex-wrap items-end justify-between gap-6"><SectionHeading :eyebrow="t('home.recentEyebrow')" :title="t('home.recentTitle')" :description="t('home.recentDescription')" /><RouterLink :to="{ name: 'courses.index' }" class="rounded-xl px-4 py-2 text-sm font-black text-brand hover:bg-brand-soft">{{ t('common.viewAll') }} <span aria-hidden="true">{{ locale === 'ar' ? '←' : '→' }}</span></RouterLink></div><BaseAlert v-if="errors.courses" tone="danger" class="mt-8">{{ t('catalog.loadError') }} <button type="button" class="font-black underline" @click="loadSection('courses', () => fetchCourses({ sort: 'latest', per_page: 6 }))">{{ t('common.retry') }}</button></BaseAlert><div v-if="loading.courses" class="mt-10 grid gap-6 md:grid-cols-2 xl:grid-cols-3"><CatalogSkeleton v-for="index in 3" :key="index" /></div><div v-else-if="courses.length" class="mt-10 grid gap-6 md:grid-cols-2 xl:grid-cols-3"><CourseCard v-for="course in courses" :key="course.id" :course="course" /></div><EmptyState v-else-if="!errors.courses" class="mt-10" :title="t('home.emptyCourses')" /></div></section>
+        <HomeCatalogSection id="categories" :item-count="categories.length" :title="t('home.categoriesTitle')" :destination="{ name: 'courses.index' }" :loading="loading.categories" :error="Boolean(errors.categories)" :empty="!categories.length" :empty-title="t('home.emptyCategories')" dense @retry="loadSection('categories', fetchCategories)">
+            <CategoryCard v-for="category in categories.slice(0, 12)" :key="category.id" :category="category" compact />
+        </HomeCatalogSection>
 
-        <section class="border-y border-slate-200 bg-slate-50 py-20 sm:py-24">
-            <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                <SectionHeading :eyebrow="t('home.categoriesEyebrow')" :title="t('home.categoriesTitle')" :description="t('home.categoriesDescription')" centered />
-                <BaseAlert v-if="errors.categories" tone="danger" class="mt-8">{{ t('catalog.loadError') }} <button type="button" class="font-black underline" @click="loadSection('categories', fetchCategories)">{{ t('common.retry') }}</button></BaseAlert>
-                <div v-if="loading.categories" class="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4"><div v-for="index in 4" :key="index" class="h-44 animate-pulse rounded-3xl bg-slate-200" /></div>
-                <div v-else-if="categories.length" class="mt-10 flex flex-wrap justify-center gap-5">
-                    <CategoryCard v-for="category in categories.slice(0, 8)" :key="category.id" :category="category" class="w-full sm:w-[calc((100%-1.25rem)/2)] lg:w-[calc((100%-3.75rem)/4)]" />
-                </div>
-                <EmptyState v-else-if="!errors.categories" class="mt-10" :title="t('home.emptyCategories')" />
-            </div>
-        </section>
+        <HomeCatalogSection id="packages" :item-count="packages.length" :title="t('home.packagesTitle')" :destination="{ name: 'packages.index' }" :loading="loading.packages" :error="Boolean(errors.packages)" :empty="!packages.length" :empty-title="t('home.emptyPackages')" @retry="loadSection('packages', () => fetchPackages({ sort: 'latest', per_page: 12 }))">
+            <PackageCard v-for="packageItem in packages" :key="packageItem.id" :package-item="packageItem" compact />
+        </HomeCatalogSection>
 
-        <section v-if="loading.packages || packages.length || errors.packages" class="bg-white py-20 sm:py-24"><div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"><div class="flex flex-wrap items-end justify-between gap-6"><SectionHeading :eyebrow="t('home.packagesEyebrow')" :title="t('home.packagesTitle')" :description="t('home.packagesDescription')" /><RouterLink :to="{ name: 'packages.index' }" class="rounded-xl px-4 py-2 text-sm font-black text-brand hover:bg-brand-soft">{{ t('common.viewAll') }} <span aria-hidden="true">{{ locale === 'ar' ? '←' : '→' }}</span></RouterLink></div><BaseAlert v-if="errors.packages" tone="danger" class="mt-8">{{ t('catalog.loadError') }} <button type="button" class="font-black underline" @click="loadSection('packages', () => fetchPackages({ sort: 'latest', per_page: 3 }))">{{ t('common.retry') }}</button></BaseAlert><div v-if="loading.packages" class="mt-10 grid gap-6 md:grid-cols-2 xl:grid-cols-3"><CatalogSkeleton v-for="index in 3" :key="index" /></div><div v-else-if="packages.length" class="mt-10 grid gap-6 md:grid-cols-2 xl:grid-cols-3"><PackageCard v-for="packageItem in packages" :key="packageItem.id" :package-item="packageItem" /></div></div></section>
+        <HomeCatalogSection id="courses" :item-count="courses.length" :title="t('home.recentTitle')" :destination="{ name: 'courses.index' }" :loading="loading.courses" :error="Boolean(errors.courses)" :empty="!courses.length" :empty-title="t('home.emptyCourses')" @retry="loadSection('courses', () => fetchCourses({ sort: 'latest', per_page: 12 }))">
+            <CourseCard v-for="course in courses" :key="course.id" :course="course" compact />
+        </HomeCatalogSection>
 
-        <section id="how-it-works" class="scroll-mt-24 bg-brand-dark py-20 text-white sm:py-24"><div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"><SectionHeading :eyebrow="t('home.howEyebrow')" :title="t('home.howTitle')" :description="t('home.howDescription')" centered class="[&_h2]:text-white [&_p]:text-white/60" /><div class="mt-14 grid gap-5 md:grid-cols-3"><article v-for="(step, index) in [{ title: t('home.stepExplore'), text: t('home.stepExploreText') }, { title: t('home.stepLearn'), text: t('home.stepLearnText') }, { title: t('home.stepGrow'), text: t('home.stepGrowText') }]" :key="step.title" class="relative rounded-3xl border border-white/10 bg-white/[0.06] p-7"><span class="text-5xl font-black text-accent/25">0{{ index + 1 }}</span><h3 class="mt-5 text-xl font-black">{{ step.title }}</h3><p class="mt-3 text-sm leading-7 text-white/60">{{ step.text }}</p></article></div></div></section>
+        <HomeCatalogSection id="instructors" :item-count="instructors.length" :title="t('home.instructorsTitle')" :destination="{ name: 'instructors.index' }" :loading="loading.instructors" :error="Boolean(errors.instructors)" :empty="!instructors.length" :empty-title="t('discovery.noInstructors')" @retry="loadSection('instructors', fetchInstructors)">
+            <RouterLink v-for="instructor in instructors" :key="instructor.id" :to="{ name: 'instructors.show', params: { id: instructor.id } }" class="group overflow-hidden rounded-xl border border-slate-200 bg-white text-center shadow-sm transition hover:-translate-y-1 focus-visible:outline-3 focus-visible:outline-brand">
+                <MediaFrame :src="instructor.avatar" :alt="instructor.name" ratio="square" />
+                <div class="p-4"><h3 class="text-lg font-black text-slate-900">{{ instructor.name }}</h3><p v-if="instructor.profile?.job_title" class="mt-2 text-sm text-brand">{{ instructor.profile.job_title }}</p></div>
+            </RouterLink>
+        </HomeCatalogSection>
 
-        <section class="bg-slate-50 py-20 sm:py-24"><div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"><SectionHeading :eyebrow="t('home.whyEyebrow')" :title="t('home.whyTitle')" centered /><div class="mt-12 grid gap-6 md:grid-cols-3"><article v-for="item in [{ icon: '01', title: t('home.whyPractical'), text: t('home.whyPracticalText') }, { icon: '02', title: t('home.whyClear'), text: t('home.whyClearText') }, { icon: '03', title: t('home.whyFlexible'), text: t('home.whyFlexibleText') }]" :key="item.title" class="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm"><span class="grid size-12 place-items-center rounded-2xl bg-accent text-sm font-black text-brand-dark">{{ item.icon }}</span><h3 class="mt-5 text-xl font-black text-slate-950">{{ item.title }}</h3><p class="mt-3 text-sm leading-7 text-slate-600">{{ item.text }}</p></article></div></div></section>
+        <section id="how-it-works" class="scroll-mt-24 bg-white py-20 text-slate-900 sm:py-24"><div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"><SectionHeading :eyebrow="t('home.howEyebrow')" :title="t('home.howTitle')" :description="t('home.howDescription')" centered class="[&_h2]:text-slate-950 [&_p]:text-slate-600" /><div class="mt-14 grid gap-5 md:grid-cols-3"><article v-for="(step, index) in [{ title: t('home.stepExplore'), text: t('home.stepExploreText') }, { title: t('home.stepLearn'), text: t('home.stepLearnText') }, { title: t('home.stepGrow'), text: t('home.stepGrowText') }]" :key="step.title" class="relative rounded-3xl border border-slate-200 bg-slate-50 p-7"><span class="text-5xl font-black text-primary">0{{ index + 1 }}</span><h3 class="mt-5 text-xl font-black">{{ step.title }}</h3><p class="mt-3 text-sm leading-7 text-slate-600">{{ step.text }}</p></article></div></div></section>
 
-        <section class="bg-white py-20"><div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"><div class="relative overflow-hidden rounded-[2rem] bg-brand p-8 text-white shadow-2xl shadow-brand/20 sm:p-12 lg:flex lg:items-center lg:justify-between lg:gap-10"><div class="absolute -end-20 -top-20 size-64 rounded-full bg-accent/15" /><div class="relative max-w-2xl"><h2 class="text-3xl font-black sm:text-4xl">{{ t('home.ctaTitle') }}</h2><p class="mt-4 leading-7 text-white/70">{{ t('home.ctaText') }}</p></div><RouterLink :to="{ name: 'courses.index' }" class="relative mt-7 inline-flex rounded-2xl bg-accent px-6 py-3 font-black text-brand-dark transition hover:-translate-y-1 lg:mt-0">{{ t('home.browseCourses') }}</RouterLink></div></div></section>
-        <section class="border-t border-slate-200 bg-slate-50 py-20"><div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"><div class="flex flex-wrap items-end justify-between gap-4"><SectionHeading :title="t('discovery.featuredInstructors')" /><RouterLink :to="{ name: 'instructors.index' }" class="font-bold text-brand underline">{{ t('common.viewAll') }}</RouterLink></div><BaseAlert v-if="errors.instructors" tone="danger" class="mt-6">{{ t('catalog.loadError') }}</BaseAlert><div v-else-if="instructors.length" class="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4"><RouterLink v-for="instructor in instructors" :key="instructor.id" :to="{ name: 'instructors.show', params: { id: instructor.id } }" class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 focus-visible:outline-3 focus-visible:outline-brand"><h3 class="font-black text-slate-900">{{ instructor.name }}</h3><p v-if="instructor.profile?.job_title" class="mt-2 text-sm text-brand">{{ instructor.profile.job_title }}</p><p v-if="instructor.profile?.short_bio" class="mt-3 line-clamp-3 text-sm leading-6 text-slate-600">{{ instructor.profile.short_bio }}</p></RouterLink></div><p v-else-if="!loading.instructors" class="mt-6 text-slate-600">{{ t('discovery.noInstructors') }}</p></div></section>
-        <section class="bg-white py-20"><div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"><SectionHeading :title="t('discovery.learnerReviews')" /><BaseAlert v-if="errors.testimonials" tone="danger" class="mt-6">{{ t('catalog.loadError') }}</BaseAlert><div v-else-if="testimonials.length" class="mt-8 grid gap-5 md:grid-cols-2 lg:grid-cols-3"><ReviewCard v-for="review in testimonials" :key="`${review.course?.slug}-${review.published_at}`" :review="review" /></div><p v-else-if="!loading.testimonials" class="mt-6 text-slate-600">{{ t('discovery.noReviews') }}</p></div></section>
+        <HomeCatalogSection id="reviews" :item-count="testimonials.length" :title="t('home.reviewsTitle')" :loading="loading.testimonials" :error="Boolean(errors.testimonials)" :empty="!testimonials.length" :empty-title="t('discovery.noReviews')" @retry="loadSection('testimonials', fetchTestimonials)">
+            <ReviewCard v-for="review in testimonials" :key="`${review.course?.slug}-${review.published_at}`" :review="review" />
+        </HomeCatalogSection>
+
     </div>
 </template>

@@ -50,7 +50,7 @@ watch(() => route.query, load, { immediate: true, deep: true });
             <AsyncResourceSelect v-model="filters.actor_id" id="audit-actor" :loader="fetchAdminUsers" :resolver="fetchAdminUser" :label="t('audit.actor')" />
             <label class="sr-only" for="audit-from">{{ t('audit.from') }}</label><input id="audit-from" v-model="filters.from" type="date" class="min-h-11 rounded-xl border border-slate-300 px-4">
             <label class="sr-only" for="audit-to">{{ t('audit.to') }}</label><input id="audit-to" v-model="filters.to" type="date" class="min-h-11 rounded-xl border border-slate-300 px-4">
-            <div class="flex gap-2"><button type="submit" class="min-h-11 flex-1 rounded-xl bg-brand px-4 font-bold text-white">{{ t('audit.filter') }}</button><button type="button" class="min-h-11 rounded-xl border border-slate-300 px-4" @click="router.push({ name: 'admin.audit.index' })">{{ t('audit.reset') }}</button></div>
+            <div class="flex gap-2"><button type="submit" class="min-h-11 flex-1 rounded-xl bg-primary px-4 font-bold text-brand-dark">{{ t('audit.filter') }}</button><button type="button" class="min-h-11 rounded-xl border border-slate-300 px-4" @click="router.push({ name: 'admin.audit.index' })">{{ t('audit.reset') }}</button></div>
         </form>
         <LoadingState v-if="loading" />
         <BaseAlert v-else-if="error" tone="danger">{{ t('audit.loadError') }}</BaseAlert>

@@ -20,7 +20,7 @@ onBeforeUnmount(() => { document.body.style.overflow = ''; });
 <template>
     <div class="app-shell relative min-h-screen overflow-x-clip bg-[#f7f6f6] text-slate-900" @keydown.esc="drawerOpen = false">
         <a href="#workspace-content" class="fixed start-4 top-3 z-[70] -translate-y-24 rounded-xl bg-accent px-4 py-2 text-sm font-bold text-brand-dark shadow-lg transition focus:translate-y-0">{{ t('common.skipContent') }}</a>
-        <div class="pointer-events-none absolute inset-x-0 top-0 h-80 bg-[radial-gradient(ellipse_at_65%_0%,rgba(107,29,50,.06),transparent_68%)]" />
+        <div class="pointer-events-none absolute inset-x-0 top-0 h-80 bg-[radial-gradient(ellipse_at_65%_0%,rgba(245,189,22,.06),transparent_68%)]" />
         <div class="fixed inset-y-0 start-0 z-30 hidden w-72 lg:block"><AppSidebar :area="area" /></div>
         <div class="relative min-h-screen lg:ps-72">
             <AppHeader :area="area" @open-menu="drawerOpen = true" />
