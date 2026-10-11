@@ -48,6 +48,50 @@ describe('message reconciliation', () => {
 });
 
 describe('shared messenger', () => {
+    it('keeps the inbox heading compact with its title and unread count', async () => {
+        const wrapper = render(CourseMessenger, { courseId: 1 });
+        await flushPromises();
+
+        const heading = wrapper.get('section > header');
+        expect(heading.classes()).toContain('min-h-15');
+        expect(heading.text()).toContain('Course messages');
+        expect(heading.text()).toMatch(/\d+ unread/);
+        expect(heading.text()).not.toContain('YOUR COURSE INBOX');
+        expect(heading.text()).not.toContain('Updates automatically');
+    });
+    it('scrolls to a new incoming message without jumping on read updates or history search', async () => {
+        const wrapper = render(CourseMessenger, { courseId: 1 });
+        await flushPromises();
+        await wrapper.find('nav button').trigger('click');
+        await flushPromises();
+        const feed = wrapper.get('.conversation-feed').element;
+        Object.defineProperty(feed, 'scrollHeight', { configurable: true, value: 800 });
+        feed.scrollTop = 40;
+        const incoming = { ...message, id: 9, client_id: 'incoming-9', body: 'A new message' };
+        api.fetchEvents.mockResolvedValue({ data: [{ version: 2, kind: 'message', subject_id: 9 }], version: 2 });
+        api.fetchMessages.mockResolvedValue({ items: [message, incoming], meta: {} });
+        api.fetchMessage.mockResolvedValue(incoming);
+
+        await vi.advanceTimersByTimeAsync(5000);
+        await flushPromises();
+
+        expect(wrapper.text()).toContain('A new message');
+        expect(feed.scrollTop).toBe(800);
+
+        feed.scrollTop = 120;
+        api.fetchEvents.mockResolvedValue({ data: [{ version: 3, kind: 'read', subject_id: 2 }], version: 3 });
+        await vi.advanceTimersByTimeAsync(5000);
+        await flushPromises();
+        expect(feed.scrollTop).toBe(120);
+
+        feed.scrollTop = 160;
+        api.fetchMessages.mockResolvedValue({ items: [{ ...message, id: 20, body: 'Historical search result' }], meta: {} });
+        await wrapper.get('button[aria-label="Search message history"]').trigger('click');
+        await wrapper.get('#message-search').setValue('Historical');
+        await wrapper.find('#message-search').element.closest('form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+        await flushPromises();
+        expect(feed.scrollTop).toBe(160);
+    });
     it.each(['button', 'enter'])('shows a clock immediately after %s send, a check on server acceptance and blue double checks after reading', async (method) => {
         const pending = deferred();
         api.sendMessage.mockReturnValue(pending.promise);
@@ -145,17 +189,25 @@ describe('shared messenger', () => {
         expect(api.startPrivate).toHaveBeenCalledWith(1); expect(api.fetchConversation).toHaveBeenCalledWith(3);
     });
     it('renders the shared unified inbox and exposes unread filtering', async () => {
-        const wrapper = render(CourseMessenger); await flushPromises();
+        const wrapper = render(CourseMessenger, {}, { attachTo: document.body }); await flushPromises();
         expect(wrapper.find('select').exists()).toBe(true);
-        await wrapper.find('input[type=checkbox]').setValue(true); await flushPromises();
+        expect(wrapper.find('#conversation-search').exists()).toBe(false);
+        expect(wrapper.get('nav').classes()).toContain('md:flex-1');
+        await wrapper.get('button[aria-label="Search"]').trigger('click');
+        expect(document.activeElement).toBe(wrapper.get('#conversation-search').element);
+        await wrapper.get('input[type=checkbox]').setValue(true); await flushPromises();
         expect(api.fetchConversations).toHaveBeenLastCalledWith(expect.objectContaining({ unread: 1 }));
+        await wrapper.get('#conversation-search').trigger('keydown', { key: 'Escape' });
+        await nextTick();
+        expect(wrapper.find('#conversation-search').exists()).toBe(false);
     });
     it('keeps history search scoped during polling and does not advance read cursors through search', async () => {
         const wrapper = render(CourseMessenger, { courseId: 1 }); await flushPromises();
         await wrapper.find('nav button').trigger('click'); await flushPromises();
         api.markRead.mockClear();
         api.fetchMessages.mockResolvedValue({ items: [{ ...message, id: 4, body: 'Matched history' }], meta: {} });
-        await wrapper.find('#message-search').setValue('Matched');
+        await wrapper.get('button[aria-label="Search message history"]').trigger('click');
+        await wrapper.get('#message-search').setValue('Matched');
         await wrapper.find('#message-search').element.closest('form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); await flushPromises();
         api.fetchEvents.mockResolvedValue({ data: [{ version: 2, kind: 'message', subject_id: 9 }], version: 2 });
         await vi.advanceTimersByTimeAsync(5000); await flushPromises();
@@ -166,13 +218,39 @@ describe('shared messenger', () => {
     it('makes the active search state clearable without leaving the conversation', async () => {
         const wrapper = render(CourseMessenger, { courseId: 1 }); await flushPromises();
         await wrapper.find('nav button').trigger('click'); await flushPromises();
-        await wrapper.find('#message-search').setValue('Matched');
+        await wrapper.get('button[aria-label="Search message history"]').trigger('click');
+        await wrapper.get('#message-search').setValue('Matched');
         await wrapper.find('#message-search').element.closest('form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); await flushPromises();
 
         expect(wrapper.text()).toContain('Showing search results');
         await wrapper.find('button[aria-label="Clear message search"]').trigger('click'); await flushPromises();
         expect(api.fetchMessages).toHaveBeenLastCalledWith(3, { search: undefined });
         expect(wrapper.find('textarea').exists()).toBe(true);
+    });
+    it('opens message search from the header icon and closes it with Escape', async () => {
+        const wrapper = render(CourseMessenger, { courseId: 1 }, { attachTo: document.body });
+        await flushPromises();
+        await wrapper.get('nav button').trigger('click');
+        await flushPromises();
+
+        const searchButton = wrapper.get('button[aria-label="Search message history"]');
+        expect(wrapper.find('#message-search').exists()).toBe(false);
+        await searchButton.trigger('click');
+        expect(document.activeElement).toBe(wrapper.get('#message-search').element);
+        await wrapper.get('#message-search').trigger('keydown', { key: 'Escape' });
+        await nextTick();
+        expect(wrapper.find('#message-search').exists()).toBe(false);
+        expect(document.activeElement).toBe(searchButton.element);
+    });
+    it('keeps voice playback without a separate voice-download link', async () => {
+        api.fetchMessages.mockResolvedValue({ items: [{ ...message, attachments: [{ id: 1, kind: 'voice', name: 'note.webm', url: '/private/voice', duration: 12 }] }], meta: {} });
+        const wrapper = render(CourseMessenger, { courseId: 1 });
+        await flushPromises();
+        await wrapper.get('nav button').trigger('click');
+        await flushPromises();
+
+        expect(wrapper.find('audio[src="/private/voice"]').exists()).toBe(true);
+        expect(wrapper.find('a[download]').exists()).toBe(false);
     });
     it('clears private content when access is revoked during catch-up', async () => {
         const wrapper = render(CourseMessenger, { courseId: 1 }); await flushPromises(); await wrapper.find('nav button').trigger('click'); await flushPromises();
@@ -235,10 +313,29 @@ describe('shared messenger', () => {
         await wrapper.find('nav button').trigger('click'); await flushPromises();
 
         const timestamp = wrapper.get('article time');
-        expect(timestamp.text()).toBe('15 minutes ago');
+        expect(timestamp.text()).toBe('15m');
         expect(timestamp.attributes('title')).toContain('October 10, 2026');
         await vi.advanceTimersByTimeAsync(60000);
-        expect(timestamp.text()).toBe('16 minutes ago');
+        expect(timestamp.text()).toBe('16m');
+    });
+    it('shows the requested compact Arabic time units and two-part intervals', async () => {
+        setLocale('ar');
+        vi.setSystemTime(new Date('2026-10-10T12:00:00Z'));
+        const intervals = [
+            [15, '15ث'], [1500, '25د'], [3600, '1س'], [4800, '1س 20د'],
+            [86400, '1ي'], [122400, '1ي 10س'], [604800, '1اسبوع'],
+            [1036800, '1اسبوع 5ي'], [2592000, '1شهر'], [31536000, '1سنة'],
+        ];
+        api.fetchMessages.mockResolvedValue({
+            items: intervals.map(([seconds], index) => ({ ...message, id: 20 + index, client_id: `relative-${index}`, created_at: new Date(Date.now() - seconds * 1000).toISOString() })),
+            meta: {},
+        });
+        const wrapper = render(CourseMessenger, { courseId: 1 });
+        await flushPromises();
+        await wrapper.find('nav button').trigger('click');
+        await flushPromises();
+
+        expect(wrapper.findAll('article time').map((timestamp) => timestamp.text())).toEqual(intervals.map(([, expected]) => expected));
     });
     it('enlarges emoji graphemes in messages without rendering HTML', async () => {
         api.fetchMessages.mockResolvedValue({ items: [{ ...message, body: 'Hello 👩‍💻 🇵🇸 <script>x</script>' }], meta: {} });
@@ -404,7 +501,7 @@ describe('mobile conversation dialog', () => {
 
         expect(document.querySelector('[aria-modal="true"]')).toBeNull();
         expect(wrapper.find('textarea').exists()).toBe(true);
-        expect(wrapper.get('textarea').element.rows).toBe(3);
+        expect(wrapper.get('textarea').element.rows).toBe(1);
         expect(wrapper.text()).toContain(message.body);
         expect(document.body.style.position).toBe('');
     });

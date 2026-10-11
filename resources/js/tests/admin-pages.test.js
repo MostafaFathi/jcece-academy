@@ -84,6 +84,15 @@ describe('admin dashboard and lists', () => {
         expect(document.documentElement.dir).toBe('rtl');
         wrapper.unmount();
     });
+    it.each(['student', 'instructor'])('lets the %s messaging workspace use the viewport below the dashboard header', (area) => {
+        state.route.name = `${area}.messages`;
+        state.route.matched = [];
+        const wrapper = render(AppShellLayout, { area });
+
+        expect(wrapper.get('main').classes()).toContain('pb-4');
+        expect(wrapper.get('main').classes()).not.toContain('pb-28');
+        wrapper.unmount();
+    });
 });
 
 describe('admin forms', () => {

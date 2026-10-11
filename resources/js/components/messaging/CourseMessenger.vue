@@ -22,12 +22,22 @@ const reply = ref(null);
 const deleteId = ref(null);
 const historySearch = ref('');
 const historyMode = ref(false);
+const searchOpen = ref(false);
+const listFiltersOpen = ref(false);
 const listBusy = ref(false);
 const historyBusy = ref(false);
+const workspaceGrid = ref(null);
+const desktopGridHeight = ref(null);
 const feed = ref(null);
 const composer = ref(null);
 const conversationDialog = ref(null);
 const closeButton = ref(null);
+const searchButton = ref(null);
+const searchPopover = ref(null);
+const searchInput = ref(null);
+const listFilterButton = ref(null);
+const listFilterPopover = ref(null);
+const listSearchInput = ref(null);
 const mobileQuery = window.matchMedia?.('(max-width: 767px)');
 const mobile = ref(mobileQuery?.matches ?? false);
 const viewportStyle = ref({});
@@ -56,6 +66,46 @@ function updateViewport() {
 
 function updateMobile(event) { mobile.value = event.matches; }
 
+function resizeDesktopWorkspace() {
+    if (mobile.value || !workspaceGrid.value) { desktopGridHeight.value = null; return; }
+    const top = workspaceGrid.value.getBoundingClientRect().top + window.scrollY;
+    const main = workspaceGrid.value.closest('main');
+    const bottomPadding = main ? Number.parseFloat(window.getComputedStyle(main).paddingBottom) || 0 : 16;
+    desktopGridHeight.value = `${Math.max(280, Math.floor(window.innerHeight - top - Math.max(bottomPadding, 16)))}px`;
+}
+
+async function openSearch() {
+    searchOpen.value = true;
+    await nextTick();
+    searchInput.value?.focus({ preventScroll: true });
+}
+
+function closeSearch(restoreFocus = true) {
+    searchOpen.value = false;
+    if (restoreFocus) void nextTick(() => searchButton.value?.focus({ preventScroll: true }));
+}
+
+function closeSearchOnOutside(event) {
+    if (searchOpen.value && !searchPopover.value?.contains(event.target) && !searchButton.value?.contains(event.target)) closeSearch(false);
+    if (listFiltersOpen.value && !listFilterPopover.value?.contains(event.target) && !listFilterButton.value?.contains(event.target)) listFiltersOpen.value = false;
+}
+
+async function openListFilters() {
+    listFiltersOpen.value = true;
+    await nextTick();
+    listSearchInput.value?.focus({ preventScroll: true });
+}
+
+function closeListFilters() {
+    listFiltersOpen.value = false;
+    void nextTick(() => listFilterButton.value?.focus({ preventScroll: true }));
+}
+
+async function searchConversations() {
+    listFiltersOpen.value = false;
+    await load();
+}
+
 function unlockPage() {
     restorePage?.();
     restorePage = null;
@@ -79,6 +129,7 @@ function lockPage() {
 
 async function closeConversation() {
     releaseOverlayHistory();
+    closeSearch(false);
     closeReactionMenu();
     wizard.value = null;
     reply.value = null;
@@ -112,6 +163,7 @@ watch([mobile, () => selected.value?.id], async ([isMobile, id]) => {
     }
     closeButton.value?.focus({ preventScroll: true });
 });
+watch([mobile, error, online, locale], async () => { await nextTick(); resizeDesktopWorkspace(); });
 const deleteDialog = ref(null);
 const reactionMenu = ref(null);
 const reactionMenuElement = ref(null);
@@ -223,10 +275,25 @@ function toggledReactions(reactions, emoji) {
 function relativeTime(value) {
     const createdAt = Date.parse(value);
     if (!Number.isFinite(createdAt)) return value;
-    const elapsed = Math.round((createdAt - clock.value) / 1000);
-    const units = [['year', 31536000], ['month', 2592000], ['week', 604800], ['day', 86400], ['hour', 3600], ['minute', 60]];
-    const [unit, seconds] = units.find(([, duration]) => Math.abs(elapsed) >= duration) ?? ['second', 1];
-    return new Intl.RelativeTimeFormat(locale.value, { numeric: 'auto' }).format(Math.round(elapsed / seconds), unit);
+    let remaining = Math.max(0, Math.floor((clock.value - createdAt) / 1000));
+    const arabic = locale.value === 'ar';
+    const units = [
+        [31536000, arabic ? 'سنة' : 'y'],
+        [2592000, arabic ? 'شهر' : 'mo'],
+        [604800, arabic ? 'اسبوع' : 'w'],
+        [86400, arabic ? 'ي' : 'd'],
+        [3600, arabic ? 'س' : 'h'],
+        [60, arabic ? 'د' : 'm'],
+        [1, arabic ? 'ث' : 's'],
+    ];
+    const parts = [];
+    for (const [duration, label] of units) {
+        const amount = Math.floor(remaining / duration);
+        if (amount > 0 || (duration === 1 && !parts.length)) parts.push(`${amount}${label}`);
+        remaining %= duration;
+        if (parts.length === 2) break;
+    }
+    return parts.join(' ');
 }
 
 function fullTime(value) {
@@ -258,17 +325,22 @@ function sendStatus(message) {
 }
 
 onMounted(() => {
+    void nextTick(resizeDesktopWorkspace);
+    window.addEventListener('resize', resizeDesktopWorkspace);
+    document.addEventListener('pointerdown', closeSearchOnOutside);
     window.addEventListener('popstate', onPopState);
     mobileQuery?.addEventListener('change', updateMobile);
     window.visualViewport?.addEventListener('resize', updateViewport);
     window.visualViewport?.addEventListener('scroll', updateViewport);
     document.addEventListener('keydown', onDialogKeydown);
-    clockInterval = window.setInterval(() => { clock.value = Date.now(); }, 60000);
+    clockInterval = window.setInterval(() => { clock.value = Date.now(); }, 1000);
     document.addEventListener('pointerdown', closeReactionMenuOnOutside);
     window.addEventListener('scroll', dismissReactionMenu, true);
     window.addEventListener('resize', dismissReactionMenu);
 });
 onBeforeUnmount(() => {
+    window.removeEventListener('resize', resizeDesktopWorkspace);
+    document.removeEventListener('pointerdown', closeSearchOnOutside);
     window.removeEventListener('popstate', onPopState);
     unlockPage();
     mobileQuery?.removeEventListener('change', updateMobile);
@@ -281,6 +353,15 @@ onBeforeUnmount(() => {
     window.removeEventListener('resize', dismissReactionMenu);
 });
 watch(selected, dismissReactionMenu);
+watch(messages, async (current, previous) => {
+    if (!selected.value || loading.value || historyBusy.value || historyMode.value) return;
+    const latestPreviousId = previous.reduce((latest, message) => Math.max(latest, Number(message.id) || 0), 0);
+    const hasNewIncomingMessage = current.some((message) => Number(message.id) > latestPreviousId && message.user?.id !== auth.user?.id);
+    if (!hasNewIncomingMessage) return;
+    const conversationId = selected.value.id;
+    await nextTick();
+    if (selected.value?.id === conversationId && !historyBusy.value && !historyMode.value && feed.value) feed.value.scrollTop = feed.value.scrollHeight;
+});
 
 async function load(pageNumber = 1) {
     if (listBusy.value) return;
@@ -304,6 +385,8 @@ watch(courseFilter, () => { wizard.value = null; load(); });
 async function select(conversation, event) {
     if (sending.value) return;
     conversationTrigger = event?.currentTarget ?? document.activeElement;
+    closeSearch(false);
+    listFiltersOpen.value = false;
     closeReactionMenu();
     reply.value = null;
     deleteId.value = null;
@@ -368,26 +451,20 @@ async function searchHistory() {
     if (!selected.value || historyBusy.value) return;
     closeReactionMenu();
     historyBusy.value = true;
-    try { await chat.searchMessages(historySearch.value); historyMode.value = !!historySearch.value.trim(); }
+    try { await chat.searchMessages(historySearch.value); historyMode.value = !!historySearch.value.trim(); closeSearch(false); }
     catch (failure) { error.value = failure; }
     finally { historyBusy.value = false; }
 }
 </script>
 
 <template>
-    <section class="min-w-0 space-y-5" :dir="locale === 'ar' ? 'rtl' : 'ltr'" :aria-label="t('messaging.title')">
-        <header class="relative overflow-hidden rounded-[1.75rem] bg-[linear-gradient(120deg,#32131f,#6b1d32)] px-5 py-6 text-white shadow-[0_18px_45px_rgba(64,23,37,.14)] sm:px-7">
-            <div class="pointer-events-none absolute -end-12 -top-20 size-56 rounded-full border border-white/10" aria-hidden="true" />
-            <div class="relative flex flex-wrap items-center justify-between gap-4">
-                <div class="flex min-w-0 items-center gap-4">
-                    <span class="grid size-12 shrink-0 place-items-center rounded-2xl border border-white/15 bg-white/10 text-accent"><MessagingIcon name="messages" class="size-6" /></span>
-                    <div class="min-w-0"><p class="text-xs font-bold tracking-wide text-white/60">{{ t('messaging.inboxLabel') }}</p><h2 class="text-2xl font-black tracking-tight sm:text-3xl">{{ t('messaging.title') }}</h2></div>
-                </div>
-                <div class="flex flex-wrap items-center gap-2 text-xs font-bold">
-                    <span class="rounded-full bg-white/10 px-3 py-2 text-white">{{ t('messaging.unreadCount', { count: notificationCount }) }}</span>
-                    <span class="inline-flex items-center gap-2 rounded-full border border-white/15 px-3 py-2 text-white/80"><span class="size-2 rounded-full" :class="online ? 'bg-emerald-400' : 'bg-amber-300'" />{{ online ? t('messaging.polling') : t('messaging.offlineStatus') }}</span>
-                </div>
+    <section class="min-w-0 space-y-3" :dir="locale === 'ar' ? 'rtl' : 'ltr'" :aria-label="t('messaging.title')">
+        <header class="flex min-h-15 min-w-0 items-center justify-between gap-3 rounded-2xl bg-[linear-gradient(120deg,#32131f,#6b1d32)] px-4 py-2.5 text-white shadow-[0_10px_28px_rgba(64,23,37,.12)] sm:px-5">
+            <div class="flex min-w-0 items-center gap-2.5">
+                <span class="grid size-9 shrink-0 place-items-center rounded-xl border border-white/15 bg-white/10 text-accent" aria-hidden="true"><MessagingIcon name="messages" class="size-5" /></span>
+                <h2 class="min-w-0 truncate text-lg font-black tracking-tight sm:text-xl">{{ t('messaging.title') }}</h2>
             </div>
+            <span aria-live="polite" class="shrink-0 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-bold text-white">{{ t('messaging.unreadCount', { count: notificationCount }) }}</span>
         </header>
 
         <div v-if="!online" role="status" class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-950">{{ t('messaging.offline') }}</div>
@@ -396,19 +473,17 @@ async function searchHistory() {
             <button type="button" class="min-h-11 rounded-xl border border-red-200 bg-white px-4 font-bold transition hover:bg-red-100 focus-visible:outline-3 focus-visible:outline-red-600" @click="chat.sync(); load()">{{ t('messaging.retry') }}</button>
         </div>
 
-        <div class="grid min-w-0 gap-4 xl:grid-cols-[minmax(18rem,21rem)_minmax(0,1fr)]">
-            <aside class="flex min-w-0 flex-col gap-4 overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white shadow-[0_8px_28px_rgba(40,20,28,.04)]">
-                <div class="space-y-4 border-b border-slate-100 p-4 sm:p-5">
-                    <div class="flex items-center justify-between gap-3"><h3 class="text-base font-black text-slate-950">{{ t('messaging.conversations') }}</h3><span class="rounded-full bg-brand-soft px-2.5 py-1 text-xs font-black text-brand">{{ conversations.length }}</span></div>
-                    <label v-if="!courseId" class="block text-xs font-bold text-slate-600">{{ t('messaging.course') }}<select v-model="courseFilter" class="mt-1.5 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900"><option value="">{{ t('messaging.allCourses') }}</option><option v-for="course in courses" :key="course.id" :value="course.id">{{ course.title }}</option></select></label>
-                    <form class="flex min-w-0 gap-2" @submit.prevent="load()"><label class="sr-only" for="conversation-search">{{ t('messaging.search') }}</label><div class="relative min-w-0 flex-1"><MessagingIcon name="search" class="pointer-events-none absolute start-3 top-3.5 size-4 text-slate-400" /><input id="conversation-search" v-model="search" :placeholder="t('messaging.search')" maxlength="120" class="min-h-11 w-full rounded-xl border border-slate-300 bg-white pe-3 ps-10 text-sm"></div><button class="min-h-11 rounded-xl border border-slate-200 px-3 text-sm font-bold text-brand transition hover:bg-brand-soft focus-visible:outline-3 focus-visible:outline-brand" type="submit">{{ t('messaging.search') }}</button></form>
-                    <label class="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-xl px-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"><input v-model="unread" type="checkbox" class="size-4 accent-brand" @change="load()">{{ t('messaging.unreadOnly') }}</label>
-                    <div v-if="selectedCourse" class="flex flex-wrap gap-2"><button v-if="auth.can('messaging.send')" type="button" class="inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary px-3 text-xs font-extrabold text-brand-dark transition hover:bg-primary-hover focus-visible:outline-3 focus-visible:outline-brand disabled:opacity-50" :disabled="sending" @click="start"><MessagingIcon name="plus" class="size-4" />{{ t('messaging.startPrivate') }}</button><button v-if="selectedCourse.can_manage" type="button" class="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 px-3 text-xs font-bold text-brand transition hover:bg-brand-soft focus-visible:outline-3 focus-visible:outline-brand" @click="wizard = 'group'"><MessagingIcon name="users" class="size-4" />{{ t('messaging.newGroup') }}</button></div>
-                    <p v-else-if="!courseId" class="text-xs leading-5 text-slate-500">{{ t('messaging.chooseCourse') }}</p>
+        <div ref="workspaceGrid" class="grid min-w-0 gap-4 md:min-h-0 md:grid-cols-[minmax(13rem,16rem)_minmax(0,1fr)] xl:grid-cols-[minmax(17rem,20rem)_minmax(0,1fr)]" :style="mobile ? undefined : { height: desktopGridHeight }">
+            <aside class="flex min-w-0 flex-col overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white shadow-[0_8px_28px_rgba(40,20,28,.04)] md:min-h-0">
+                <div class="relative z-20 shrink-0 space-y-2 border-b border-slate-100 p-3">
+                    <div class="flex min-w-0 items-center gap-2"><h3 class="min-w-0 flex-1 truncate text-base font-black text-slate-950">{{ t('messaging.conversations') }}</h3><span class="rounded-full bg-brand-soft px-2.5 py-1 text-xs font-black text-brand">{{ conversations.length }}</span><button ref="listFilterButton" type="button" class="relative grid size-10 shrink-0 place-items-center rounded-xl border border-slate-200 text-brand transition hover:bg-brand-soft focus-visible:outline-3 focus-visible:outline-brand" :aria-label="t('messaging.search')" :title="t('messaging.search')" :aria-expanded="listFiltersOpen" aria-controls="conversation-filters" @click="listFiltersOpen ? closeListFilters() : openListFilters()"><MessagingIcon name="search" class="size-5" /><span v-if="search || unread" class="absolute end-1 top-1 size-2 rounded-full bg-primary" /></button></div>
+                    <label v-if="!courseId" class="block"><span class="sr-only">{{ t('messaging.course') }}</span><select v-model="courseFilter" class="min-h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-900"><option value="">{{ t('messaging.allCourses') }}</option><option v-for="course in courses" :key="course.id" :value="course.id">{{ course.title }}</option></select></label>
+                    <div v-if="selectedCourse" class="flex flex-wrap gap-2"><button v-if="auth.can('messaging.send')" type="button" class="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-primary px-3 text-xs font-extrabold text-brand-dark transition hover:bg-primary-hover focus-visible:outline-3 focus-visible:outline-brand disabled:opacity-50" :disabled="sending" @click="start"><MessagingIcon name="plus" class="size-4" />{{ t('messaging.startPrivate') }}</button><button v-if="selectedCourse.can_manage" type="button" class="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-slate-200 px-3 text-xs font-bold text-brand transition hover:bg-brand-soft focus-visible:outline-3 focus-visible:outline-brand" @click="wizard = 'group'"><MessagingIcon name="users" class="size-4" />{{ t('messaging.newGroup') }}</button></div>
+                    <div v-if="listFiltersOpen" ref="listFilterPopover" id="conversation-filters" role="dialog" :aria-label="t('messaging.search')" class="absolute inset-x-3 top-full z-30 mt-2 rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_16px_40px_rgba(30,20,26,.2)]" @keydown.esc.stop.prevent="closeListFilters()"><form class="flex min-w-0 gap-2" @submit.prevent="searchConversations"><label class="sr-only" for="conversation-search">{{ t('messaging.search') }}</label><input ref="listSearchInput" id="conversation-search" v-model="search" :placeholder="t('messaging.search')" maxlength="120" class="min-h-11 min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-3 text-sm"><button class="min-h-11 rounded-xl bg-brand px-3 text-sm font-bold text-white transition hover:bg-brand/90 focus-visible:outline-3 focus-visible:outline-brand" type="submit">{{ t('messaging.search') }}</button></form><label class="mt-2 inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-xl px-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"><input v-model="unread" type="checkbox" class="size-4 accent-brand" @change="load()">{{ t('messaging.unreadOnly') }}</label></div>
                 </div>
                 <p v-if="listBusy" role="status" class="px-5 text-sm text-slate-500">{{ t('messaging.loading') }}</p>
                 <div v-else-if="!conversations.length" class="grid place-items-center gap-2 px-5 py-12 text-center"><span class="grid size-12 place-items-center rounded-2xl bg-brand-soft text-brand"><MessagingIcon name="messages" class="size-6" /></span><p class="text-sm font-semibold text-slate-600">{{ t('messaging.empty') }}</p></div>
-                <nav class="max-h-80 space-y-1.5 overflow-y-auto px-2 pb-3 xl:max-h-[42rem]" :aria-label="t('messaging.conversations')">
+                <nav class="max-h-80 space-y-1.5 overflow-y-auto px-2 py-2 md:min-h-0 md:flex-1 md:max-h-none" :aria-label="t('messaging.conversations')">
                     <button v-for="conversation in conversations" :key="conversation.id" type="button" class="group flex min-h-20 w-full items-center gap-3 rounded-2xl border px-3 py-3 text-start transition focus-visible:outline-3 focus-visible:outline-brand disabled:opacity-60" :class="selected?.id === conversation.id ? 'border-brand/25 bg-brand-soft shadow-[inset_3px_0_0_#6b1d32]' : 'border-transparent hover:border-slate-200 hover:bg-slate-50'" :aria-pressed="selected?.id === conversation.id" :disabled="sending" @click="select(conversation, $event)">
                         <span class="grid size-11 shrink-0 place-items-center rounded-xl" :class="conversation.kind === 'private' ? 'bg-slate-100 text-brand' : 'bg-amber-50 text-amber-800'"><MessagingIcon :name="conversation.kind === 'private' ? 'user' : 'users'" class="size-5" /></span>
                         <span class="min-w-0 flex-1"><span class="block truncate text-sm font-extrabold text-slate-900">{{ conversation.title }}</span><span class="mt-0.5 block truncate text-xs text-slate-500">{{ conversation.course.title }}</span><span class="mt-1 block text-[11px] font-bold text-slate-500">{{ t(`messaging.kind.${conversation.kind}`) }}</span></span>
@@ -418,25 +493,25 @@ async function searchHistory() {
                 <div v-if="lastPage > 1" class="flex items-center justify-between gap-2 border-t border-slate-100 px-4 py-2 text-xs font-bold text-slate-600"><button type="button" class="min-h-11 px-2 text-brand disabled:text-slate-400" :disabled="page <= 1 || listBusy" @click="load(page - 1)">{{ t('messaging.previous') }}</button><span>{{ page }}/{{ lastPage }}</span><button type="button" class="min-h-11 px-2 text-brand disabled:text-slate-400" :disabled="page >= lastPage || listBusy" @click="load(page + 1)">{{ t('messaging.next') }}</button></div>
             </aside>
 
-            <div class="min-w-0 space-y-4">
+            <div class="min-w-0 space-y-4 md:flex md:min-h-0 md:flex-col md:gap-4 md:space-y-0" :class="wizard ? 'md:overflow-y-auto' : ''">
                 <GroupWizard v-if="wizard && selectedCourse && !(mobile && selected)" :key="`${wizard}-${selected?.id ?? 0}`" :course="selectedCourse" :mode="wizard" :conversation="wizard === 'members' ? selected : null" @done="done" @cancel="wizard = null" />
                 <Teleport to="body" :disabled="!mobile">
-                <section v-if="selected" ref="conversationDialog" :role="mobile ? 'dialog' : undefined" :aria-modal="mobile ? true : undefined" :aria-label="selected.title" :dir="locale === 'ar' ? 'rtl' : 'ltr'" :style="mobile ? viewportStyle : undefined" :class="{ 'mobile-conversation': mobile }" class="flex min-w-0 flex-col overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white shadow-[0_8px_28px_rgba(40,20,28,.04)]">
-                    <header class="shrink-0 space-y-4 border-b border-slate-100 bg-white p-4 sm:p-5">
-                        <div class="flex flex-wrap items-center justify-between gap-3"><button v-if="mobile" ref="closeButton" type="button" class="grid size-11 shrink-0 place-items-center rounded-xl border border-slate-200 text-slate-700 focus-visible:outline-3 focus-visible:outline-brand" :aria-label="t('messaging.closeConversation')" @click="closeConversation"><MessagingIcon name="close" class="size-5" /></button><div class="flex min-w-0 flex-1 items-center gap-3"><span class="grid size-11 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand"><MessagingIcon :name="selected.kind === 'private' ? 'user' : 'users'" class="size-5" /></span><div class="min-w-0"><h3 class="truncate text-base font-black text-slate-950">{{ selected.title }}</h3><p class="flex min-w-0 items-center gap-1.5 truncate text-xs font-semibold text-slate-500"><MessagingIcon name="book" class="size-3.5 shrink-0" />{{ selected.course.title }} · {{ t(`messaging.kind.${selected.kind}`) }}</p></div></div><button v-if="selected.can_manage && selected.kind === 'selected'" type="button" class="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 px-3 text-sm font-bold text-brand transition hover:bg-brand-soft focus-visible:outline-3 focus-visible:outline-brand" @click="manage"><MessagingIcon name="users" class="size-4" />{{ t('messaging.manageMembers') }}</button></div>
-                        <form class="flex min-w-0 gap-2" @submit.prevent="searchHistory"><label class="sr-only" for="message-search">{{ t('messaging.searchMessages') }}</label><div class="relative min-w-0 flex-1"><MessagingIcon name="search" class="pointer-events-none absolute start-3 top-3.5 size-4 text-slate-400" /><input id="message-search" v-model="historySearch" maxlength="120" :placeholder="t('messaging.searchMessages')" class="min-h-11 w-full rounded-xl border border-slate-300 pe-3 ps-10 text-sm"></div><button type="submit" class="min-h-11 rounded-xl border border-slate-200 px-3 text-sm font-bold text-brand transition hover:bg-brand-soft focus-visible:outline-3 focus-visible:outline-brand disabled:opacity-50" :disabled="historyBusy">{{ t('messaging.search') }}</button><button v-if="historyMode" type="button" class="grid size-11 shrink-0 place-items-center rounded-xl border border-slate-200 text-slate-600 transition hover:bg-slate-50" :aria-label="t('messaging.clearSearch')" @click="historySearch = ''; searchHistory()"><MessagingIcon name="close" class="size-4" /></button></form>
+                <section v-if="selected" ref="conversationDialog" :role="mobile ? 'dialog' : undefined" :aria-modal="mobile ? true : undefined" :aria-label="selected.title" :dir="locale === 'ar' ? 'rtl' : 'ltr'" :style="mobile ? viewportStyle : undefined" :class="{ 'mobile-conversation': mobile }" class="flex min-w-0 flex-col overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white shadow-[0_8px_28px_rgba(40,20,28,.04)] md:min-h-0 md:flex-1">
+                    <header class="relative z-20 shrink-0 border-b border-slate-100 bg-white p-3 sm:p-4">
+                        <div class="flex flex-wrap items-center justify-between gap-2"><button v-if="mobile" ref="closeButton" type="button" class="grid size-11 shrink-0 place-items-center rounded-xl border border-slate-200 text-slate-700 focus-visible:outline-3 focus-visible:outline-brand" :aria-label="t('messaging.closeConversation')" @click="closeConversation"><MessagingIcon name="close" class="size-5" /></button><div class="flex min-w-0 flex-1 items-center gap-2"><span class="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand"><MessagingIcon :name="selected.kind === 'private' ? 'user' : 'users'" class="size-5" /></span><div class="min-w-0"><h3 class="truncate text-base font-black text-slate-950">{{ selected.title }}</h3><p class="flex min-w-0 items-center gap-1.5 truncate text-xs font-semibold text-slate-500"><MessagingIcon name="book" class="size-3.5 shrink-0" />{{ selected.course.title }} · {{ t(`messaging.kind.${selected.kind}`) }}</p></div></div><div class="flex shrink-0 items-center gap-2"><button v-if="selected.can_manage && selected.kind === 'selected'" type="button" class="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 px-3 text-sm font-bold text-brand transition hover:bg-brand-soft focus-visible:outline-3 focus-visible:outline-brand" @click="manage"><MessagingIcon name="users" class="size-4" />{{ t('messaging.manageMembers') }}</button><button v-if="historyMode" type="button" class="grid size-11 place-items-center rounded-xl border border-slate-200 text-slate-600 transition hover:bg-slate-50 focus-visible:outline-3 focus-visible:outline-brand" :aria-label="t('messaging.clearSearch')" :title="t('messaging.clearSearch')" :disabled="historyBusy" @click="historySearch = ''; searchHistory()"><MessagingIcon name="close" class="size-4" /></button><button ref="searchButton" type="button" class="grid size-11 place-items-center rounded-xl border border-slate-200 text-brand transition hover:bg-brand-soft focus-visible:outline-3 focus-visible:outline-brand" :aria-label="t('messaging.searchMessages')" :title="t('messaging.searchMessages')" :aria-expanded="searchOpen" aria-controls="message-search-popover" @click="searchOpen ? closeSearch() : openSearch()"><MessagingIcon name="search" class="size-5" /></button></div></div>
+                        <div v-if="searchOpen" ref="searchPopover" id="message-search-popover" role="dialog" :aria-label="t('messaging.searchMessages')" class="absolute end-3 top-full z-30 mt-2 w-[min(22rem,calc(100%-1.5rem))] rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_16px_40px_rgba(30,20,26,.2)]" @keydown.esc.stop.prevent="closeSearch()"><form class="flex min-w-0 gap-2" @submit.prevent="searchHistory"><label class="sr-only" for="message-search">{{ t('messaging.searchMessages') }}</label><input ref="searchInput" id="message-search" v-model="historySearch" maxlength="120" :placeholder="t('messaging.searchMessages')" class="min-h-11 min-w-0 flex-1 rounded-xl border border-slate-300 px-3 text-sm"><button type="submit" class="min-h-11 rounded-xl bg-brand px-3 text-sm font-bold text-white transition hover:bg-brand/90 focus-visible:outline-3 focus-visible:outline-brand disabled:opacity-50" :disabled="historyBusy">{{ t('messaging.search') }}</button></form></div>
                     </header>
                     <div v-if="mobile && wizard && selectedCourse" class="min-h-0 overflow-y-auto"><GroupWizard :key="`${wizard}-${selected.id}`" :course="selectedCourse" :mode="wizard" :conversation="wizard === 'members' ? selected : null" @done="done" @cancel="wizard = null" /></div>
                     <p v-if="mobile && !online" role="status" class="shrink-0 bg-amber-50 px-4 py-2 text-xs text-amber-950">{{ t('messaging.offline') }}</p>
                     <p v-if="mobile && error" role="alert" class="shrink-0 bg-red-50 px-4 py-2 text-sm text-red-900">{{ t([403, 404].includes(error.status) ? 'messaging.denied' : 'messaging.error') }}</p>
                     <p v-if="historyMode" class="shrink-0 border-b border-amber-100 bg-amber-50 px-4 py-2 text-xs font-bold text-amber-950">{{ t('messaging.searchResults') }}</p>
                     <p v-if="loading" role="status" class="p-4 text-sm text-slate-500">{{ t('messaging.loading') }}</p>
-                    <div ref="feed" class="conversation-feed min-h-56 max-h-[34rem] space-y-4 overflow-y-auto bg-[#fbf9fa] p-4 sm:p-6" tabindex="0" :aria-label="t('messaging.history')">
+                    <div ref="feed" class="conversation-feed min-h-56 max-h-[34rem] space-y-2.5 overflow-y-auto bg-[#fbf9fa] p-3 sm:p-4 md:min-h-0 md:max-h-none md:flex-1" tabindex="0" :aria-label="t('messaging.history')">
                         <button v-if="hasOlder" type="button" class="min-h-11 w-full rounded-xl border border-slate-200 bg-white text-sm font-bold text-brand transition hover:bg-brand-soft" @click="chat.older(historyMode ? historySearch : '')">{{ t('messaging.older') }}</button>
                         <div v-if="!loading && !messages.length" class="grid place-items-center gap-3 py-16 text-center text-slate-500"><span class="grid size-14 place-items-center rounded-2xl bg-white text-brand shadow-sm"><MessagingIcon name="messages" class="size-7" /></span><p class="text-sm font-semibold">{{ t('messaging.noMessages') }}</p></div>
                         <div v-for="message in messages" :key="message.id ?? message.client_id" dir="ltr" class="flex min-w-0" :class="message.user.id === auth.user?.id ? 'justify-end' : 'justify-start'">
                             <div class="min-w-0 max-w-[min(100%,42rem)]">
-                                <article :dir="locale === 'ar' ? 'rtl' : 'ltr'" class="min-w-0 space-y-2 rounded-2xl border p-3.5 shadow-[0_3px_12px_rgba(25,14,20,.04)] sm:p-4" :class="[message.user.id === auth.user?.id ? 'border-brand/15 bg-brand-soft' : 'border-slate-200 bg-white', canOpenMessageActions(message) ? 'cursor-pointer transition hover:border-brand/35 focus-visible:outline-3 focus-visible:outline-brand' : '']" :tabindex="canOpenMessageActions(message) ? 0 : undefined" :aria-label="canOpenMessageActions(message) ? `${message.user.name}: ${message.body || t('messaging.attachment')}. ${t('messaging.messageActionsHint')}` : undefined" :aria-expanded="reactionMenu?.message.id === message.id" @click="openMessageActions(message, $event)" @keydown="onMessageKeydown(message, $event)">
+                                <article :dir="locale === 'ar' ? 'rtl' : 'ltr'" class="min-w-0 space-y-1.5 rounded-2xl border p-2.5 shadow-[0_3px_12px_rgba(25,14,20,.04)] sm:p-3" :class="[message.user.id === auth.user?.id ? 'border-brand/15 bg-brand-soft' : 'border-slate-200 bg-white', canOpenMessageActions(message) ? 'cursor-pointer transition hover:border-brand/35 focus-visible:outline-3 focus-visible:outline-brand' : '']" :tabindex="canOpenMessageActions(message) ? 0 : undefined" :aria-label="canOpenMessageActions(message) ? `${message.user.name}: ${message.body || t('messaging.attachment')}. ${t('messaging.messageActionsHint')}` : undefined" :aria-expanded="reactionMenu?.message.id === message.id" @click="openMessageActions(message, $event)" @keydown="onMessageKeydown(message, $event)">
                                 <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs"><span class="font-extrabold text-brand">{{ message.user.name }}</span><time v-if="message.created_at" :datetime="message.created_at" :title="fullTime(message.created_at)" :aria-label="fullTime(message.created_at)" class="text-slate-500">{{ relativeTime(message.created_at) }}</time></div>
                                 <blockquote v-if="message.reply" class="rounded-lg border-s-2 border-brand bg-white/70 px-3 py-2 text-xs leading-5 text-slate-600">
                                     <div class="flex min-w-0 items-center gap-2">
@@ -445,9 +520,9 @@ async function searchHistory() {
                                         <span class="min-w-0 truncate">{{ message.reply.deleted ? t('messaging.deleted') : message.reply.body || replyAttachment(message.reply)?.name || t('messaging.attachment') }}</span>
                                     </div>
                                 </blockquote>
-                                <p v-if="message.deleted || message.body" class="whitespace-pre-wrap break-words text-sm leading-8 text-slate-900" :class="message.deleted ? 'italic text-slate-500' : ''"><template v-for="(part, index) in messageSegments(message.deleted ? t('messaging.deleted') : message.body)" :key="index"><span :class="part.emoji ? 'inline-block align-middle text-[1.65rem] leading-none' : ''">{{ part.text }}</span></template></p>
+                                <p v-if="message.deleted || message.body" class="whitespace-pre-wrap break-words text-sm leading-6 text-slate-900" :class="message.deleted ? 'italic text-slate-500' : ''"><template v-for="(part, index) in messageSegments(message.deleted ? t('messaging.deleted') : message.body)" :key="index"><span :class="part.emoji ? 'inline-block align-middle text-[1.65rem] leading-none' : ''">{{ part.text }}</span></template></p>
                                 <div v-if="message.attachment_name" class="flex min-w-0 items-center gap-2 rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-xs font-semibold text-slate-700"><MessagingIcon :name="message.attachment_kind === 'voice' ? 'microphone' : 'paperclip'" class="size-4 shrink-0" /><span class="min-w-0 truncate">{{ message.attachment_name }}</span></div>
-                                <div v-for="attachment in message.attachments" :key="attachment.id" class="min-w-0"><a v-if="attachment.kind === 'image'" :href="attachment.url" target="_blank" rel="noopener"><img :src="attachment.url" :alt="attachment.name" loading="lazy" class="max-h-64 max-w-full rounded-xl border border-slate-200"></a><div v-else><audio :src="attachment.url" controls preload="none" class="max-w-full" /><p class="text-xs text-slate-500">{{ Math.round(attachment.duration) }}s</p></div><a :href="attachment.url" :download="attachment.name" class="inline-flex min-h-11 max-w-full items-center gap-1.5 break-all text-xs font-bold text-brand underline underline-offset-2"><MessagingIcon name="download" class="size-4 shrink-0" />{{ t('messaging.download') }}: {{ attachment.name }}</a></div>
+                                <div v-for="attachment in message.attachments" :key="attachment.id" class="min-w-0"><a v-if="attachment.kind === 'image'" :href="attachment.url" target="_blank" rel="noopener"><img :src="attachment.url" :alt="attachment.name" loading="lazy" class="max-h-64 max-w-full rounded-xl border border-slate-200"></a><div v-else><audio :src="attachment.url" controls preload="none" class="max-w-full" /><p class="text-xs text-slate-500">{{ Math.round(attachment.duration) }}s</p></div><a v-if="attachment.kind === 'image'" :href="attachment.url" :download="attachment.name" class="inline-flex min-h-11 max-w-full items-center gap-1.5 break-all text-xs font-bold text-brand underline underline-offset-2"><MessagingIcon name="download" class="size-4 shrink-0" />{{ t('messaging.download') }}: {{ attachment.name }}</a></div>
                                 <div v-if="message.user.id === auth.user?.id" class="flex justify-end text-xs"><span :role="message.pending || message.failed ? 'status' : undefined" :aria-label="sendStatus(message)" :title="sendStatus(message)" class="inline-flex items-center gap-1" :class="message.failed ? 'text-red-700' : message.reader_count > 0 && message.id ? 'text-sky-600' : 'text-slate-500'"><MessagingIcon :name="message.failed ? 'alert' : message.pending || !message.id ? 'clock' : message.reader_count > 0 ? 'doubleCheck' : 'check'" class="size-4" /><span v-if="message.failed" class="font-semibold">{{ t('messaging.notSent') }}</span></span></div>
                                 </article>
                                 <div v-if="!message.deleted && visibleReactions(message).length" class="relative z-10 -mt-2 flex flex-wrap gap-1 px-3" :class="message.user.id === auth.user?.id ? 'justify-end' : 'justify-start'">

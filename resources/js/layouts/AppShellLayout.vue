@@ -24,7 +24,7 @@ onBeforeUnmount(() => { document.body.style.overflow = ''; });
         <div class="fixed inset-y-0 start-0 z-30 hidden w-72 lg:block"><AppSidebar :area="area" /></div>
         <div class="relative min-h-screen lg:ps-72">
             <AppHeader :area="area" @open-menu="drawerOpen = true" />
-            <main id="workspace-content" tabindex="-1" class="mx-auto w-full max-w-[1600px] px-4 pt-5 sm:px-6 sm:pt-7 lg:px-9 lg:pt-8" :class="['student', 'instructor'].includes(area) ? 'pb-28' : 'pb-14'">
+            <main id="workspace-content" tabindex="-1" class="mx-auto w-full max-w-[1600px] px-4 pt-5 sm:px-6 sm:pt-7 lg:px-9 lg:pt-8" :class="['student.messages', 'instructor.messages'].includes(route.name) ? 'pb-4' : ['student', 'instructor'].includes(area) ? 'pb-28' : 'pb-14'">
                 <AppBreadcrumbs />
                 <RouterView />
             </main>
