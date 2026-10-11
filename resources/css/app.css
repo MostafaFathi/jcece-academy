@@ -34,20 +34,24 @@
 
 @theme {
     --font-sans: 'Cairo', Tahoma, Arial, ui-sans-serif, system-ui, sans-serif;
-    --color-brand: #6b1d32;
-    --color-brand-dark: #4f1425;
-    --color-brand-soft: #f7e9ed;
+    --color-brand: #865108;
+    --color-brand-dark: #422d10;
+    --color-brand-soft: #fff7d6;
+    --color-charcoal: #1c1c1c;
+    --color-primary: #f5bd16;
+    --color-primary-hover: #e9ac0b;
+    --color-secondary: #6b1d32;
     --color-accent: #ffd21e;
 }
 
 @layer base {
     html { color-scheme: light; scroll-behavior: smooth; scrollbar-color: #c6bdc1 transparent; scrollbar-width: thin; }
-    body { background: #f7f6f6; color: #262126; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; }
+    body { background: #faf9f6; color: #262126; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; }
     button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
     button { cursor: pointer; }
     button:disabled { cursor: not-allowed; }
-    ::selection { background: #ffd21e; color: #4f1425; }
-    :focus-visible { outline-color: #6b1d32; outline-offset: 3px; }
+    ::selection { background: #ffd21e; color: #422d10; }
+    :focus-visible { outline-color: #865108; outline-offset: 3px; }
     ::-webkit-scrollbar { width: 10px; height: 10px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { border: 2px solid transparent; border-radius: 999px; background: #c6bdc1; background-clip: padding-box; }
@@ -62,27 +66,27 @@
     }
 
     .app-shell :is(input:not([type='checkbox'], [type='radio'], [type='file']), select, textarea):focus-visible {
-        border-color: #6b1d32;
-        box-shadow: 0 0 0 3px rgb(107 29 50 / 12%);
+        border-color: #865108;
+        box-shadow: 0 0 0 3px rgb(245 189 22 / 25%);
         outline: none;
     }
 
     .site-shell :is(input:not([type='checkbox'], [type='radio'], [type='file']), select, textarea):focus-visible {
-        border-color: #6b1d32;
-        box-shadow: 0 0 0 3px rgb(107 29 50 / 12%);
+        border-color: #865108;
+        box-shadow: 0 0 0 3px rgb(245 189 22 / 25%);
         outline: none;
     }
 
     .app-shell table { border-collapse: separate; border-spacing: 0; }
-    .app-shell table thead { background: #faf8f8; }
+    .app-shell table thead { background: #fffaf0; }
     .app-shell table th { color: #625962; font-size: 0.75rem; font-weight: 800; letter-spacing: 0.025em; }
     .app-shell table tbody tr { transition: background-color 150ms ease; }
-    .app-shell table tbody tr:hover { background: #fdf9fa; }
+    .app-shell table tbody tr:hover { background: #fffaf0; }
     .app-shell table tbody tr:last-child td { border-bottom: 0; }
     .app-shell table td { color: #49414a; vertical-align: middle; }
 
-    .sidebar-scroll { scrollbar-color: rgb(255 255 255 / 28%) transparent; scrollbar-width: thin; }
-    .sidebar-scroll::-webkit-scrollbar-thumb { background-color: rgb(255 255 255 / 28%); }
+    .sidebar-scroll { scrollbar-color: rgb(66 45 16 / 35%) transparent; scrollbar-width: thin; }
+    .sidebar-scroll::-webkit-scrollbar-thumb { background-color: rgb(66 45 16 / 35%); }
 }
 
 @media (prefers-reduced-motion: reduce) {

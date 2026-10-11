@@ -29,7 +29,7 @@ onMounted(() => load());
 </script>
 
 <template>
-    <div class="space-y-7" :dir="locale === 'ar' ? 'rtl' : 'ltr'"><PageHeading :title="t('support.heading')" :description="t('support.description')"><template #actions><RouterLink :to="{ name: 'student.support.create' }" class="inline-flex min-h-11 items-center rounded-xl bg-brand px-5 py-3 text-sm font-bold text-white hover:bg-brand-dark">{{ t('support.newTicket') }}</RouterLink></template></PageHeading>
+    <div class="space-y-7" :dir="locale === 'ar' ? 'rtl' : 'ltr'"><PageHeading :title="t('support.heading')" :description="t('support.description')"><template #actions><RouterLink :to="{ name: 'student.support.create' }" class="inline-flex min-h-11 items-center rounded-xl bg-primary px-5 py-3 text-sm font-bold text-brand-dark hover:bg-primary-hover">{{ t('support.newTicket') }}</RouterLink></template></PageHeading>
         <LoadingState v-if="loading" />
         <BaseAlert v-else-if="error" tone="danger">{{ t('support.listError') }} <BaseButton class="ms-2" variant="secondary" @click="load(meta?.current_page ?? 1)">{{ t('common.retry') }}</BaseButton></BaseAlert>
         <EmptyState v-else-if="!tickets.length" :title="t('support.empty')" :description="t('support.emptyDescription')" />

@@ -21,7 +21,7 @@ function page(value) { router.push({ name: listName, query: { ...route.query, pa
             <AsyncResourceSelect v-model="filters.assigned_to" id="ticket-assignee-filter" :loader="fetchSupportStaff" :resolver="resolveSupportStaff" :label="t('operations.assignee')" />
             <label class="grid gap-1 text-sm font-bold" for="ticket-from">{{ t('operations.createdFrom') }}<input id="ticket-from" v-model="filters.created_from" type="date" class="min-h-11 rounded-xl border px-3"></label>
             <label class="grid gap-1 text-sm font-bold" for="ticket-to">{{ t('operations.createdTo') }}<input id="ticket-to" v-model="filters.created_to" type="date" :min="filters.created_from || undefined" class="min-h-11 rounded-xl border px-3"></label>
-            <button type="submit" class="min-h-11 self-end rounded-xl bg-brand px-5 font-bold text-white">{{ t('operations.filter') }}</button>
+            <button type="submit" class="min-h-11 self-end rounded-xl bg-primary px-5 font-bold text-brand-dark">{{ t('operations.filter') }}</button>
         </form>
         <LoadingState v-if="loading" />
         <BaseAlert v-else-if="error" tone="danger">{{ t('operations.loadError') }} <button class="underline" @click="load">{{ t('operations.retry') }}</button></BaseAlert>

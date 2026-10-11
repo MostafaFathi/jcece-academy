@@ -23,7 +23,7 @@ watch(enabled, (value) => { if (value) update(); else { clearTimeout(timer); cou
 onBeforeUnmount(() => { disposed = true; clearTimeout(timer); });
 </script>
 <template>
-    <RouterLink v-if="enabled" :to="{ name: destination }" class="fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] end-4 z-40 grid size-14 place-items-center rounded-2xl border border-white/20 bg-brand text-white shadow-[0_14px_35px_rgba(68,20,37,.32)] transition hover:-translate-y-1 hover:bg-brand-dark focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-brand sm:bottom-7 sm:end-7" :aria-label="count ? `${t('messaging.conversations')}: ${t('messaging.unreadCount', { count })}` : t('messaging.conversations')" :title="t('messaging.conversations')">
+    <RouterLink v-if="enabled" :to="{ name: destination }" class="fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] end-4 z-40 grid size-14 place-items-center rounded-2xl border border-white/20 bg-primary text-brand-dark shadow-[0_14px_35px_rgba(146,97,8,.32)] transition hover:-translate-y-1 hover:bg-primary-hover focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-brand sm:bottom-7 sm:end-7" :aria-label="count ? `${t('messaging.conversations')}: ${t('messaging.unreadCount', { count })}` : t('messaging.conversations')" :title="t('messaging.conversations')">
         <MessagingIcon name="messages" class="size-6" />
         <span v-if="count" aria-live="polite" class="absolute -start-2 -top-2 grid min-w-6 place-items-center rounded-full border-2 border-white bg-accent px-1 text-xs font-black text-brand-dark">{{ count > 99 ? '99+' : count }}</span>
     </RouterLink>

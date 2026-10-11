@@ -134,7 +134,7 @@ onMounted(load);
                 <section class="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
                     <h2 class="mb-3 text-sm font-black">{{ t('rolePermissions.role') }}</h2>
                     <div role="tablist" class="flex flex-wrap gap-2" :aria-label="t('rolePermissions.role')">
-                        <button v-for="role in roles" :key="role.role" type="button" role="tab" :aria-selected="selectedRole === role.role" :disabled="switching" class="min-h-11 rounded-xl border px-4 py-2 text-sm font-bold focus-visible:outline-3 focus-visible:outline-accent disabled:opacity-50" :class="selectedRole === role.role ? 'border-brand bg-brand text-white' : 'border-slate-300 bg-white text-slate-700'" @click="selectRole(role.role)">{{ t(`labels.roles.${role.role}`) }}</button>
+                        <button v-for="role in roles" :key="role.role" type="button" role="tab" :aria-selected="selectedRole === role.role" :disabled="switching" class="min-h-11 rounded-xl border px-4 py-2 text-sm font-bold focus-visible:outline-3 focus-visible:outline-accent disabled:opacity-50" :class="selectedRole === role.role ? 'border-brand bg-primary text-brand-dark' : 'border-slate-300 bg-white text-slate-700'" @click="selectRole(role.role)">{{ t(`labels.roles.${role.role}`) }}</button>
                     </div>
                     <p class="mt-4 text-sm text-slate-600">{{ t('rolePermissions.selected', { count: draft.length, total: permissions.length }) }} <span v-if="dirty" class="ms-2 font-bold text-amber-800">{{ t('rolePermissions.dirty') }}</span></p>
                     <p v-if="unmanagedCount" class="mt-2 text-xs text-amber-800">{{ t('rolePermissions.unmanaged', { count: unmanagedCount }) }}</p>
@@ -165,14 +165,14 @@ onMounted(load);
 
                 <div class="sticky bottom-2 z-10 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-xl backdrop-blur">
                     <span class="text-sm font-bold">{{ dirty ? t('rolePermissions.dirty') : t('rolePermissions.noChanges') }}</span>
-                    <div class="flex gap-2"><button type="button" :disabled="!dirty || saving" class="min-h-11 rounded-xl border border-slate-300 px-4 font-bold disabled:opacity-50" @click="reset">{{ t('rolePermissions.reset') }}</button><button type="button" :disabled="!dirty || saving || error === 'stale'" class="min-h-11 rounded-xl bg-brand px-5 font-bold text-white disabled:opacity-50" @click="reviewing = true">{{ t('rolePermissions.review') }}</button></div>
+                    <div class="flex gap-2"><button type="button" :disabled="!dirty || saving" class="min-h-11 rounded-xl border border-slate-300 px-4 font-bold disabled:opacity-50" @click="reset">{{ t('rolePermissions.reset') }}</button><button type="button" :disabled="!dirty || saving || error === 'stale'" class="min-h-11 rounded-xl bg-primary px-5 font-bold text-brand-dark disabled:opacity-50" @click="reviewing = true">{{ t('rolePermissions.review') }}</button></div>
                 </div>
                 <section v-if="reviewing && dirty" class="space-y-4 rounded-3xl border-2 border-brand bg-white p-5 shadow-sm" aria-live="polite">
                     <h2 class="text-lg font-black">{{ t('rolePermissions.reviewTitle') }} — {{ t(`labels.roles.${selectedRole}`) }}</h2>
                     <ul class="space-y-2 text-sm"><li v-for="permission in changes.added" :key="`add-${permission.key}`">+ {{ t('rolePermissions.added') }}: {{ permissionLabel(permission) }}</li><li v-for="permission in changes.removed" :key="`remove-${permission.key}`">− {{ t('rolePermissions.removed') }}: {{ permissionLabel(permission) }}</li></ul>
                     <BaseAlert v-if="sensitiveChanges" tone="warning">{{ t('rolePermissions.sensitiveHint') }} <span v-if="selectedRole === 'student' && changes.added.length">{{ t('rolePermissions.studentElevation') }}</span> <span v-if="selectedRole === 'admin' && changes.removed.some((permission) => permission.key === 'roles.manage')">{{ t('rolePermissions.adminRemoval') }}</span></BaseAlert>
                     <label v-if="sensitiveChanges" class="flex items-start gap-3 text-sm font-bold"><input v-model="acknowledged" type="checkbox" class="mt-1 size-5 accent-brand">{{ t('rolePermissions.confirmSensitive') }}</label>
-                    <button type="button" :disabled="saving || (sensitiveChanges && !acknowledged)" class="min-h-11 rounded-xl bg-brand px-5 font-bold text-white disabled:opacity-50" @click="save">{{ t('rolePermissions.save') }}</button>
+                    <button type="button" :disabled="saving || (sensitiveChanges && !acknowledged)" class="min-h-11 rounded-xl bg-primary px-5 font-bold text-brand-dark disabled:opacity-50" @click="save">{{ t('rolePermissions.save') }}</button>
                 </section>
             </template>
         </template>

@@ -27,21 +27,21 @@ function iconFor(route) {
 </script>
 
 <template>
-    <aside class="relative flex h-full min-h-0 flex-col overflow-hidden bg-[#26131c] text-white">
-        <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_0%_0%,rgba(255,210,30,.09),transparent_42%),linear-gradient(180deg,#351522_0%,#24141c_100%)]" />
-        <div class="relative h-1 shrink-0 bg-[linear-gradient(90deg,#ffd21e_0%,#ffd21e_32%,#8b213e_32%,#8b213e_100%)]" />
-        <div class="relative shrink-0 px-5 pb-5 pt-6"><BrandLogo /><p class="mt-5 rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-xs font-semibold text-white/65">{{ areaLabel }}</p></div>
+    <aside class="relative flex h-full min-h-0 flex-col overflow-hidden border-e border-slate-200 bg-white text-slate-900">
+        <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_0%_0%,rgba(245,189,22,.06),transparent_42%)]" />
+        <div class="relative h-1 shrink-0 bg-[linear-gradient(90deg,#f5bd16_0%,#f5bd16_88%,#6b1d32_88%,#6b1d32_100%)]" />
+        <div class="relative shrink-0 px-5 pb-5 pt-6"><BrandLogo /><p class="mt-5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600">{{ areaLabel }}</p></div>
         <nav class="sidebar-scroll relative flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-3 pb-5" :aria-label="t('nav.main')">
-            <p class="px-3 pb-2 pt-2 text-[10px] font-extrabold uppercase tracking-[0.22em] text-white/40">{{ t('nav.main') }}</p>
+            <p class="px-3 pb-2 pt-2 text-[10px] font-extrabold uppercase tracking-[0.22em] text-slate-600">{{ t('nav.main') }}</p>
             <template v-for="(item, index) in items" :key="item.route">
-                <p v-if="item.group && items[index - 1]?.group !== item.group" class="px-3 pb-1 pt-5 text-[10px] font-extrabold uppercase tracking-[0.18em] text-accent/75">{{ t(item.group) }}</p>
-                <RouterLink :to="{ name: item.route }" class="group relative flex min-h-11 items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold leading-5 text-white/65 transition-colors duration-150 hover:bg-white/[0.08] hover:text-white focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-accent" exact-active-class="!bg-white/[0.12] !text-white before:absolute before:inset-y-2 before:start-0 before:w-0.5 before:rounded-full before:bg-accent [&_svg]:!text-accent">
-                    <svg aria-hidden="true" class="size-[19px] shrink-0 text-white/45 transition-colors group-hover:text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path :d="iconFor(item.route)" /></svg>
+                <p v-if="item.group && items[index - 1]?.group !== item.group" class="px-3 pb-1 pt-5 text-[10px] font-extrabold uppercase tracking-[0.18em] text-brand-dark">{{ t(item.group) }}</p>
+                <RouterLink :to="{ name: item.route }" class="group relative flex min-h-11 items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold leading-5 text-slate-600 transition-colors duration-150 hover:bg-brand-soft hover:text-brand-dark focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand" exact-active-class="!bg-brand-soft !text-brand-dark before:absolute before:inset-y-2 before:start-0 before:w-0.5 before:rounded-full before:bg-primary [&_svg]:!text-brand-dark">
+                    <svg aria-hidden="true" class="size-[19px] shrink-0 text-slate-600 transition-colors group-hover:text-brand-dark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path :d="iconFor(item.route)" /></svg>
                     <span class="min-w-0 flex-1">{{ t(item.label) }}</span>
-                    <span aria-hidden="true" class="text-xs text-white/25 opacity-0 transition-opacity group-hover:opacity-100">{{ locale === 'ar' ? '‹' : '›' }}</span>
+                    <span aria-hidden="true" class="text-xs text-slate-600 opacity-0 transition-opacity group-hover:opacity-100">{{ locale === 'ar' ? '‹' : '›' }}</span>
                 </RouterLink>
             </template>
         </nav>
-        <div class="relative shrink-0 border-t border-white/10 p-4"><p class="rounded-xl bg-white/[0.04] px-4 py-3 text-xs leading-5 text-white/50"><span class="mb-1 block h-0.5 w-8 rounded-full bg-accent" />{{ t('brand.tagline') }}</p></div>
+        <div class="relative shrink-0 border-t border-slate-200 p-4"><p class="rounded-xl bg-slate-50 px-4 py-3 text-xs leading-5 text-slate-600"><span class="mb-1 block h-0.5 w-8 rounded-full bg-accent" />{{ t('brand.tagline') }}</p></div>
     </aside>
 </template>

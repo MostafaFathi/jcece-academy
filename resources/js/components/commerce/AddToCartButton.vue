@@ -56,7 +56,7 @@ async function add() {
                         </div>
                         <button type="button" class="rounded-lg p-1 text-xl leading-none text-slate-500 hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-brand" :aria-label="t('common.close')" @click="toastVisible = false">×</button>
                     </div>
-                    <RouterLink :to="checkoutDestination" class="mt-4 flex min-h-11 items-center justify-center rounded-xl bg-brand px-4 py-2 text-sm font-black text-white transition hover:bg-brand-dark focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand" @click="toastVisible = false">{{ cart.ready || !auth.isAuthenticated ? t('commerce.checkout') : t('commerce.viewCart') }}</RouterLink>
+                    <RouterLink :to="checkoutDestination" class="mt-4 flex min-h-11 items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-black text-brand-dark transition hover:bg-primary-hover focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand" @click="toastVisible = false">{{ cart.ready || !auth.isAuthenticated ? t('commerce.checkout') : t('commerce.viewCart') }}</RouterLink>
                 </div>
             </Transition>
         </Teleport>
