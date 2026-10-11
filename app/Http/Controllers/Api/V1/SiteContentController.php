@@ -5,11 +5,17 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\SiteFaq;
 use App\Models\SitePage;
+use App\Models\SiteSetting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class SiteContentController extends Controller
 {
+    public function settings(): JsonResponse
+    {
+        return response()->json(['data' => ['home_autoplay_enabled' => (bool) (SiteSetting::query()->value('home_autoplay_enabled') ?? true)]]);
+    }
+
     public function page(Request $request, SitePage $sitePage): JsonResponse
     {
         abort_unless(in_array($sitePage->slug, SitePage::SLUGS, true) && $sitePage->published_at !== null, 404);

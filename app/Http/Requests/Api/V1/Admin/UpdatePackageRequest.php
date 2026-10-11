@@ -37,6 +37,7 @@ class UpdatePackageRequest extends FormRequest
             'slug' => ['sometimes', 'required', 'string', 'max:255', 'alpha_dash', Rule::unique('packages', 'slug')->ignore($package)],
             'description' => ['nullable', 'string'],
             'thumbnail' => ['nullable', 'string', 'max:2048'],
+            'thumbnail_upload' => ['sometimes', 'file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
             'type' => ['sometimes', 'required', Rule::enum(PackageType::class)],
             'price' => ['sometimes', 'required', 'numeric', 'min:0', 'max:9999999999.99'],
             'compare_price' => ['nullable', 'numeric', 'max:9999999999.99'],

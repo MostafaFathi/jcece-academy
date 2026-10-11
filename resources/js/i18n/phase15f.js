@@ -4,6 +4,8 @@ export const ar = {
         trainingTypes: { recorded: 'مسجل', live: 'مباشر', hybrid: 'هجين' },
     },
     site: {
+        adminTitle: 'إعدادات ومحتوى الموقع',
+        homeSettings: 'إعدادات الصفحة الرئيسية', homeAutoplay: 'تحريك عناصر الأقسام تلقائيًا', homeAutoplayHint: 'يشمل التصنيفات والباقات والدورات والمدربين والآراء. تتوقف الحركة عند التفاعل مع القسم أو تفعيل تقليل الحركة على الجهاز.', saveSettings: 'حفظ الإعدادات',
         about: 'عن الأكاديمية', faq: 'الأسئلة الشائعة', contact: 'تواصل معنا', intro: 'معلومات الأكاديمية المنشورة رسميًا.', notPublished: 'المحتوى التحريري المعتمد لم يُنشر بعد.', noFaq: 'لا توجد أسئلة منشورة حاليًا.', contactIntro: 'أرسل استفسارك وسيتولى الفريق مراجعته.', subject: 'الموضوع', message: 'الرسالة', send: 'إرسال الرسالة', sent: 'استلمنا رسالتك.', manage: 'إدارة محتوى الموقع', manageIntro: 'أدخل النصوص الرسمية بالعربية والإنجليزية وانشرها بعد الاعتماد.', arabic: 'النص العربي', english: 'النص الإنجليزي', save: 'حفظ المسودة', publish: 'نشر المحتوى', published: 'منشور', draft: 'غير منشور', questionAr: 'السؤال بالعربية', answerAr: 'الإجابة بالعربية', questionEn: 'السؤال بالإنجليزية', answerEn: 'الإجابة بالإنجليزية', active: 'منشور', order: 'الترتيب', addFaq: 'إضافة سؤال', saveFaq: 'حفظ السؤال', removeFaq: 'حذف السؤال', contacts: 'رسائل التواصل', editorialRequired: 'المحتوى التحريري مطلوب من الأكاديمية.',
     },
     profile: {
@@ -17,6 +19,8 @@ export const en = {
         trainingTypes: { recorded: 'Recorded', live: 'Live', hybrid: 'Hybrid' },
     },
     site: {
+        adminTitle: 'Website settings & content',
+        homeSettings: 'Homepage settings', homeAutoplay: 'Automatically move section cards', homeAutoplayHint: 'Applies to categories, packages, courses, instructors and reviews. Motion pauses during interaction and respects reduced-motion preferences.', saveSettings: 'Save settings',
         about: 'About the academy', faq: 'Frequently asked questions', contact: 'Contact us', intro: 'Officially published academy information.', notPublished: 'Approved editorial content has not been published yet.', noFaq: 'No questions are published yet.', contactIntro: 'Send your inquiry for the team to review.', subject: 'Subject', message: 'Message', send: 'Send message', sent: 'Your message has been received.', manage: 'Manage site content', manageIntro: 'Enter official Arabic and English copy and publish after approval.', arabic: 'Arabic text', english: 'English text', save: 'Save draft', publish: 'Publish content', published: 'Published', draft: 'Not published', questionAr: 'Arabic question', answerAr: 'Arabic answer', questionEn: 'English question', answerEn: 'English answer', active: 'Published', order: 'Order', addFaq: 'Add question', saveFaq: 'Save question', removeFaq: 'Remove question', contacts: 'Contact messages', editorialRequired: 'Editorial copy is required from the academy.',
     },
     profile: {

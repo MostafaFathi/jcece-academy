@@ -5,7 +5,7 @@ import { useI18n } from 'vue-i18n';
 import { fetchCategories } from '../api/categories';
 import { fetchCourses } from '../api/courses';
 import { fetchPackages } from '../api/packages';
-import { fetchInstructors, fetchTestimonials } from '../api/public-site';
+import { fetchInstructors, fetchSiteSettings, fetchTestimonials } from '../api/public-site';
 import BaseAlert from '../components/ui/BaseAlert.vue';
 import HomeCatalogSection from '../components/public/HomeCatalogSection.vue';
 import MediaFrame from '../components/public/MediaFrame.vue';
@@ -23,6 +23,7 @@ const courses = ref([]);
 const packages = ref([]);
 const instructors = ref([]);
 const testimonials = ref([]);
+const homeAutoplayEnabled = ref(false);
 const loading = ref({ categories: true, courses: true, packages: true, instructors: true, testimonials: true });
 const errors = ref({ categories: null, courses: null, packages: null, instructors: null, testimonials: null });
 const startupFailed = computed(() => route.query.startup === 'failed');
@@ -48,6 +49,7 @@ async function loadSection(key, loader) {
 }
 
 function loadHomepage() {
+    void fetchSiteSettings().then((settings) => { homeAutoplayEnabled.value = settings.home_autoplay_enabled; }).catch(() => {});
     void loadSection('categories', fetchCategories);
     void loadSection('courses', () => fetchCourses({ sort: 'latest', per_page: 12 }));
     void loadSection('packages', () => fetchPackages({ sort: 'latest', per_page: 12 }));
@@ -80,19 +82,19 @@ onMounted(loadHomepage);
             </div>
         </section>
 
-        <HomeCatalogSection id="categories" :item-count="categories.length" :title="t('home.categoriesTitle')" :destination="{ name: 'courses.index' }" :loading="loading.categories" :error="Boolean(errors.categories)" :empty="!categories.length" :empty-title="t('home.emptyCategories')" dense @retry="loadSection('categories', fetchCategories)">
+        <HomeCatalogSection id="categories" :auto-play="homeAutoplayEnabled" :item-count="categories.length" :title="t('home.categoriesTitle')" :destination="{ name: 'courses.index' }" :loading="loading.categories" :error="Boolean(errors.categories)" :empty="!categories.length" :empty-title="t('home.emptyCategories')" dense @retry="loadSection('categories', fetchCategories)">
             <CategoryCard v-for="category in categories.slice(0, 12)" :key="category.id" :category="category" compact />
         </HomeCatalogSection>
 
-        <HomeCatalogSection id="packages" :item-count="packages.length" :title="t('home.packagesTitle')" :destination="{ name: 'packages.index' }" :loading="loading.packages" :error="Boolean(errors.packages)" :empty="!packages.length" :empty-title="t('home.emptyPackages')" @retry="loadSection('packages', () => fetchPackages({ sort: 'latest', per_page: 12 }))">
+        <HomeCatalogSection id="packages" :auto-play="homeAutoplayEnabled" :item-count="packages.length" :title="t('home.packagesTitle')" :destination="{ name: 'packages.index' }" :loading="loading.packages" :error="Boolean(errors.packages)" :empty="!packages.length" :empty-title="t('home.emptyPackages')" @retry="loadSection('packages', () => fetchPackages({ sort: 'latest', per_page: 12 }))">
             <PackageCard v-for="packageItem in packages" :key="packageItem.id" :package-item="packageItem" compact />
         </HomeCatalogSection>
 
-        <HomeCatalogSection id="courses" :item-count="courses.length" :title="t('home.recentTitle')" :destination="{ name: 'courses.index' }" :loading="loading.courses" :error="Boolean(errors.courses)" :empty="!courses.length" :empty-title="t('home.emptyCourses')" @retry="loadSection('courses', () => fetchCourses({ sort: 'latest', per_page: 12 }))">
+        <HomeCatalogSection id="courses" :auto-play="homeAutoplayEnabled" :item-count="courses.length" :title="t('home.recentTitle')" :destination="{ name: 'courses.index' }" :loading="loading.courses" :error="Boolean(errors.courses)" :empty="!courses.length" :empty-title="t('home.emptyCourses')" @retry="loadSection('courses', () => fetchCourses({ sort: 'latest', per_page: 12 }))">
             <CourseCard v-for="course in courses" :key="course.id" :course="course" compact />
         </HomeCatalogSection>
 
-        <HomeCatalogSection id="instructors" :item-count="instructors.length" :title="t('home.instructorsTitle')" :destination="{ name: 'instructors.index' }" :loading="loading.instructors" :error="Boolean(errors.instructors)" :empty="!instructors.length" :empty-title="t('discovery.noInstructors')" @retry="loadSection('instructors', fetchInstructors)">
+        <HomeCatalogSection id="instructors" :auto-play="homeAutoplayEnabled" :item-count="instructors.length" :title="t('home.instructorsTitle')" :destination="{ name: 'instructors.index' }" :loading="loading.instructors" :error="Boolean(errors.instructors)" :empty="!instructors.length" :empty-title="t('discovery.noInstructors')" @retry="loadSection('instructors', fetchInstructors)">
             <RouterLink v-for="instructor in instructors" :key="instructor.id" :to="{ name: 'instructors.show', params: { id: instructor.id } }" class="group overflow-hidden rounded-xl border border-slate-200 bg-white text-center shadow-sm transition hover:-translate-y-1 focus-visible:outline-3 focus-visible:outline-brand">
                 <MediaFrame :src="instructor.avatar" :alt="instructor.name" ratio="square" />
                 <div class="p-4"><h3 class="text-lg font-black text-slate-900">{{ instructor.name }}</h3><p v-if="instructor.profile?.job_title" class="mt-2 text-sm text-brand">{{ instructor.profile.job_title }}</p></div>
@@ -101,7 +103,7 @@ onMounted(loadHomepage);
 
         <section id="how-it-works" class="scroll-mt-24 bg-white py-20 text-slate-900 sm:py-24"><div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"><SectionHeading :eyebrow="t('home.howEyebrow')" :title="t('home.howTitle')" :description="t('home.howDescription')" centered class="[&_h2]:text-slate-950 [&_p]:text-slate-600" /><div class="mt-14 grid gap-5 md:grid-cols-3"><article v-for="(step, index) in [{ title: t('home.stepExplore'), text: t('home.stepExploreText') }, { title: t('home.stepLearn'), text: t('home.stepLearnText') }, { title: t('home.stepGrow'), text: t('home.stepGrowText') }]" :key="step.title" class="relative rounded-3xl border border-slate-200 bg-slate-50 p-7"><span class="text-5xl font-black text-primary">0{{ index + 1 }}</span><h3 class="mt-5 text-xl font-black">{{ step.title }}</h3><p class="mt-3 text-sm leading-7 text-slate-600">{{ step.text }}</p></article></div></div></section>
 
-        <HomeCatalogSection id="reviews" :item-count="testimonials.length" :title="t('home.reviewsTitle')" :loading="loading.testimonials" :error="Boolean(errors.testimonials)" :empty="!testimonials.length" :empty-title="t('discovery.noReviews')" @retry="loadSection('testimonials', fetchTestimonials)">
+        <HomeCatalogSection id="reviews" :auto-play="homeAutoplayEnabled" :item-count="testimonials.length" :title="t('home.reviewsTitle')" :loading="loading.testimonials" :error="Boolean(errors.testimonials)" :empty="!testimonials.length" :empty-title="t('discovery.noReviews')" @retry="loadSection('testimonials', fetchTestimonials)">
             <ReviewCard v-for="review in testimonials" :key="`${review.course?.slug}-${review.published_at}`" :review="review" />
         </HomeCatalogSection>
 

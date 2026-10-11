@@ -7,10 +7,12 @@ use App\Http\Requests\Api\V1\Admin\StoreCategoryRequest;
 use App\Http\Requests\Api\V1\Admin\UpdateCategoryRequest;
 use App\Http\Resources\Api\V1\CategoryResource;
 use App\Models\Category;
+use App\Services\CatalogImageStorage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Gate;
+use Throwable;
 
 class CategoryController extends Controller
 {
@@ -29,11 +31,22 @@ class CategoryController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StoreCategoryRequest $request): JsonResponse
+    public function store(StoreCategoryRequest $request, CatalogImageStorage $images): JsonResponse
     {
         Gate::authorize('create', Category::class);
 
-        $category = Category::create($request->validated());
+        $attributes = $request->safe()->except('image_upload');
+        $newImage = $request->hasFile('image_upload') ? $images->store($request->file('image_upload'), 'catalog/categories', 'image_upload') : null;
+        if ($newImage !== null) {
+            $attributes['image'] = $newImage;
+        }
+
+        try {
+            $category = Category::create($attributes);
+        } catch (Throwable $exception) {
+            $images->deleteManaged($newImage);
+            throw $exception;
+        }
 
         return (new CategoryResource($category))->response()->setStatusCode(201);
     }
@@ -51,11 +64,26 @@ class CategoryController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(UpdateCategoryRequest $request, Category $category): CategoryResource
+    public function update(UpdateCategoryRequest $request, Category $category, CatalogImageStorage $images): CategoryResource
     {
         Gate::authorize('update', $category);
 
-        $category->update($request->validated());
+        $attributes = $request->safe()->except('image_upload');
+        $oldImage = $category->image;
+        $newImage = $request->hasFile('image_upload') ? $images->store($request->file('image_upload'), 'catalog/categories', 'image_upload') : null;
+        if ($newImage !== null) {
+            $attributes['image'] = $newImage;
+        }
+
+        try {
+            $category->update($attributes);
+        } catch (Throwable $exception) {
+            $images->deleteManaged($newImage);
+            throw $exception;
+        }
+        if (array_key_exists('image', $attributes) && $oldImage !== $category->image) {
+            $images->deleteManaged($oldImage);
+        }
 
         return new CategoryResource($category->refresh());
     }

@@ -41,6 +41,7 @@ class StoreInstructorRequest extends FormRequest
             'instagram_url' => ['nullable', 'url', 'max:255'],
             'website_url' => ['nullable', 'url', 'max:255'],
             'is_featured' => ['sometimes', 'boolean'],
+            'avatar' => ['sometimes', 'file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
         ];
     }
 }

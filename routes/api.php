@@ -134,6 +134,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
     Route::get('policies/{policyPage:slug}', PolicyPageController::class)->name('policies.show');
     Route::get('site-pages/{sitePage:slug}', [SiteContentController::class, 'page'])->name('site-pages.show');
     Route::get('site-faqs', [SiteContentController::class, 'faqs'])->name('site-faqs.index');
+    Route::get('site-settings', [SiteContentController::class, 'settings'])->name('site-settings.show');
     Route::get('testimonials', TestimonialController::class)->name('testimonials.index');
     Route::post('contact', ContactController::class)->middleware('throttle:3,1')->name('contact.store');
     Route::get('certificates/verify/{token}', CertificateVerificationController::class)
@@ -238,6 +239,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::get('audit-events', AuditEventController::class)->name('audit-events.index');
         Route::get('policy-pages', [AdminPolicyPageController::class, 'index'])->name('policy-pages.index');
         Route::get('site-content', [AdminSiteContentController::class, 'index'])->name('site-content.index');
+        Route::put('site-settings', [AdminSiteContentController::class, 'updateSettings'])->name('site-settings.update');
         Route::put('site-pages/{slug}', [AdminSiteContentController::class, 'updatePage'])->name('site-pages.update');
         Route::post('site-pages/{slug}/publication', [AdminSiteContentController::class, 'publishPage'])->name('site-pages.publish');
         Route::post('site-faqs', [AdminSiteContentController::class, 'storeFaq'])->name('site-faqs.store');

@@ -32,6 +32,7 @@ class StorePackageRequest extends FormRequest
             'slug' => ['required', 'string', 'max:255', 'alpha_dash', Rule::unique('packages', 'slug')],
             'description' => ['nullable', 'string'],
             'thumbnail' => ['nullable', 'string', 'max:2048'],
+            'thumbnail_upload' => ['sometimes', 'file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
             'type' => ['required', Rule::enum(PackageType::class)],
             'price' => ['required', 'numeric', 'min:0', 'max:9999999999.99'],
             'compare_price' => ['nullable', 'numeric', 'gte:price', 'max:9999999999.99'],

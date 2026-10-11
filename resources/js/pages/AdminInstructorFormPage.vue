@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useAuthStore } from '../stores/auth';
@@ -8,6 +8,7 @@ import PageHeading from '../components/ui/PageHeading.vue';
 import BaseAlert from '../components/ui/BaseAlert.vue';
 import BaseButton from '../components/ui/BaseButton.vue';
 import LoadingState from '../components/ui/LoadingState.vue';
+import { publicMediaUrl } from '../utils/catalog';
 
 const route = useRoute();
 const router = useRouter();
@@ -22,11 +23,37 @@ const loaded = ref(false);
 const loading = ref(true);
 const busy = ref(false);
 const error = ref(null);
+const avatarFile = ref(null);
+const avatarInput = ref(null);
+const avatarPreview = ref(null);
+const currentAvatar = ref(null);
+const removeAvatar = ref(false);
+const avatarSource = computed(() => avatarPreview.value || publicMediaUrl(currentAvatar.value));
+
+function selectAvatar(event) {
+    const file = event.target.files?.[0] ?? null;
+    if (avatarPreview.value) URL.revokeObjectURL(avatarPreview.value);
+    avatarFile.value = file;
+    avatarPreview.value = file ? URL.createObjectURL(file) : null;
+    if (file) removeAvatar.value = false;
+}
+
+function clearAvatar() {
+    if (avatarPreview.value) URL.revokeObjectURL(avatarPreview.value);
+    avatarFile.value = null;
+    avatarPreview.value = null;
+    currentAvatar.value = null;
+    removeAvatar.value = true;
+    if (avatarInput.value) avatarInput.value.value = '';
+}
+
+onBeforeUnmount(() => { if (avatarPreview.value) URL.revokeObjectURL(avatarPreview.value); });
 
 onMounted(async () => {
     if (!isEdit.value) { loaded.value = true; loading.value = false; return; }
     try {
         const instructor = await fetchAdminInstructor(route.params.id);
+        currentAvatar.value = instructor.avatar;
         Object.assign(form, { name: instructor.name, email: instructor.email ?? '', status: instructor.status, ...instructor.profile, specialties: instructor.profile?.specialties?.join('\n') ?? '', years_experience: instructor.profile?.years_experience ?? '' });
         loaded.value = true;
     } catch (failure) { error.value = failure; }
@@ -40,6 +67,8 @@ async function submit() {
     for (const key of fields.filter((key) => key !== 'years_experience')) payload[key] = form[key] || null;
     if (canManageAccount.value) {
         Object.assign(payload, { name: form.name.trim(), email: form.email.trim(), status: form.status });
+        if (avatarFile.value) payload.avatar = avatarFile.value;
+        else if (removeAvatar.value && isEdit.value) payload.remove_avatar = true;
         if (!isEdit.value || form.password) Object.assign(payload, { password: form.password, password_confirmation: form.password_confirmation });
     }
     busy.value = true;
@@ -61,6 +90,7 @@ async function submit() {
         <template v-else>
             <BaseAlert v-if="error" tone="danger">{{ t(error.status === 422 ? 'admin.validation' : error.status === 403 ? 'admin.notAllowed' : 'admin.saveError') }}</BaseAlert>
             <form class="space-y-6" @submit.prevent="submit">
+                <section v-if="canManageAccount" class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7"><h2 class="text-lg font-black">{{ t('admin.instructorAvatar') }}</h2><p class="mt-2 text-sm text-slate-600">{{ t('admin.instructorAvatarHint') }}</p><div class="mt-5 flex flex-wrap items-center gap-5"><label for="instructor-avatar" class="grid size-28 cursor-pointer place-items-center overflow-hidden rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 text-4xl font-black text-brand focus-within:outline-3 focus-within:outline-brand"><img v-if="avatarSource" :src="avatarSource" :alt="form.name || t('admin.instructorAvatar')" class="size-full object-cover"><span v-else aria-hidden="true">{{ form.name?.charAt(0) || '+' }}</span></label><div class="space-y-2"><label for="instructor-avatar" class="block text-sm font-bold">{{ t('admin.chooseInstructorAvatar') }}</label><input id="instructor-avatar" ref="avatarInput" type="file" accept="image/jpeg,image/png,image/webp" class="block max-w-full text-sm file:me-3 file:rounded-lg file:border-0 file:bg-brand-soft file:px-4 file:py-2 file:font-bold file:text-brand" @change="selectAvatar"><button v-if="avatarSource" type="button" class="text-sm font-bold text-red-700 underline" @click="clearAvatar">{{ t('admin.removeInstructorAvatar') }}</button><p v-if="error?.errors?.avatar" role="alert" class="text-sm text-red-700">{{ error.errors.avatar[0] }}</p></div></div></section>
                 <section v-if="canManageAccount" class="space-y-5 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7"><h2 class="text-lg font-black">{{ t('admin.instructorAccount') }}</h2><div class="grid gap-5 sm:grid-cols-2"><div><label for="instructor-name" class="mb-2 block text-sm font-bold">{{ t('admin.name') }}</label><input id="instructor-name" v-model="form.name" required maxlength="255" class="w-full rounded-xl border border-slate-300 px-4 py-3"><p v-if="error?.errors?.name" role="alert" class="mt-1 text-sm text-red-700">{{ error.errors.name[0] }}</p></div><div><label for="instructor-email" class="mb-2 block text-sm font-bold">{{ t('admin.email') }}</label><input id="instructor-email" v-model="form.email" type="email" dir="ltr" required maxlength="255" class="w-full rounded-xl border border-slate-300 px-4 py-3"><p v-if="error?.errors?.email" role="alert" class="mt-1 text-sm text-red-700">{{ error.errors.email[0] }}</p></div><div><label for="instructor-status" class="mb-2 block text-sm font-bold">{{ t('admin.status') }}</label><select id="instructor-status" v-model="form.status" class="w-full rounded-xl border border-slate-300 px-4 py-3"><option v-for="status in statuses" :key="status" :value="status">{{ t(`labels.statuses.${status}`) }}</option></select></div></div><div class="grid gap-5 border-t border-slate-100 pt-5 sm:grid-cols-2"><div><label for="instructor-password" class="mb-2 block text-sm font-bold">{{ t('admin.password') }}</label><input id="instructor-password" v-model="form.password" type="password" autocomplete="new-password" :required="!isEdit" class="w-full rounded-xl border border-slate-300 px-4 py-3"><p v-if="error?.errors?.password" role="alert" class="mt-1 text-sm text-red-700">{{ error.errors.password[0] }}</p></div><div><label for="instructor-confirm" class="mb-2 block text-sm font-bold">{{ t('admin.passwordConfirmation') }}</label><input id="instructor-confirm" v-model="form.password_confirmation" type="password" autocomplete="new-password" :required="!isEdit || Boolean(form.password)" class="w-full rounded-xl border border-slate-300 px-4 py-3"></div><p v-if="isEdit" class="sm:col-span-2 text-xs text-slate-500">{{ t('admin.blankPassword') }}</p></div></section>
                 <section class="space-y-5 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7"><h2 class="text-lg font-black">{{ t('admin.instructorProfile') }}</h2><div class="grid gap-5 sm:grid-cols-2"><div><label for="job-title" class="mb-2 block text-sm font-bold">{{ t('admin.jobTitle') }}</label><input id="job-title" v-model="form.job_title" maxlength="255" class="w-full rounded-xl border border-slate-300 px-4 py-3"><p v-if="error?.errors?.job_title" role="alert" class="mt-1 text-sm text-red-700">{{ error.errors.job_title[0] }}</p></div><div><label for="years-experience" class="mb-2 block text-sm font-bold">{{ t('admin.yearsExperience') }}</label><input id="years-experience" v-model="form.years_experience" type="number" min="0" max="80" class="w-full rounded-xl border border-slate-300 px-4 py-3"><p v-if="error?.errors?.years_experience" role="alert" class="mt-1 text-sm text-red-700">{{ error.errors.years_experience[0] }}</p></div></div><div><label for="short-bio" class="mb-2 block text-sm font-bold">{{ t('admin.shortBio') }}</label><textarea id="short-bio" v-model="form.short_bio" maxlength="1000" rows="2" class="w-full rounded-xl border border-slate-300 px-4 py-3" /><p v-if="error?.errors?.short_bio" role="alert" class="mt-1 text-sm text-red-700">{{ error.errors.short_bio[0] }}</p></div><div><label for="instructor-bio" class="mb-2 block text-sm font-bold">{{ t('admin.bio') }}</label><textarea id="instructor-bio" v-model="form.bio" maxlength="10000" rows="5" class="w-full rounded-xl border border-slate-300 px-4 py-3" /><p v-if="error?.errors?.bio" role="alert" class="mt-1 text-sm text-red-700">{{ error.errors.bio[0] }}</p></div><div><label for="specialties" class="mb-2 block text-sm font-bold">{{ t('admin.specialties') }}</label><textarea id="specialties" v-model="form.specialties" rows="3" class="w-full rounded-xl border border-slate-300 px-4 py-3" /><p class="mt-1 text-xs text-slate-500">{{ t('admin.onePerLine') }}</p><p v-if="error?.errors?.specialties" role="alert" class="mt-1 text-sm text-red-700">{{ error.errors.specialties[0] }}</p></div><div class="grid gap-5 sm:grid-cols-2"><div v-for="key in ['linkedin_url', 'facebook_url', 'instagram_url', 'website_url']" :key="key"><label :for="key" class="mb-2 block text-sm font-bold">{{ t(`admin.${key}`) }}</label><input :id="key" v-model="form[key]" type="url" maxlength="255" dir="ltr" class="w-full rounded-xl border border-slate-300 px-4 py-3"><p v-if="error?.errors?.[key]" role="alert" class="mt-1 text-sm text-red-700">{{ error.errors[key][0] }}</p></div></div><label class="flex items-center gap-3 text-sm font-bold"><input v-model="form.is_featured" type="checkbox" class="size-5 accent-brand">{{ t('admin.featured') }}</label></section>
                 <div class="flex flex-wrap gap-3"><BaseButton type="submit" :loading="busy">{{ t(isEdit ? 'admin.save' : 'admin.create') }}</BaseButton><RouterLink :to="{ name: 'admin.instructors.index' }" class="inline-flex min-h-11 items-center rounded-xl border border-slate-300 px-5 text-sm font-bold">{{ t('admin.cancel') }}</RouterLink></div>

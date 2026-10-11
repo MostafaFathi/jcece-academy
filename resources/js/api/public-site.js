@@ -17,6 +17,10 @@ export async function fetchSiteFaqs() {
     return unwrapResource(await api.get('api/v1/site-faqs'));
 }
 
+export async function fetchSiteSettings() {
+    return unwrapResource(await api.get('api/v1/site-settings'));
+}
+
 export async function fetchTestimonials() {
     return unwrapCollection(await api.get('api/v1/testimonials'));
 }
@@ -27,6 +31,10 @@ export async function submitContact(payload) {
 
 export async function fetchAdminSiteContent() {
     return unwrapResource(await api.get('api/v1/admin/site-content'));
+}
+
+export async function saveSiteSettings(payload) {
+    return unwrapResource(await api.put('api/v1/admin/site-settings', payload));
 }
 
 export async function saveSitePage(slug, payload) {

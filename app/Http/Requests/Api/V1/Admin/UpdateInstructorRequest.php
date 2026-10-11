@@ -13,6 +13,13 @@ use Illuminate\Validation\Validator;
 
 class UpdateInstructorRequest extends FormRequest
 {
+    protected function prepareForValidation(): void
+    {
+        if ($this->boolean('clear_specialties')) {
+            $this->merge(['specialties' => []]);
+        }
+    }
+
     /**
      * Determine if the user is authorized to make this request.
      */
@@ -47,6 +54,8 @@ class UpdateInstructorRequest extends FormRequest
             'instagram_url' => ['nullable', 'url', 'max:255'],
             'website_url' => ['nullable', 'url', 'max:255'],
             'is_featured' => ['sometimes', 'boolean'],
+            'avatar' => ['sometimes', 'file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'remove_avatar' => ['sometimes', 'boolean'],
         ];
     }
 

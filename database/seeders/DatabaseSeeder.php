@@ -16,6 +16,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->call(RolesAndPermissionsSeeder::class);
         $this->call(PolicyPageSeeder::class);
+        $this->call(SiteSettingSeeder::class);
 
         if (app()->isLocal()) {
             $this->call(DevelopmentSeeder::class);

@@ -127,6 +127,25 @@ describe('admin instructor management', () => {
         await wrapper.get('form').trigger('submit'); await flushPromises();
         expect(instructorsApi.updateAdminInstructor.mock.calls[0][1]).toMatchObject({ password: 'ChangedPass123', password_confirmation: 'ChangedPass123' }); wrapper.unmount();
     });
+    it('includes a selected instructor photo in the save request', async () => {
+        const createObjectURL = URL.createObjectURL;
+        const revokeObjectURL = URL.revokeObjectURL;
+        URL.createObjectURL = vi.fn(() => 'blob:trainer-preview');
+        URL.revokeObjectURL = vi.fn();
+        try {
+            const wrapper = render(AdminInstructorFormPage); await flushPromises();
+            const image = new File(['photo'], 'trainer.png', { type: 'image/png' });
+            Object.defineProperty(wrapper.get('#instructor-avatar').element, 'files', { configurable: true, value: [image] });
+            await wrapper.get('#instructor-avatar').trigger('change');
+            expect(wrapper.get('img[src="blob:trainer-preview"]').exists()).toBe(true);
+            await wrapper.get('form').trigger('submit'); await flushPromises();
+            expect(instructorsApi.createAdminInstructor.mock.calls[0][0].avatar).toBe(image);
+            wrapper.unmount();
+        } finally {
+            URL.createObjectURL = createObjectURL;
+            URL.revokeObjectURL = revokeObjectURL;
+        }
+    });
     it('sets Arabic document direction when locale changes', async () => {
         setLocale('ar'); const wrapper = render(AdminInstructorsPage); await flushPromises(); expect(wrapper.attributes('dir')).toBe('rtl'); wrapper.unmount();
     });

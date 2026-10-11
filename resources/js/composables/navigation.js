@@ -25,7 +25,7 @@ export const navigationByArea = {
         { label: 'operations.certificates', route: 'admin.certificates.index', permissions: ['certificates.view'], group: 'operations.workspace' },
         { label: 'operations.support', route: 'admin.tickets.index', permissions: ['support_tickets.view'], group: 'operations.workspace' },
         { label: 'policies.manage', route: 'admin.policy-pages', permissions: ['policy_pages.view'], group: 'nav.website' },
-        { label: 'site.manage', route: 'admin.site-content', permissions: ['site_content.manage'], group: 'nav.website' },
+        { label: 'site.adminTitle', route: 'admin.site-content', permissions: ['site_content.manage'], group: 'nav.website' },
     ],
     instructor: [
         { label: 'reports.title', route: 'instructor.reports', roles: ['instructor'], permissions: ['courses.view'] },

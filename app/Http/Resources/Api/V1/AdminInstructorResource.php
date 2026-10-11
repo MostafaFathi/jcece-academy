@@ -18,6 +18,7 @@ class AdminInstructorResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
+            'avatar' => $this->avatar,
             'email' => $this->when($request->user()?->can(PermissionName::InstructorsManage->value), $this->email),
             'status' => $this->status->value,
             'profile' => $this->whenLoaded('instructorProfile', fn (): ?array => $this->instructorProfile === null ? null : [

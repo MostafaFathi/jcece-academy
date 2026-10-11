@@ -1,0 +1,1 @@
+function e(e,t,n=!1){if(!e[t])return e;let r=new FormData;for(let[t,n]of Object.entries(e))Array.isArray(n)?(n.length===0&&r.append(`clear_${t}`,`1`),n.forEach((e,n)=>r.append(`${t}[${n}]`,e))):n!==void 0&&r.append(t,n===null?``:typeof n==`boolean`?n?`1`:`0`:n);return n&&r.append(`_method`,`PATCH`),r}export{e as t};

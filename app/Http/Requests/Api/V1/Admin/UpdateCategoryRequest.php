@@ -34,6 +34,7 @@ class UpdateCategoryRequest extends FormRequest
             'slug' => ['sometimes', 'required', 'string', 'max:255', 'alpha_dash', Rule::unique('categories', 'slug')->ignore($category)],
             'description' => ['nullable', 'string'],
             'image' => ['nullable', 'string', 'max:2048'],
+            'image_upload' => ['sometimes', 'file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
             'icon' => ['nullable', 'string', 'max:255'],
             'sort_order' => ['sometimes', 'integer', 'min:0'],
             'is_active' => ['sometimes', 'boolean'],

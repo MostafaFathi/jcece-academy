@@ -7,7 +7,9 @@ use App\Models\User;
 use App\RoleName;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use RuntimeException;
 use Tests\TestCase;
@@ -52,6 +54,50 @@ class AdminInstructorApiTest extends TestCase
         $this->assertTrue($instructor->hasRole(RoleName::Instructor->value));
         $this->assertTrue(Hash::check('StrongPass123', $instructor->password));
         $this->assertDatabaseHas('instructor_profiles', ['user_id' => $instructor->id, 'job_title' => 'Safety Trainer']);
+    }
+
+    public function test_admin_can_upload_and_replace_instructor_photo(): void
+    {
+        Storage::fake('public');
+        $this->actingAsAdmin();
+
+        $response = $this->post('/api/v1/admin/instructors', [
+            ...$this->newInstructorPayload(), 'avatar' => UploadedFile::fake()->image('trainer.png'),
+        ], ['Accept' => 'application/json'])->assertCreated();
+        $instructor = User::query()->where('email', 'new.trainer@example.test')->firstOrFail();
+        $firstPath = str_replace('/storage/', '', $instructor->avatar);
+        Storage::disk('public')->assertExists($firstPath);
+        $response->assertJsonPath('data.avatar', $instructor->avatar);
+
+        $this->post("/api/v1/admin/instructors/{$instructor->id}", [
+            '_method' => 'PATCH', 'avatar' => UploadedFile::fake()->image('replacement.jpg'),
+            'clear_specialties' => '1', 'bio' => '',
+        ], ['Accept' => 'application/json'])->assertOk();
+        Storage::disk('public')->assertMissing($firstPath);
+        $replacementPath = str_replace('/storage/', '', $instructor->fresh()->avatar);
+        Storage::disk('public')->assertExists($replacementPath);
+        $this->assertSame([], $instructor->fresh()->instructorProfile->specialties);
+
+        $this->patchJson("/api/v1/admin/instructors/{$instructor->id}", ['remove_avatar' => true])
+            ->assertOk()->assertJsonPath('data.avatar', null);
+        Storage::disk('public')->assertMissing($replacementPath);
+    }
+
+    public function test_profile_editor_cannot_change_instructor_photo(): void
+    {
+        Storage::fake('public');
+        $this->seed(RolesAndPermissionsSeeder::class);
+        $manager = User::factory()->create();
+        $manager->assignRole(RoleName::ContentManager->value);
+        $instructor = User::factory()->create();
+        $instructor->assignRole(RoleName::Instructor->value);
+        Sanctum::actingAs($manager);
+
+        $this->post("/api/v1/admin/instructors/{$instructor->id}", [
+            '_method' => 'PATCH', 'avatar' => UploadedFile::fake()->image('denied.png'),
+        ], ['Accept' => 'application/json'])->assertForbidden();
+        $this->assertNull($instructor->fresh()->avatar);
+        $this->assertSame([], Storage::disk('public')->files('avatars'));
     }
 
     public function test_instructor_creation_rolls_back_user_and_role_when_profile_write_fails(): void

@@ -15,6 +15,15 @@ use Illuminate\Validation\Validator;
 
 class StoreCourseRequest extends FormRequest
 {
+    protected function prepareForValidation(): void
+    {
+        foreach (['learning_outcomes', 'requirements', 'target_audiences', 'required_tools'] as $key) {
+            if ($this->boolean('clear_'.$key)) {
+                $this->merge([$key => []]);
+            }
+        }
+    }
+
     /**
      * Determine if the user is authorized to make this request.
      */
@@ -38,6 +47,7 @@ class StoreCourseRequest extends FormRequest
             'short_description' => ['nullable', 'string', 'max:1000'],
             'description' => ['nullable', 'string'],
             'thumbnail' => ['nullable', 'string', 'max:2048'],
+            'thumbnail_upload' => ['sometimes', 'file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
             'promo_video_url' => ['nullable', 'url:http,https', 'max:2048'],
             'level' => ['required', Rule::enum(CourseLevel::class)],
             'training_type' => ['sometimes', Rule::enum(CourseTrainingType::class)],

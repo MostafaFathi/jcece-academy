@@ -3,7 +3,7 @@ import { flushPromises, mount } from '@vue/test-utils';
 import { createPinia } from 'pinia';
 import HomePage from '../pages/HomePage.vue';
 import CategoryCard from '../components/public/CategoryCard.vue';
-import { fetchInstructors, fetchTestimonials } from '../api/public-site';
+import { fetchInstructors, fetchSiteSettings, fetchTestimonials } from '../api/public-site';
 import i18n, { setLocale } from '../i18n';
 import { fetchCategories } from '../api/categories';
 import { fetchCourses } from '../api/courses';
@@ -13,7 +13,7 @@ vi.mock('vue-router', () => ({ useRoute: () => ({ query: {} }), useRouter: () =>
 vi.mock('../api/categories', () => ({ fetchCategories: vi.fn() }));
 vi.mock('../api/courses', () => ({ fetchCourses: vi.fn() }));
 vi.mock('../api/packages', () => ({ fetchPackages: vi.fn() }));
-vi.mock('../api/public-site', () => ({ fetchInstructors: vi.fn(), fetchTestimonials: vi.fn() }));
+vi.mock('../api/public-site', () => ({ fetchInstructors: vi.fn(), fetchTestimonials: vi.fn(), fetchSiteSettings: vi.fn() }));
 
 const RouterLinkStub = { props: ['to'], template: '<a><slot /></a>' };
 
@@ -26,6 +26,7 @@ describe('homepage', () => {
         setLocale('ar');
         fetchInstructors.mockResolvedValue({ items: [{ id: 2, name: 'محاضر', profile: { job_title: 'مهندس' } }] });
         fetchTestimonials.mockResolvedValue({ items: [] });
+        fetchSiteSettings.mockResolvedValue({ home_autoplay_enabled: true });
         fetchCategories.mockResolvedValue([{ id: 1, name: 'الهندسة', slug: 'engineering', children: [] }]);
         fetchCourses.mockResolvedValue({ items: [{ id: 1, title: 'دورة BIM', slug: 'bim', short_description: 'وصف حقيقي', price: '50.00', level: 'beginner', rating_summary: { average_rating: 4.5, review_count: 2 } }], meta: {} });
         fetchPackages.mockResolvedValue({ items: [{ id: 1, title: 'مسار BIM', slug: 'bim-path', type: 'learning_path', price: '100.00', course_count: 1 }], meta: {} });
@@ -61,5 +62,14 @@ describe('homepage', () => {
         expect(wrapper.text()).toContain('الهندسة');
         expect(wrapper.text()).toContain('مسار BIM');
         expect(wrapper.text()).toContain('تعذر تحميل المحتوى الآن');
+    });
+
+    it('passes the administrator autoplay setting to every horizontal section', async () => {
+        fetchSiteSettings.mockResolvedValue({ home_autoplay_enabled: false });
+        const wrapper = mountPage();
+        await flushPromises();
+        expect(wrapper.findAllComponents({ name: 'HomeCatalogSection' })).toHaveLength(5);
+        expect(wrapper.findAllComponents({ name: 'HomeCatalogSection' }).every((section) => section.props('autoPlay') === false)).toBe(true);
+        wrapper.unmount();
     });
 });

@@ -61,13 +61,13 @@ class PublicSitePhase15FTest extends TestCase
     public function test_public_instructor_response_excludes_private_user_fields(): void
     {
         $this->seed(RolesAndPermissionsSeeder::class);
-        $instructor = User::factory()->create(['email' => 'private-instructor@example.test', 'phone' => '0599999999']);
+        $instructor = User::factory()->create(['email' => 'private-instructor@example.test', 'phone' => '0599999999', 'avatar' => '/storage/avatars/portrait.png']);
         $instructor->assignRole(RoleName::Instructor->value);
         InstructorProfile::factory()->for($instructor)->create();
         Course::factory()->published()->for($instructor, 'instructor')->create();
 
         $response = $this->getJson("/api/v1/instructors/{$instructor->id}")->assertOk()
-            ->assertJsonPath('data.id', $instructor->id)->assertJsonCount(1, 'data.courses');
+            ->assertJsonPath('data.id', $instructor->id)->assertJsonPath('data.avatar', '/storage/avatars/portrait.png')->assertJsonCount(1, 'data.courses');
         $this->assertStringNotContainsString('private-instructor@example.test', $response->getContent());
         $this->assertStringNotContainsString('0599999999', $response->getContent());
         $response->assertJsonMissingPath('data.roles')->assertJsonMissingPath('data.permissions');

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ContactMessage;
 use App\Models\SiteFaq;
 use App\Models\SitePage;
+use App\Models\SiteSetting;
 use App\PermissionName;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -23,7 +24,18 @@ class SiteContentController extends Controller
         return response()->json(['data' => [
             'pages' => SitePage::query()->whereIn('slug', SitePage::SLUGS)->orderBy('slug')->get(),
             'faqs' => SiteFaq::query()->orderBy('sort_order')->orderBy('id')->get(),
+            'settings' => ['home_autoplay_enabled' => (bool) (SiteSetting::query()->value('home_autoplay_enabled') ?? true)],
         ]]);
+    }
+
+    public function updateSettings(Request $request): JsonResponse
+    {
+        $this->authorizeManage($request);
+        $attributes = $request->validate(['home_autoplay_enabled' => ['required', 'boolean']]);
+        $settings = SiteSetting::current();
+        $settings->update($attributes);
+
+        return response()->json(['data' => ['home_autoplay_enabled' => $settings->home_autoplay_enabled]]);
     }
 
     public function updatePage(Request $request, string $slug): JsonResponse

@@ -1,4 +1,6 @@
 export const en = {
+    selectCatalogImage: 'Choose image', removeCatalogImage: 'Remove image', catalogImageHint: 'JPG, PNG or WebP, up to 4 MB. This image appears on the public website.',
+    instructorAvatar: 'Instructor photo', instructorAvatarHint: 'Shown on the public website. JPG, PNG or WebP, up to 2 MB.', chooseInstructorAvatar: 'Choose photo', removeInstructorAvatar: 'Remove photo',
     addRole: 'Add role', removeRole: 'Remove role',
     activeLearners: 'Active learners', newStudents: 'New students · 30 days', cohortEnrollments: 'Enrollments · 30 days', cohortCompletions: 'Completions · 30-day enrollment cohort', topDirectCourses: 'Top direct Course purchases · 30 days',
     pendingPaymentApprovals: 'Pending payment approvals', pendingRefunds: 'Pending refunds',
@@ -14,6 +16,8 @@ export const en = {
 };
 
 export const ar = {
+    selectCatalogImage: 'اختيار صورة', removeCatalogImage: 'إزالة الصورة', catalogImageHint: 'JPG أو PNG أو WebP، حتى 4 ميغابايت. تظهر هذه الصورة في الموقع العام.',
+    instructorAvatar: 'صورة المدرب', instructorAvatarHint: 'تظهر في الموقع العام. JPG أو PNG أو WebP، حتى 2 ميغابايت.', chooseInstructorAvatar: 'اختيار صورة', removeInstructorAvatar: 'إزالة الصورة',
     addRole: 'إضافة دور', removeRole: 'إزالة دور',
     activeLearners: 'متعلمون بوصول فعّال', newStudents: 'متدربون جدد · 30 يومًا', cohortEnrollments: 'تسجيلات · 30 يومًا', cohortCompletions: 'إكمالات دفعة التسجيل · 30 يومًا', topDirectCourses: 'أكثر الدورات شراءً مباشرة · 30 يومًا',
     pendingPaymentApprovals: 'مدفوعات بانتظار الموافقة', pendingRefunds: 'استردادات معلقة',

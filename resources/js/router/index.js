@@ -128,7 +128,7 @@ export const routes = [
             { path: 'support', name: 'admin.tickets.index', component: () => import('../pages/OperationalTicketsPage.vue'), meta: { requiresAuth: true, permissions: ['support_tickets.view'], title: 'operations.support' } },
             { path: 'support/:id', name: 'admin.tickets.show', component: () => import('../pages/OperationalTicketDetailPage.vue'), meta: { requiresAuth: true, permissions: ['support_tickets.view'], title: 'operations.support' } },
             { path: 'policy-pages', name: 'admin.policy-pages', component: () => import('../pages/AdminPolicyPagesPage.vue'), meta: { requiresAuth: true, permissions: ['policy_pages.view'], title: 'policies.manage' } },
-            { path: 'site-content', name: 'admin.site-content', component: () => import('../pages/AdminSiteContentPage.vue'), meta: { requiresAuth: true, permissions: ['site_content.manage'], title: 'site.manage' } },
+            { path: 'site-content', name: 'admin.site-content', component: () => import('../pages/AdminSiteContentPage.vue'), meta: { requiresAuth: true, permissions: ['site_content.manage'], title: 'site.adminTitle' } },
             { path: 'content', name: 'admin.content', redirect: { name: 'admin.courses.index' }, meta: { requiresAuth: true, permissions: ['courses.view'] } },
         ],
     },

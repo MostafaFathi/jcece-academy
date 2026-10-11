@@ -10,6 +10,7 @@ use App\Http\Resources\Api\V1\PackageResource;
 use App\Models\Package;
 use App\PackageStatus;
 use App\Services\AuditTrail;
+use App\Services\CatalogImageStorage;
 use App\Services\PackageService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -17,6 +18,7 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Throwable;
 
 class PackageController extends Controller
 {
@@ -50,23 +52,33 @@ class PackageController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StorePackageRequest $request, PackageService $packageService, AuditTrail $audit): JsonResponse
+    public function store(StorePackageRequest $request, PackageService $packageService, AuditTrail $audit, CatalogImageStorage $images): JsonResponse
     {
         Gate::authorize('create', Package::class);
-        $attributes = $request->validated();
+        $attributes = $request->safe()->except('thumbnail_upload');
 
         if (($attributes['status'] ?? PackageStatus::Draft->value) === PackageStatus::Published->value) {
             Gate::authorize('publish', new Package);
         }
 
-        $package = DB::transaction(function () use ($packageService, $attributes, $audit, $request): Package {
-            $package = $packageService->create($attributes);
-            if ($package->status === PackageStatus::Published) {
-                $audit->record('package.published', $package, $request->user());
-            }
+        $newImage = $request->hasFile('thumbnail_upload') ? $images->store($request->file('thumbnail_upload'), 'catalog/packages', 'thumbnail_upload') : null;
+        if ($newImage !== null) {
+            $attributes['thumbnail'] = $newImage;
+        }
 
-            return $package;
-        });
+        try {
+            $package = DB::transaction(function () use ($packageService, $attributes, $audit, $request): Package {
+                $package = $packageService->create($attributes);
+                if ($package->status === PackageStatus::Published) {
+                    $audit->record('package.published', $package, $request->user());
+                }
+
+                return $package;
+            });
+        } catch (Throwable $exception) {
+            $images->deleteManaged($newImage);
+            throw $exception;
+        }
 
         return (new PackageResource($package))->response()->setStatusCode(201);
     }
@@ -84,24 +96,38 @@ class PackageController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(UpdatePackageRequest $request, Package $package, PackageService $packageService, AuditTrail $audit): PackageResource
+    public function update(UpdatePackageRequest $request, Package $package, PackageService $packageService, AuditTrail $audit, CatalogImageStorage $images): PackageResource
     {
         Gate::authorize('update', $package);
-        $attributes = $request->validated();
+        $attributes = $request->safe()->except('thumbnail_upload');
 
         if (($attributes['status'] ?? null) === PackageStatus::Published->value && $package->status !== PackageStatus::Published) {
             Gate::authorize('publish', $package);
         }
 
-        $package = DB::transaction(function () use ($package, $attributes, $packageService, $audit, $request): Package {
-            $previousStatus = $package->status;
-            $package = $packageService->update($package, $attributes);
-            if ($previousStatus !== $package->status && in_array($package->status, [PackageStatus::Published, PackageStatus::Archived], true)) {
-                $audit->record('package.status_changed', $package, $request->user(), ['from_status' => $previousStatus->value, 'to_status' => $package->status->value]);
-            }
+        $oldImage = $package->thumbnail;
+        $newImage = $request->hasFile('thumbnail_upload') ? $images->store($request->file('thumbnail_upload'), 'catalog/packages', 'thumbnail_upload') : null;
+        if ($newImage !== null) {
+            $attributes['thumbnail'] = $newImage;
+        }
 
-            return $package;
-        });
+        try {
+            $package = DB::transaction(function () use ($package, $attributes, $packageService, $audit, $request): Package {
+                $previousStatus = $package->status;
+                $package = $packageService->update($package, $attributes);
+                if ($previousStatus !== $package->status && in_array($package->status, [PackageStatus::Published, PackageStatus::Archived], true)) {
+                    $audit->record('package.status_changed', $package, $request->user(), ['from_status' => $previousStatus->value, 'to_status' => $package->status->value]);
+                }
+
+                return $package;
+            });
+        } catch (Throwable $exception) {
+            $images->deleteManaged($newImage);
+            throw $exception;
+        }
+        if (array_key_exists('thumbnail', $attributes) && $oldImage !== $package->thumbnail) {
+            $images->deleteManaged($oldImage);
+        }
 
         return new PackageResource($package);
     }

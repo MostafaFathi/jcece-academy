@@ -10,12 +10,14 @@ use App\Http\Requests\Api\V1\ListCoursesRequest;
 use App\Http\Resources\Api\V1\CourseResource;
 use App\Models\Course;
 use App\RoleName;
+use App\Services\CatalogImageStorage;
 use App\Services\CourseService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Gate;
+use Throwable;
 
 class CourseController extends Controller
 {
@@ -58,10 +60,10 @@ class CourseController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StoreCourseRequest $request, CourseService $courseService): JsonResponse
+    public function store(StoreCourseRequest $request, CourseService $courseService, CatalogImageStorage $images): JsonResponse
     {
         Gate::authorize('create', Course::class);
-        $attributes = $request->validated();
+        $attributes = $request->safe()->except('thumbnail_upload');
         Gate::authorize('assignInstructor', [Course::class, (int) $attributes['instructor_id']]);
 
         if (array_key_exists('certificate_enabled', $attributes)) {
@@ -72,7 +74,17 @@ class CourseController extends Controller
             Gate::authorize('publish', new Course);
         }
 
-        $course = $courseService->create($attributes, $request->user());
+        $newImage = $request->hasFile('thumbnail_upload') ? $images->store($request->file('thumbnail_upload'), 'catalog/courses', 'thumbnail_upload') : null;
+        if ($newImage !== null) {
+            $attributes['thumbnail'] = $newImage;
+        }
+
+        try {
+            $course = $courseService->create($attributes, $request->user());
+        } catch (Throwable $exception) {
+            $images->deleteManaged($newImage);
+            throw $exception;
+        }
 
         return (new CourseResource($course))->response()->setStatusCode(201);
     }
@@ -97,10 +109,10 @@ class CourseController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(UpdateCourseRequest $request, Course $course, CourseService $courseService): CourseResource
+    public function update(UpdateCourseRequest $request, Course $course, CourseService $courseService, CatalogImageStorage $images): CourseResource
     {
         Gate::authorize('update', $course);
-        $attributes = $request->validated();
+        $attributes = $request->safe()->except('thumbnail_upload');
 
         if (array_key_exists('instructor_id', $attributes)) {
             Gate::authorize('assignInstructor', [Course::class, (int) $attributes['instructor_id']]);
@@ -114,7 +126,21 @@ class CourseController extends Controller
             Gate::authorize('publish', $course);
         }
 
-        $course = $courseService->update($course, $attributes, $request->user());
+        $oldImage = $course->thumbnail;
+        $newImage = $request->hasFile('thumbnail_upload') ? $images->store($request->file('thumbnail_upload'), 'catalog/courses', 'thumbnail_upload') : null;
+        if ($newImage !== null) {
+            $attributes['thumbnail'] = $newImage;
+        }
+
+        try {
+            $course = $courseService->update($course, $attributes, $request->user());
+        } catch (Throwable $exception) {
+            $images->deleteManaged($newImage);
+            throw $exception;
+        }
+        if (array_key_exists('thumbnail', $attributes) && $oldImage !== $course->thumbnail) {
+            $images->deleteManaged($oldImage);
+        }
 
         return new CourseResource($course);
     }
