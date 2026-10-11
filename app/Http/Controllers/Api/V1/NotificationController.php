@@ -8,6 +8,7 @@ use App\Models\NotificationPreference;
 use App\Models\PlatformNotification;
 use App\Services\NotificationTargetService;
 use App\Services\NotificationTypeRegistry;
+use App\Services\RealtimeSignals;
 use App\UserStatus;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -19,7 +20,7 @@ use Illuminate\Validation\Rule;
 
 class NotificationController extends Controller
 {
-    public function __construct(private NotificationTypeRegistry $registry, private NotificationTargetService $targets) {}
+    public function __construct(private NotificationTypeRegistry $registry, private NotificationTargetService $targets, private RealtimeSignals $realtime) {}
 
     private function inbox(Request $request): Builder
     {
@@ -48,6 +49,7 @@ class NotificationController extends Controller
     public function read(Request $request, string $notification): JsonResponse
     {
         $this->inbox($request)->whereKey($notification)->firstOrFail()->markAsRead();
+        $this->realtime->notification($request->user()->id);
 
         return response()->json(['status' => 'read']);
     }
@@ -55,6 +57,7 @@ class NotificationController extends Controller
     public function readAll(Request $request): JsonResponse
     {
         $this->inbox($request)->whereNull('read_at')->update(['read_at' => now()]);
+        $this->realtime->notification($request->user()->id);
 
         return response()->json(['status' => 'read']);
     }
@@ -65,6 +68,7 @@ class NotificationController extends Controller
         $path = $this->targets->path($request->user(), $n->target_type, $n->target_id);
         abort_unless($path, 404);
         $n->markAsRead();
+        $this->realtime->notification($request->user()->id);
 
         return response()->json(['path' => $path]);
     }

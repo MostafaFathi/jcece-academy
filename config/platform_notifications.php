@@ -1,6 +1,6 @@
 <?php
 
-return ['retention_days' => 180, 'receipt_retention_days' => 730, 'timezone' => 'Asia/Hebron', 'types' => [
+return ['retention_days' => 180, 'receipt_retention_days' => 730, 'timezone' => 'Asia/Hebron', 'broadcast' => (bool) env('NOTIFICATIONS_BROADCAST', false), 'types' => [
     'enrollment.activated' => ['category' => 'learning', 'mandatory' => true, 'email' => false, 'priority' => 'high', 'en' => 'Course access activated', 'ar' => 'تم تفعيل الوصول للدورة'],
     'enrollment.suspended' => ['category' => 'learning', 'mandatory' => true, 'email' => false, 'priority' => 'high', 'en' => 'Course access suspended', 'ar' => 'تم تعليق الوصول للدورة'],
     'enrollment.expired' => ['category' => 'learning', 'mandatory' => true, 'email' => false, 'priority' => 'high', 'en' => 'Course access expired', 'ar' => 'انتهت صلاحية الدورة'],

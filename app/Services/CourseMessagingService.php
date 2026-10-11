@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Events\CourseConversationChanged;
 use App\Models\Course;
 use App\Models\CourseConversation;
 use App\Models\CourseMessage;
@@ -22,7 +21,7 @@ use Throwable;
 
 class CourseMessagingService
 {
-    public function __construct(private CourseConversationPolicy $policy, private UploadedFileStorage $files) {}
+    public function __construct(private CourseConversationPolicy $policy, private UploadedFileStorage $files, private RealtimeSignals $realtime) {}
 
     public function conversation(User $user, int $id): CourseConversation
     {
@@ -274,9 +273,7 @@ class CourseMessagingService
     {
         $conversation->increment('version');
         $conversation->events()->create(['version' => $conversation->version, 'kind' => $kind, 'subject_id' => $subjectId, 'created_at' => now()]);
-        if (config('messaging.broadcast')) {
-            CourseConversationChanged::dispatch($conversation->id, $conversation->version, $kind);
-        }
+        $this->realtime->conversation($conversation->id, $conversation->version, $kind);
     }
 
     public function unreadQuery(User $actor, CourseConversation $conversation): Builder

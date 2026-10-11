@@ -18,7 +18,7 @@ use Illuminate\Support\Str;
 
 class UnifiedNotificationService
 {
-    public function __construct(private NotificationTypeRegistry $registry, private NotificationTargetService $targets) {}
+    public function __construct(private NotificationTypeRegistry $registry, private NotificationTargetService $targets, private RealtimeSignals $realtime) {}
 
     public function deliver(User $recipient, PlatformNotificationEvent $event): void
     {
@@ -65,6 +65,7 @@ class UnifiedNotificationService
                     $notification->forceFill(['category' => $definition['category'], 'priority' => $definition['priority'], 'target_type' => $targetType, 'target_id' => $targetId, 'target_version' => $event->type === 'message.received' ? $subject->id : 0])->save();
                 }
                 $receipt->update(['notification_id' => $notification->id]);
+                $this->realtime->notification($user->id);
             }
             // Existing commerce/certificate outbox owns these emails and is monitored alongside this outbox.
             $legacy = in_array($event->type, ['payment.approved', 'payment.rejected', 'order.updated', 'refund.updated', 'certificate.approved', 'certificate.issued'], true);

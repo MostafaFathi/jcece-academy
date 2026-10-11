@@ -5,6 +5,7 @@ import i18n from './i18n';
 import router from './router';
 import { installUnauthorizedHandler } from './api/client';
 import { useAuthStore } from './stores/auth';
+import { installRealtime } from './realtime';
 
 const app = createApp(App);
 const pinia = createPinia();
@@ -12,6 +13,7 @@ const pinia = createPinia();
 app.use(pinia);
 app.use(i18n);
 app.use(router);
+installRealtime(useAuthStore(pinia));
 
 installUnauthorizedHandler(() => {
     const auth = useAuthStore(pinia);

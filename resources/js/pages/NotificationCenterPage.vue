@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref, watch } from 'vue';
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useAuthStore } from '../stores/auth';
@@ -22,7 +22,10 @@ async function action(item, navigate = false) {
     finally { busy.value = null; }
 }
 async function readAll() { if (busy.value) return; busy.value = 'all'; try { await api.readAllNotifications(); await load(); api.notifyInboxChanged(); } catch (failure) { error.value = failure; } finally { busy.value = null; } }
-watch([unread, category], () => load()); onMounted(load);
+function refreshCurrentPage() { void load(meta.value.current_page); }
+watch([unread, category], () => load());
+onMounted(() => { void load(); window.addEventListener('notifications:changed', refreshCurrentPage); });
+onBeforeUnmount(() => window.removeEventListener('notifications:changed', refreshCurrentPage));
 </script>
 <template>
     <section class="mx-auto max-w-4xl space-y-5 p-4 sm:p-6" :dir="locale === 'ar' ? 'rtl' : 'ltr'">

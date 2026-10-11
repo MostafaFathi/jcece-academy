@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAuthStore } from '../../stores/auth';
 import { useRoute } from 'vue-router';
@@ -20,7 +20,8 @@ async function update() {
     finally { busy = false; if (!disposed && enabled.value) timer = setTimeout(update, delay); }
 }
 watch(enabled, (value) => { if (value) update(); else { clearTimeout(timer); count.value = 0; } }, { immediate: true });
-onBeforeUnmount(() => { disposed = true; clearTimeout(timer); });
+onMounted(() => window.addEventListener('notifications:changed', update));
+onBeforeUnmount(() => { disposed = true; clearTimeout(timer); window.removeEventListener('notifications:changed', update); });
 </script>
 <template>
     <RouterLink v-if="enabled" :to="{ name: destination }" class="fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] end-4 z-40 grid size-14 place-items-center rounded-2xl border border-white/20 bg-primary text-brand-dark shadow-[0_14px_35px_rgba(146,97,8,.32)] transition hover:-translate-y-1 hover:bg-primary-hover focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-brand sm:bottom-7 sm:end-7" :aria-label="count ? `${t('messaging.conversations')}: ${t('messaging.unreadCount', { count })}` : t('messaging.conversations')" :title="t('messaging.conversations')">

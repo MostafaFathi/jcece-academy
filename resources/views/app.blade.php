@@ -6,6 +6,7 @@
         <meta name="theme-color" content="#6B1D32">
         <meta name="description" content="JCEC Academy learning and commerce platform">
         <title>{{ config('app.name', 'JCEC Academy') }}</title>
+        <script>window.__JCEC_REALTIME__ = @json(['key' => config('broadcasting.default') === 'pusher' ? config('broadcasting.connections.pusher.key') : null, 'cluster' => config('broadcasting.connections.pusher.options.cluster')]);</script>
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
     <body>

@@ -1,1 +1,0 @@
-import{D as e,R as t}from"./app-D3u2P238.js";import{t as n}from"./AppShellLayout-D86PCjAB.js";var r={__name:`SalesSupportLayout`,setup(r){return(r,i)=>(t(),e(n,{area:`support`}))}};export{r as default};
