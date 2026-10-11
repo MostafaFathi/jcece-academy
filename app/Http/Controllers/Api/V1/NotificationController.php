@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\CourseConversation;
 use App\Models\NotificationPreference;
 use App\Models\PlatformNotification;
+use App\Services\NotificationContentService;
 use App\Services\NotificationTargetService;
 use App\Services\NotificationTypeRegistry;
 use App\Services\RealtimeSignals;
@@ -20,7 +21,7 @@ use Illuminate\Validation\Rule;
 
 class NotificationController extends Controller
 {
-    public function __construct(private NotificationTypeRegistry $registry, private NotificationTargetService $targets, private RealtimeSignals $realtime) {}
+    public function __construct(private NotificationTypeRegistry $registry, private NotificationTargetService $targets, private RealtimeSignals $realtime, private NotificationContentService $content) {}
 
     private function inbox(Request $request): Builder
     {
@@ -41,7 +42,14 @@ class NotificationController extends Controller
         }
         $page = $query->orderByDesc('updated_at')->orderByDesc('id')->paginate($valid['per_page'] ?? 20);
         $locale = in_array($request->user()->preferred_locale, ['ar', 'en'], true) ? $request->user()->preferred_locale : app()->getLocale();
-        $page->through(fn ($n) => ['id' => $n->id, 'type' => $n->type, 'category' => $n->category, 'priority' => $n->priority, 'title' => $this->registry->get($n->type)[$locale === 'en' ? 'en' : 'ar'], 'titles' => array_intersect_key($this->registry->get($n->type), array_flip(['ar', 'en'])), 'read_at' => $n->read_at, 'created_at' => $n->created_at, 'count' => $n->aggregate_count]);
+        $legacy = $this->content->legacySnapshots($page->getCollection());
+        $page->through(function (PlatformNotification $notification) use ($locale, $legacy): array {
+            $context = $notification->data['context'] ?? $legacy[$notification->target_type.':'.$notification->target_id] ?? [];
+            $arabic = $this->content->present($notification->type, $context, 'ar', $notification->aggregate_count);
+            $english = $this->content->present($notification->type, $context, 'en', $notification->aggregate_count);
+
+            return ['id' => $notification->id, 'type' => $notification->type, 'category' => $notification->category, 'priority' => $notification->priority, 'title' => $locale === 'en' ? $english['title'] : $arabic['title'], 'description' => $locale === 'en' ? $english['description'] : $arabic['description'], 'titles' => ['ar' => $arabic['title'], 'en' => $english['title']], 'descriptions' => ['ar' => $arabic['description'], 'en' => $english['description']], 'read_at' => $notification->read_at, 'created_at' => $notification->created_at, 'count' => $notification->aggregate_count];
+        });
 
         return response()->json(['data' => $page->items(), 'meta' => ['current_page' => $page->currentPage(), 'last_page' => $page->lastPage(), 'total' => $page->total(), 'unread_count' => $unread]]);
     }

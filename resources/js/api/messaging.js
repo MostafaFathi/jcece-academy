@@ -20,6 +20,7 @@ export const sendMessage = async (id, payload, attachment) => {
     return unwrapResource(await api.post(`${base}/conversations/${id}/messages`, form));
 };
 export const markRead = async (id, message_id) => api.post(`${base}/conversations/${id}/read`, { message_id });
+export const sendTyping = (id, typing) => api.post(`${base}/conversations/${id}/typing`, { typing });
 export const deleteMessage = async (id) => api.delete(`${base}/messages/${id}`);
 export const reactToMessage = async (id, emoji) => api.post(`${base}/messages/${id}/reactions`, { emoji });
 export const fetchMessageNotifications = async () => (await api.get(`${base}/notifications`)).data;

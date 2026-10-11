@@ -69,6 +69,25 @@ class CourseMessagingApiTest extends TestCase
         return $this->postJson("/api/v1/messaging/conversations/{$conversation}/messages", ['body' => $body, 'client_id' => (string) Str::uuid()])->assertCreated()->json('data.id');
     }
 
+    public function test_typing_signal_requires_an_authorized_sender_and_boolean_state(): void
+    {
+        [$course, $instructor, $student] = $this->course();
+        $conversation = $this->privateChat($course, $student);
+        $url = "/api/v1/messaging/conversations/{$conversation}/typing";
+
+        $this->postJson($url, ['typing' => true])->assertOk()->assertJsonPath('data.ok', true);
+        $this->postJson($url, ['typing' => 'invalid'])->assertUnprocessable();
+
+        $other = $this->student();
+        Sanctum::actingAs($other);
+        $this->postJson($url, ['typing' => true])->assertNotFound();
+
+        Sanctum::actingAs($instructor);
+        $this->postJson($url, ['typing' => false])->assertOk();
+        $instructor->revokePermissionTo('messaging.send');
+        $this->postJson($url, ['typing' => true])->assertForbidden();
+    }
+
     public function test_both_directions_return_the_same_canonical_private_chat_and_database_enforces_uniqueness(): void
     {
         [$course, $instructor, $student] = $this->course();

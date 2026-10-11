@@ -13,6 +13,7 @@ use App\Models\CourseMessageAttachment;
 use App\Models\User;
 use App\Policies\CourseConversationPolicy;
 use App\Services\CourseMessagingService;
+use App\Services\RealtimeSignals;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -23,7 +24,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class CourseMessagingController extends Controller
 {
-    public function __construct(private CourseMessagingService $service, private CourseConversationPolicy $policy) {}
+    public function __construct(private CourseMessagingService $service, private CourseConversationPolicy $policy, private RealtimeSignals $realtime) {}
 
     public function courses(Request $request): JsonResponse
     {
@@ -108,6 +109,16 @@ class CourseMessagingController extends Controller
     {
         $data = $request->validate(['message_id' => ['required', 'integer', 'min:1']]);
         $this->service->read($request->user(), $this->service->conversation($request->user(), $conversation), $data['message_id']);
+
+        return response()->json(['data' => ['ok' => true]]);
+    }
+
+    public function typing(Request $request, int $conversation): JsonResponse
+    {
+        $owned = $this->service->conversation($request->user(), $conversation);
+        abort_unless($this->policy->send($request->user(), $owned), 403);
+        $data = $request->validate(['typing' => ['required', 'boolean']]);
+        $this->realtime->typing($owned->id, $request->user()->id, $data['typing']);
 
         return response()->json(['data' => ['ok' => true]]);
     }

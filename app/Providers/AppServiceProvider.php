@@ -62,7 +62,7 @@ class AppServiceProvider extends ServiceProvider
         foreach ([AuditEvent::class, Course::class, Lesson::class, Quiz::class, QuizAttempt::class, Assignment::class, AssignmentSubmission::class, Enrollment::class, EnrollmentAccessGrant::class, Certificate::class, CertificateApprovalRequest::class, Payment::class, Refund::class, Order::class, SupportTicket::class, SupportTicketMessage::class, CourseMessage::class, CourseReadCursor::class, CourseReview::class, LessonVideoUpload::class, LessonProgress::class, User::class, TransactionalDelivery::class] as $model) {
             $model::observe(NotificationWorkflowObserver::class);
         }
-        foreach (['send' => 30, 'reaction' => 60, 'group' => 10, 'private' => 10] as $action => $limit) {
+        foreach (['send' => 30, 'reaction' => 60, 'group' => 10, 'private' => 10, 'typing' => 60] as $action => $limit) {
             RateLimiter::for('messaging-'.$action, fn (Request $request) => Limit::perMinute($limit)->by((string) $request->user()?->id));
         }
         ResetPassword::createUrlUsing(fn (User $user, string $token): string => url('/reset-password/'.rawurlencode($token)).'?email='.rawurlencode($user->getEmailForPasswordReset()));

@@ -301,6 +301,8 @@ function fullTime(value) {
     return Number.isNaN(date.getTime()) ? value : date.toLocaleString(locale.value, { dateStyle: 'full', timeStyle: 'short' });
 }
 
+function refreshClock() { if (!document.hidden) clock.value = Date.now(); }
+
 function messageSegments(value) {
     if (typeof Intl.Segmenter !== 'function') return [{ text: value, emoji: false }];
     const graphemes = new Intl.Segmenter(locale.value, { granularity: 'grapheme' }).segment(value);
@@ -333,7 +335,8 @@ onMounted(() => {
     window.visualViewport?.addEventListener('resize', updateViewport);
     window.visualViewport?.addEventListener('scroll', updateViewport);
     document.addEventListener('keydown', onDialogKeydown);
-    clockInterval = window.setInterval(() => { clock.value = Date.now(); }, 1000);
+    clockInterval = window.setInterval(() => { if (!document.hidden) clock.value = Date.now(); }, 15000);
+    document.addEventListener('visibilitychange', refreshClock);
     document.addEventListener('pointerdown', closeReactionMenuOnOutside);
     window.addEventListener('scroll', dismissReactionMenu, true);
     window.addEventListener('resize', dismissReactionMenu);
@@ -348,6 +351,7 @@ onBeforeUnmount(() => {
     window.visualViewport?.removeEventListener('scroll', updateViewport);
     document.removeEventListener('keydown', onDialogKeydown);
     window.clearInterval(clockInterval);
+    document.removeEventListener('visibilitychange', refreshClock);
     document.removeEventListener('pointerdown', closeReactionMenuOnOutside);
     window.removeEventListener('scroll', dismissReactionMenu, true);
     window.removeEventListener('resize', dismissReactionMenu);

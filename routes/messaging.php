@@ -15,6 +15,7 @@ Route::prefix('v1/messaging')->middleware(['auth:sanctum', EnsureMessagingAccess
     Route::get('conversations/{conversation}/messages', [Messaging::class, 'messages'])->name('messages');
     Route::post('conversations/{conversation}/messages', [Messaging::class, 'send'])->middleware('throttle:messaging-send')->name('send');
     Route::post('conversations/{conversation}/read', [Messaging::class, 'read'])->name('read');
+    Route::post('conversations/{conversation}/typing', [Messaging::class, 'typing'])->middleware('throttle:messaging-typing')->name('typing');
     Route::get('conversations/{conversation}/events', [Messaging::class, 'events'])->name('events');
     Route::get('notifications', [Messaging::class, 'notifications'])->name('notifications');
     Route::get('messages/{message}', [Messaging::class, 'messageDetail'])->name('message');

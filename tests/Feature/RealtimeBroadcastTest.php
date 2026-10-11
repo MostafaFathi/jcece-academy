@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Events\CourseConversationChanged;
+use App\Events\CourseConversationTyping;
 use App\Events\UserNotificationChanged;
 use App\Models\User;
 use App\RoleName;
@@ -43,6 +44,7 @@ class RealtimeBroadcastTest extends TestCase
     public function test_realtime_signals_use_private_channels_and_contain_no_message_or_notification_data(): void
     {
         $conversation = new CourseConversationChanged(12, 5, 'message');
+        $typing = new CourseConversationTyping(12, 9, true);
         $notification = new UserNotificationChanged(9);
 
         $this->assertInstanceOf(PrivateChannel::class, $conversation->broadcastOn()[0]);
@@ -50,6 +52,8 @@ class RealtimeBroadcastTest extends TestCase
         $this->assertSame('private-user-notifications.9', $notification->broadcastOn()[0]->name);
         $this->assertSame([], $notification->broadcastWith());
         $this->assertSame(['conversation_id' => 12, 'version' => 5, 'kind' => 'message'], $conversation->broadcastWith());
+        $this->assertSame('private-course-conversation.12', $typing->broadcastOn()[0]->name);
+        $this->assertSame(['userId' => 9, 'typing' => true], $typing->broadcastWith());
     }
 
     public function test_configured_signals_dispatch_immediately_after_commit_without_a_queue_worker(): void
@@ -58,16 +62,18 @@ class RealtimeBroadcastTest extends TestCase
         config()->set('broadcasting.connections.pusher', ['key' => 'public-key', 'secret' => 'test-secret', 'app_id' => '123', 'options' => ['cluster' => 'eu']]);
         config()->set('messaging.broadcast', true);
         config()->set('platform_notifications.broadcast', true);
-        Event::fake([CourseConversationChanged::class, UserNotificationChanged::class]);
-        DB::shouldReceive('afterCommit')->twice()->andReturnUsing(function ($callback): void {
+        Event::fake([CourseConversationChanged::class, CourseConversationTyping::class, UserNotificationChanged::class]);
+        DB::shouldReceive('afterCommit')->times(3)->andReturnUsing(function ($callback): void {
             $callback();
         });
 
         $signals = app(RealtimeSignals::class);
         $signals->conversation(12, 5, 'message');
+        $signals->typing(12, 9, true);
         $signals->notification(9);
 
         Event::assertDispatched(CourseConversationChanged::class, fn (CourseConversationChanged $event): bool => $event->conversationId === 12);
+        Event::assertDispatched(CourseConversationTyping::class, fn (CourseConversationTyping $event): bool => $event->conversationId === 12 && $event->userId === 9 && $event->typing);
         Event::assertDispatched(UserNotificationChanged::class, fn (UserNotificationChanged $event): bool => $event->userId === 9);
     }
 

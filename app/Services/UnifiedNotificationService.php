@@ -18,7 +18,7 @@ use Illuminate\Support\Str;
 
 class UnifiedNotificationService
 {
-    public function __construct(private NotificationTypeRegistry $registry, private NotificationTargetService $targets, private RealtimeSignals $realtime) {}
+    public function __construct(private NotificationTypeRegistry $registry, private NotificationTargetService $targets, private RealtimeSignals $realtime, private NotificationContentService $content) {}
 
     public function deliver(User $recipient, PlatformNotificationEvent $event): void
     {
@@ -44,7 +44,7 @@ class UnifiedNotificationService
             if ($event->type === 'certificate.eligible') {
                 [$targetType,$targetId] = ['enrollment', $subject->id];
             }
-            $payload = ['event_type' => $event->type, 'target_type' => $targetType, 'target_id' => $targetId];
+            $payload = ['event_type' => $event->type, 'target_type' => $targetType, 'target_id' => $targetId, 'context' => $this->content->snapshot($event->subject)];
             $channels = $this->registry->channels($user, $event->type);
             if ($event->type === 'message.received' && Cache::get("notification-presence:{$user->id}:{$targetId}")) {
                 return;

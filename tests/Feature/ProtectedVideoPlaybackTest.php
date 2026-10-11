@@ -20,6 +20,7 @@ class ProtectedVideoPlaybackTest extends TestCase
 
     public function test_only_current_course_access_receives_short_lived_protected_playback(): void
     {
+        config()->set('jcec.bunny_stream.enabled', false);
         config()->set('jcec.protected_video.allowed_playback_hosts', ['media.example.test']);
         $this->app->bind(ProtectedVideoProvider::class, fn (): ProtectedVideoProvider => new class implements ProtectedVideoProvider
         {

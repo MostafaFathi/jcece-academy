@@ -29,6 +29,7 @@ use App\Models\TransactionalDelivery;
 use App\Models\User;
 use App\Notifications\PlatformEventNotification;
 use App\Services\AnnouncementService;
+use App\Services\NotificationContentService;
 use App\Services\NotificationTargetService;
 use App\Services\NotificationTypeRegistry;
 use App\Services\UnifiedNotificationService;
@@ -89,6 +90,77 @@ class UnifiedNotificationsTest extends TestCase
         Sanctum::actingAs($a);
         $this->postJson('/api/v1/notifications/'.$id.'/read')->assertOk();
         $this->getJson('/api/v1/notifications?unread=1')->assertJsonCount(0, 'data')->assertJsonPath('meta.unread_count', 0);
+    }
+
+    public function test_assignment_notification_identifies_assignment_course_and_due_date_in_both_languages(): void
+    {
+        Bus::fake([SendPlatformNotification::class]);
+        $student = $this->user();
+        $course = $this->course($student);
+        $course->update(['title' => 'Excel لإدارة المشاريع']);
+        $assignment = Assignment::factory()->for($course)->create(['title' => 'خطة المشروع', 'status' => 'published', 'due_at' => now()->addDays(3)->startOfHour()]);
+        app(UnifiedNotificationService::class)->deliver($student, new PlatformNotificationEvent('assignment.available', $assignment, 'specific-assignment-'.$assignment->id));
+
+        $notification = PlatformNotification::query()->where('notifiable_id', $student->id)->where('type', 'assignment.available')->latest()->firstOrFail();
+        $this->assertSame('خطة المشروع', $notification->data['context']['name']);
+        $this->assertSame('Excel لإدارة المشاريع', $notification->data['context']['course']);
+        Sanctum::actingAs($student);
+        $response = $this->getJson('/api/v1/notifications')->assertOk();
+        $row = collect($response->json('data'))->firstWhere('id', $notification->id);
+        $this->assertStringContainsString('خطة المشروع', $row['titles']['ar']);
+        $this->assertStringContainsString('Excel لإدارة المشاريع', $row['descriptions']['ar']);
+        $this->assertStringContainsString('آخر موعد للتسليم', $row['descriptions']['ar']);
+        $this->assertStringContainsString('Due:', $row['descriptions']['en']);
+    }
+
+    public function test_older_notification_without_context_uses_its_target_and_does_not_expose_private_content(): void
+    {
+        Bus::fake([SendPlatformNotification::class]);
+        $student = $this->user();
+        $course = $this->course($student);
+        $assignment = Assignment::factory()->for($course)->create(['title' => 'واجب سابق', 'status' => 'published']);
+        app(UnifiedNotificationService::class)->deliver($student, new PlatformNotificationEvent('assignment.available', $assignment, 'legacy-assignment-'.$assignment->id));
+        $notification = PlatformNotification::query()->where('notifiable_id', $student->id)->where('type', 'assignment.available')->latest()->firstOrFail();
+        $notification->update(['data' => ['event_type' => 'assignment.available', 'target_type' => 'assignment', 'target_id' => $assignment->id]]);
+
+        Sanctum::actingAs($student);
+        $response = $this->getJson('/api/v1/notifications')->assertOk();
+        $row = collect($response->json('data'))->firstWhere('id', $notification->id);
+        $this->assertStringContainsString('واجب سابق', $row['titles']['ar']);
+        $this->assertStringContainsString($course->title, $row['descriptions']['ar']);
+        $this->assertArrayNotHasKey('context', $row);
+    }
+
+    public function test_contextual_content_covers_each_category_and_mail_without_exposing_message_bodies(): void
+    {
+        $content = app(NotificationContentService::class);
+        $cases = [
+            'enrollment.expiring' => [['course' => 'Excel', 'deadline' => '2026-10-14T12:00:00+03:00'], 'Excel'],
+            'quiz.reminder' => [['name' => 'الاختبار النهائي', 'course' => 'Excel', 'deadline' => '2026-10-14T12:00:00+03:00'], 'الاختبار النهائي'],
+            'assignment.available' => [['name' => 'خطة العمل', 'course' => 'Excel', 'deadline' => '2026-10-14T12:00:00+03:00'], 'خطة العمل'],
+            'certificate.issued' => [['name' => 'Excel', 'number' => 'CERT-7'], 'CERT-7'],
+            'payment.approved' => [['name' => 'ORD-7', 'amount' => '150.00', 'currency' => 'ILS'], 'ORD-7'],
+            'support.reply' => [['name' => 'مشكلة الدخول', 'number' => 'TKT-7'], 'TKT-7'],
+            'message.received' => [['name' => 'مجموعة الدورة', 'course' => 'Excel'], 'مجموعة الدورة'],
+            'video.failed' => [['name' => 'مقدمة', 'course' => 'Excel'], 'مقدمة'],
+            'security.permissions_changed' => [['role' => 'instructor'], 'instructor'],
+            'announcement.published' => [['name_ar' => 'صيانة مجدولة', 'name_en' => 'Planned maintenance'], 'صيانة مجدولة'],
+        ];
+        foreach ($cases as $type => [$snapshot, $expected]) {
+            $presentation = $content->present($type, $snapshot, 'ar');
+            $this->assertStringContainsString($expected, $presentation['title'].' '.$presentation['description']);
+            $this->assertNotSame('', $content->present($type, $snapshot, 'en')['title']);
+        }
+
+        $mail = (new PlatformEventNotification(['event_type' => 'assignment.reminder', 'context' => ['name' => 'خطة العمل', 'course' => 'Excel', 'deadline' => '2026-10-14T12:00:00+03:00']]))->toMail($this->user());
+        $this->assertStringContainsString('خطة العمل', $mail->subject);
+        $this->assertStringContainsString('Excel', implode(' ', $mail->introLines));
+
+        $student = $this->user();
+        $course = $this->course($student);
+        $conversation = CourseConversation::factory()->for($course)->create();
+        $message = CourseMessage::factory()->for($conversation, 'conversation')->for($student, 'user')->create(['body' => 'نص خاص يجب ألا يظهر']);
+        $this->assertStringNotContainsString('نص خاص', json_encode($content->snapshot($message), JSON_UNESCAPED_UNICODE));
     }
 
     public function test_rollback_discards_notification_and_outbox_atomically(): void

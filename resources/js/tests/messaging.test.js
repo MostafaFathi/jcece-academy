@@ -11,7 +11,7 @@ import CourseMessenger from '../components/messaging/CourseMessenger.vue';
 import MessageComposer from '../components/messaging/MessageComposer.vue';
 import GroupWizard from '../components/messaging/GroupWizard.vue';
 vi.mock('../api/messaging', () => ({
-    setNotificationPresence: vi.fn().mockResolvedValue({}), clearNotificationPresence: vi.fn().mockResolvedValue({}), fetchMessagingCourses: vi.fn(), fetchMessagingStudents: vi.fn(), fetchConversations: vi.fn(), fetchConversation: vi.fn(), startPrivate: vi.fn(), createGroup: vi.fn(), updateMembers: vi.fn(), fetchMessages: vi.fn(), fetchMessage: vi.fn(), fetchEvents: vi.fn(), sendMessage: vi.fn(), markRead: vi.fn(), deleteMessage: vi.fn(), reactToMessage: vi.fn(), fetchMessageNotifications: vi.fn() }));
+    setNotificationPresence: vi.fn().mockResolvedValue({}), clearNotificationPresence: vi.fn().mockResolvedValue({}), fetchMessagingCourses: vi.fn(), fetchMessagingStudents: vi.fn(), fetchConversations: vi.fn(), fetchConversation: vi.fn(), startPrivate: vi.fn(), createGroup: vi.fn(), updateMembers: vi.fn(), fetchMessages: vi.fn(), fetchMessage: vi.fn(), fetchEvents: vi.fn(), sendMessage: vi.fn(), sendTyping: vi.fn(), markRead: vi.fn(), deleteMessage: vi.fn(), reactToMessage: vi.fn(), fetchMessageNotifications: vi.fn() }));
 const conversation = { id: 3, title: 'Private', course: { id: 1, title: 'BIM' }, kind: 'private', can_send: true, can_manage: false, version: 1, unread_count: 1 };
 const message = { id: 8, client_id: '123', body: '<script>alert(1)</script> مرحبا', user: { id: 2, name: 'Teacher' }, attachments: [], reactions: [], reader_count: 0, can_delete: false };
 let wrappers = [];
@@ -29,6 +29,7 @@ beforeEach(() => {
     api.fetchMessages.mockResolvedValue({ items: [message], meta: {} });
     api.fetchMessageNotifications.mockResolvedValue({ data: [], unread_count: 1 });
     api.fetchEvents.mockResolvedValue({ data: [], version: 1 });
+    api.sendTyping.mockResolvedValue({});
     api.markRead.mockResolvedValue({});
     api.setNotificationPresence.mockResolvedValue({}); api.clearNotificationPresence.mockResolvedValue({});
     api.fetchMessagingStudents.mockResolvedValue({ items: [{ id: 7, name: 'Eligible student' }], meta: { last_page: 1 } });
@@ -39,7 +40,7 @@ afterEach(() => { wrappers.forEach((wrapper) => wrapper.unmount()); wrappers = [
 function fakeTypingChannel() {
     let receive, subscribed;
     const channel = {
-        listen: vi.fn().mockReturnThis(),
+        listen: vi.fn((event, callback) => { if (event === '.conversation.typing') receive = callback; return channel; }),
         listenForWhisper: vi.fn((event, callback) => { receive = callback; return channel; }),
         subscribed: vi.fn((callback) => { subscribed = callback; return channel; }),
         error: vi.fn().mockReturnThis(),
@@ -58,8 +59,8 @@ describe('conversation typing status', () => {
         await flushPromises();
         socket.ready();
         await wrapper.get('#course-message-body').setValue('Private draft');
-        expect(socket.channel.whisper).toHaveBeenCalledWith('typing', { userId: 1, typing: true });
-        expect(JSON.stringify(socket.channel.whisper.mock.calls)).not.toContain('Private draft');
+        expect(api.sendTyping).toHaveBeenCalledWith(3, true);
+        expect(JSON.stringify(api.sendTyping.mock.calls)).not.toContain('Private draft');
 
         socket.receive({ userId: 1, typing: true });
         expect(wrapper.text()).not.toContain('Typing…');
@@ -79,14 +80,14 @@ describe('conversation typing status', () => {
         socket.ready();
         chat.setTyping(true);
         chat.setTyping(true);
-        expect(socket.channel.whisper).toHaveBeenCalledTimes(1);
+        expect(api.sendTyping).toHaveBeenCalledTimes(1);
         await vi.advanceTimersByTimeAsync(2100);
         chat.setTyping(true);
-        expect(socket.channel.whisper).toHaveBeenCalledTimes(2);
+        expect(api.sendTyping).toHaveBeenCalledTimes(2);
         socket.receive({ userId: 2, typing: true });
         expect(chat.typingUserIds.value.size).toBe(1);
         await vi.advanceTimersByTimeAsync(2500);
-        expect(socket.channel.whisper).toHaveBeenLastCalledWith('typing', { userId: 1, typing: false });
+        expect(api.sendTyping).toHaveBeenLastCalledWith(3, false);
         chat.close();
         expect(chat.typingUserIds.value.size).toBe(0);
         socket.receive({ userId: 2, typing: true });
@@ -105,12 +106,12 @@ describe('conversation typing status', () => {
         expect(chat.typingUserIds.value.size).toBe(0);
         Object.defineProperty(document, 'hidden', { configurable: true, value: true });
         chat.setTyping(true);
-        expect(socket.channel.whisper).not.toHaveBeenCalled();
+        expect(api.sendTyping).not.toHaveBeenCalled();
         Object.defineProperty(document, 'hidden', { configurable: true, value: false });
         Object.defineProperty(navigator, 'onLine', { configurable: true, value: false });
         window.dispatchEvent(new Event('offline'));
         chat.setTyping(true);
-        expect(socket.channel.whisper).not.toHaveBeenCalled();
+        expect(api.sendTyping).not.toHaveBeenCalled();
     });
 });
 
@@ -395,6 +396,20 @@ describe('shared messenger', () => {
         expect(timestamp.attributes('title')).toContain('October 10, 2026');
         await vi.advanceTimersByTimeAsync(60000);
         expect(timestamp.text()).toBe('16m');
+    });
+    it('refreshes relative seconds every 15 seconds rather than on every second', async () => {
+        vi.setSystemTime(new Date('2026-10-10T12:00:00Z'));
+        api.fetchMessages.mockResolvedValue({ items: [{ ...message, created_at: '2026-10-10T12:00:00Z' }], meta: {} });
+        const wrapper = render(CourseMessenger, { courseId: 1 });
+        await flushPromises();
+        await wrapper.find('nav button').trigger('click');
+        await flushPromises();
+        const timestamp = wrapper.get('article time');
+        expect(timestamp.text()).toBe('0s');
+        await vi.advanceTimersByTimeAsync(14000);
+        expect(timestamp.text()).toBe('0s');
+        await vi.advanceTimersByTimeAsync(1000);
+        expect(timestamp.text()).toBe('15s');
     });
     it('shows the requested compact Arabic time units and two-part intervals', async () => {
         setLocale('ar');

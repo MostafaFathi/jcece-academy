@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Events\CourseConversationChanged;
+use App\Events\CourseConversationTyping;
 use App\Events\UserNotificationChanged;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
@@ -15,6 +16,13 @@ class RealtimeSignals
     {
         if (config('messaging.broadcast')) {
             $this->dispatchAfterCommit(new CourseConversationChanged($conversationId, $version, $kind));
+        }
+    }
+
+    public function typing(int $conversationId, int $userId, bool $typing): void
+    {
+        if (config('messaging.broadcast')) {
+            $this->dispatchAfterCommit(new CourseConversationTyping($conversationId, $userId, $typing));
         }
     }
 

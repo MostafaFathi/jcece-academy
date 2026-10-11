@@ -18,31 +18,29 @@ export function useCourseMessaging() {
     const activeSearch = ref('');
     const online = ref(navigator.onLine), hasOlder = ref(false), notificationCount = ref(0), page = ref(1), lastPage = ref(1);
     let listGeneration = 0, generation = 0, echoChannel = null, echoConnection = null, activeChannel = null, channelReady = false, timer, typingIdleTimer, disposed = false, backoff = 5000, filters = {}, version = 0, syncing = false;
-    let localTyping = false, lastTypingWhisperAt = 0;
+    let localTyping = false, lastTypingBroadcastAt = 0;
     const remoteTypingTimers = new Map();
     function clearRemoteTyping() {
         for (const timeout of remoteTypingTimers.values()) clearTimeout(timeout);
         remoteTypingTimers.clear();
         typingUserIds.value = new Set();
     }
-    function whisperTyping(typing) {
-        if (!activeChannel || !channelReady || !auth.user?.id || !online.value || document.hidden) return;
-        try {
-            activeChannel.whisper('typing', { userId: auth.user.id, typing });
-            if (typing) lastTypingWhisperAt = Date.now();
-        } catch { /* The websocket is optional; message delivery still uses the API. */ }
+    function broadcastTyping(typing) {
+        if (!activeChannel || !channelReady || !selected.value?.id || !auth.user?.id || !online.value || document.hidden) return;
+        void api.sendTyping(selected.value.id, typing).catch(() => {});
+        if (typing) lastTypingBroadcastAt = Date.now();
     }
     function stopTyping() {
         clearTimeout(typingIdleTimer);
-        if (localTyping) whisperTyping(false);
+        if (localTyping) broadcastTyping(false);
         localTyping = false;
-        lastTypingWhisperAt = 0;
+        lastTypingBroadcastAt = 0;
     }
     function setTyping(typing) {
         if (!typing || !selected.value?.can_send || !online.value || document.hidden) { stopTyping(); return; }
         const wasTyping = localTyping;
         localTyping = true;
-        if (!wasTyping || Date.now() - lastTypingWhisperAt >= 2000) whisperTyping(true);
+        if (!wasTyping || Date.now() - lastTypingBroadcastAt >= 2000) broadcastTyping(true);
         clearTimeout(typingIdleTimer);
         typingIdleTimer = setTimeout(stopTyping, 2500);
     }
@@ -114,8 +112,9 @@ export function useCourseMessaging() {
                 activeChannel = echoConnection.private(echoChannel);
                 const channel = activeChannel;
                 channel.listen('.conversation.changed', () => { if (activeChannel === channel) void sync(); })
+                    .listen('.conversation.typing', (payload) => { if (activeChannel === channel) receiveTyping(payload); })
                     .listenForWhisper('typing', (payload) => { if (activeChannel === channel) receiveTyping(payload); })
-                    .subscribed(() => { if (activeChannel !== channel) return; channelReady = true; if (localTyping) whisperTyping(true); })
+                    .subscribed(() => { if (activeChannel !== channel) return; channelReady = true; if (localTyping) broadcastTyping(true); })
                     .error(() => { if (activeChannel !== channel) return; channelReady = false; error.value = { status: 0 }; });
             }
         } catch (failure) {

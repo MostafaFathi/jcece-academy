@@ -15,7 +15,7 @@ const state = vi.hoisted(() => ({ push: vi.fn(), route: null }));
 vi.mock('vue-router', async (original) => ({ ...(await original()), useRouter: () => ({ push: state.push }), useRoute: () => state.route }));
 vi.mock('../api/admin', () => ({ fetchAdminCourses: vi.fn().mockResolvedValue({ items: [{ id: 3, title: 'Course A' }], meta: { current_page: 1, last_page: 1 } }) }));
 vi.mock('../api/notifications', async (original) => ({ ...(await original()), fetchManagement: vi.fn(), savePolicy: vi.fn(), retryDelivery: vi.fn(), retryTransactionalDelivery: vi.fn(), fetchNotifications: vi.fn(), openNotification: vi.fn(), readNotification: vi.fn(), readAllNotifications: vi.fn(), fetchPreferences: vi.fn(), savePreferences: vi.fn(), fetchAnnouncement: vi.fn(), fetchStaffAnnouncements: vi.fn(), saveAnnouncement: vi.fn(), previewAudience: vi.fn(), publishAnnouncement: vi.fn(), archiveAnnouncement: vi.fn() }));
-const item = { id: 'uuid-1', type: 'message.received', category: 'messaging', titles: { ar: 'رسائل جديدة', en: 'New messages' }, count: 3, read_at: null, created_at: '2026-10-10T12:00:00Z' };
+const item = { id: 'uuid-1', type: 'message.received', category: 'messaging', titles: { ar: 'رسائل جديدة: Excel', en: 'New messages: Excel' }, descriptions: { ar: 'الدورة: إدارة المشاريع', en: 'Course: Project Management' }, count: 3, read_at: null, created_at: '2026-10-10T12:00:00Z' };
 const row = { type: 'security.changed', ar: 'إعدادات الأمان', en: 'Security settings', in_app: true, email: true, digest: false, mandatory: true, mandatory_email: true };
 let wrappers = [];
 const render = (component) => { const w = mount(component, { attachTo: document.body, global: { plugins: [i18n], stubs: { RouterLink: { props: ['to'], template: '<a><slot /></a>' } } } }); wrappers.push(w); return w; };
@@ -37,7 +37,7 @@ describe('unified notification UI', () => {
         setLocale(language); const w = render(NotificationBell); await flushPromises();
         expect(w.attributes('dir')).toBe(language === 'ar' ? 'rtl' : 'ltr'); expect(w.get('button').attributes('aria-label')).toContain('2');
         await w.get('button').trigger('click'); await flushPromises();
-        const panel = document.querySelector('#notification-dropdown'); expect(panel.textContent).toContain(item.titles[language]); expect(panel.classList.contains('max-h-[75dvh]')).toBe(true);
+        const panel = document.querySelector('#notification-dropdown'); expect(panel.textContent).toContain(item.titles[language]); expect(panel.textContent).toContain(item.descriptions[language]); expect(panel.classList.contains('max-h-[75dvh]')).toBe(true);
         panel.querySelector('button').click(); await flushPromises(); expect(w.get('button').attributes('aria-expanded')).toBe('false');
     });
     it('pauses polling while hidden and clears another user’s unread state at logout', async () => {
@@ -52,6 +52,7 @@ describe('unified notification UI', () => {
     });
     it('authorizes navigation first and never follows an external URL', async () => {
         const w = render(NotificationCenter); await flushPromises(); await w.get('article button').trigger('click'); await flushPromises();
+        expect(w.text()).toContain(item.descriptions.en);
         expect(api.openNotification).toHaveBeenCalledWith(item.id); expect(state.push).toHaveBeenCalledWith('/student/messages?conversation=3');
         state.push.mockClear(); api.openNotification.mockResolvedValue({ path: '//evil.test/path' }); await w.get('article button').trigger('click'); await flushPromises(); expect(state.push).not.toHaveBeenCalled(); expect(w.find('[role=alert]').exists()).toBe(true);
     });
