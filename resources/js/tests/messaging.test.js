@@ -32,7 +32,7 @@ beforeEach(() => {
     api.fetchMessagingStudents.mockResolvedValue({ items: [{ id: 7, name: 'Eligible student' }], meta: { last_page: 1 } });
     URL.createObjectURL = vi.fn(() => 'blob:test'); URL.revokeObjectURL = vi.fn();
 });
-afterEach(() => { wrappers.forEach((wrapper) => wrapper.unmount()); wrappers = []; vi.useRealTimers(); });
+afterEach(() => { wrappers.forEach((wrapper) => wrapper.unmount()); wrappers = []; vi.useRealTimers(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 describe('message reconciliation', () => {
     it('replaces optimistic messages and ignores duplicate events without losing old history', () => {
@@ -235,6 +235,110 @@ describe('shared messenger', () => {
         pending.reject({ status: 500 }); await flushPromises();
         expect(applied()).toBe(true);
         expect(wrapper.find('[role="alert"]').exists()).toBe(true);
+    });
+});
+
+
+describe('mobile conversation dialog', () => {
+    function mobileBrowser() {
+        const viewport = Object.assign(new EventTarget(), { width: 390, height: 844, offsetTop: 0, offsetLeft: 0 });
+        const query = Object.assign(new EventTarget(), { matches: true });
+        vi.stubGlobal('matchMedia', () => query);
+        vi.stubGlobal('visualViewport', viewport);
+        vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
+        return { viewport, query };
+    }
+
+    it.each(['private', 'selected', 'all'])('opens %s conversations from the inbox in a labelled dialog and restores focus on close', async (kind) => {
+        mobileBrowser();
+        api.fetchConversations.mockResolvedValue({ items: [{ ...conversation, kind }], meta: {} });
+        api.fetchConversation.mockResolvedValue({ ...conversation, kind });
+        const wrapper = render(CourseMessenger, {}, { attachTo: document.body });
+        await flushPromises();
+        const trigger = wrapper.get('nav button');
+        trigger.element.focus();
+        await trigger.trigger('click');
+        await flushPromises();
+
+        const dialog = document.querySelector('[role="dialog"][aria-modal="true"]');
+        expect(dialog.getAttribute('aria-label')).toBe('Private');
+        expect(dialog.parentElement).toBe(document.body);
+        expect(dialog.textContent).toContain('BIM');
+        expect(dialog.textContent).toContain(message.body);
+        expect(document.body.style.position).toBe('fixed');
+        expect(wrapper.element.parentElement.inert).toBe(true);
+        const close = dialog.querySelector('button[aria-label="Close conversation"]');
+        expect(document.activeElement).toBe(close);
+        close.click();
+        await flushPromises();
+
+        expect(document.querySelector('[aria-modal="true"]')).toBeNull();
+        expect(document.body.style.position).toBe('');
+        expect(wrapper.element.parentElement.inert).toBeFalsy();
+        expect(document.activeElement).toBe(trigger.element);
+    });
+
+    it('resizes to the visible viewport above the keyboard and returns to inline layout on desktop', async () => {
+        const { viewport, query } = mobileBrowser();
+        const wrapper = render(CourseMessenger, { courseId: 1 }, { attachTo: document.body });
+        await flushPromises();
+        await wrapper.get('nav button').trigger('click');
+        await flushPromises();
+        viewport.height = 420;
+        viewport.offsetTop = 25;
+        viewport.dispatchEvent(new Event('resize'));
+        await nextTick();
+
+        const dialog = document.querySelector('[aria-modal="true"]');
+        expect(dialog.style.height).toBe('420px');
+        expect(dialog.style.top).toBe('25px');
+        expect(dialog.querySelector('textarea').rows).toBe(1);
+        query.matches = false;
+        query.dispatchEvent(new Event('change'));
+        await flushPromises();
+
+        expect(document.querySelector('[aria-modal="true"]')).toBeNull();
+        expect(wrapper.find('textarea').exists()).toBe(true);
+        expect(wrapper.get('textarea').element.rows).toBe(3);
+        expect(wrapper.text()).toContain(message.body);
+        expect(document.body.style.position).toBe('');
+    });
+
+    it('traps Tab inside the dialog and Escape cancels a pending load without reopening it', async () => {
+        mobileBrowser();
+        const detail = deferred();
+        api.fetchConversation.mockReturnValue(detail.promise);
+        const wrapper = render(CourseMessenger, { courseId: 1 }, { attachTo: document.body });
+        await flushPromises();
+        await wrapper.get('nav button').trigger('click');
+        await nextTick();
+        const dialog = document.querySelector('[aria-modal="true"]');
+        const close = dialog.querySelector('button[aria-label="Close conversation"]');
+        close.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true, cancelable: true }));
+        expect(dialog.contains(document.activeElement)).toBe(true);
+        expect(document.activeElement).not.toBe(close);
+        close.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+        await flushPromises();
+        detail.resolve(conversation);
+        await flushPromises();
+
+        expect(document.querySelector('[aria-modal="true"]')).toBeNull();
+        expect(api.markRead).not.toHaveBeenCalled();
+        expect(document.body.style.position).toBe('');
+    });
+
+    it('restores scrolling and removes viewport listeners when unmounted', async () => {
+        const { viewport } = mobileBrowser();
+        const remove = vi.spyOn(viewport, 'removeEventListener');
+        const wrapper = render(CourseMessenger, { courseId: 1 });
+        await flushPromises();
+        await wrapper.get('nav button').trigger('click');
+        await flushPromises();
+        wrapper.unmount();
+
+        expect(document.body.style.position).toBe('');
+        expect(remove).toHaveBeenCalledWith('resize', expect.any(Function));
+        expect(remove).toHaveBeenCalledWith('scroll', expect.any(Function));
     });
 });
 

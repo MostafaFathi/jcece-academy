@@ -26,6 +26,72 @@ const listBusy = ref(false);
 const historyBusy = ref(false);
 const feed = ref(null);
 const composer = ref(null);
+const conversationDialog = ref(null);
+const closeButton = ref(null);
+const mobileQuery = window.matchMedia?.('(max-width: 767px)');
+const mobile = ref(mobileQuery?.matches ?? false);
+const viewportStyle = ref({});
+let conversationTrigger = null;
+let restorePage = null;
+
+function updateViewport() {
+    const viewport = window.visualViewport;
+    viewportStyle.value = viewport ? { top: `${viewport.offsetTop}px`, left: `${viewport.offsetLeft}px`, width: `${viewport.width}px`, height: `${viewport.height}px` } : {};
+}
+
+function updateMobile(event) { mobile.value = event.matches; }
+
+function unlockPage() {
+    restorePage?.();
+    restorePage = null;
+}
+
+function lockPage() {
+    if (restorePage) return;
+    const body = document.body;
+    const saved = { position: body.style.position, top: body.style.top, width: body.style.width, overflow: body.style.overflow };
+    const scrollY = window.scrollY;
+    const background = [...body.children].filter((element) => !element.contains(conversationDialog.value));
+    const inertState = background.map((element) => [element, element.inert]);
+    background.forEach((element) => { element.inert = true; });
+    Object.assign(body.style, { position: 'fixed', top: `-${scrollY}px`, width: '100%', overflow: 'hidden' });
+    restorePage = () => {
+        Object.assign(body.style, saved);
+        inertState.forEach(([element, inert]) => { element.inert = inert; });
+        window.scrollTo(0, scrollY);
+    };
+}
+
+async function closeConversation() {
+    closeReactionMenu();
+    wizard.value = null;
+    reply.value = null;
+    deleteId.value = null;
+    historyMode.value = false;
+    historySearch.value = '';
+    chat.close();
+    await nextTick();
+    conversationTrigger?.focus({ preventScroll: true });
+}
+
+function onDialogKeydown(event) {
+    if (!mobile.value || !selected.value || event.defaultPrevented) return;
+    if (event.key === 'Escape') { event.preventDefault(); void closeConversation(); return; }
+    if (event.key !== 'Tab' || !conversationDialog.value?.contains(event.target)) return;
+    const controls = [...conversationDialog.value.querySelectorAll('button, input, textarea, select, a[href], [tabindex="0"]')].filter((element) => !element.disabled && !element.closest('[hidden]'));
+    const first = controls[0], last = controls.at(-1);
+    if (event.shiftKey && event.target === first) { event.preventDefault(); last?.focus(); }
+    else if (!event.shiftKey && event.target === last) { event.preventDefault(); first?.focus(); }
+}
+
+watch([mobile, () => selected.value?.id], async ([isMobile, id]) => {
+    if (!isMobile || !id) { unlockPage(); return; }
+    await nextTick();
+    if (!mobile.value || !selected.value) return;
+    updateViewport();
+    lockPage();
+    closeButton.value?.focus({ preventScroll: true });
+});
 const deleteDialog = ref(null);
 const reactionMenu = ref(null);
 const reactionMenuElement = ref(null);
@@ -165,12 +231,21 @@ function replyAttachment(message) {
 }
 
 onMounted(() => {
+    mobileQuery?.addEventListener('change', updateMobile);
+    window.visualViewport?.addEventListener('resize', updateViewport);
+    window.visualViewport?.addEventListener('scroll', updateViewport);
+    document.addEventListener('keydown', onDialogKeydown);
     clockInterval = window.setInterval(() => { clock.value = Date.now(); }, 60000);
     document.addEventListener('pointerdown', closeReactionMenuOnOutside);
     window.addEventListener('scroll', dismissReactionMenu, true);
     window.addEventListener('resize', dismissReactionMenu);
 });
 onBeforeUnmount(() => {
+    unlockPage();
+    mobileQuery?.removeEventListener('change', updateMobile);
+    window.visualViewport?.removeEventListener('resize', updateViewport);
+    window.visualViewport?.removeEventListener('scroll', updateViewport);
+    document.removeEventListener('keydown', onDialogKeydown);
     window.clearInterval(clockInterval);
     document.removeEventListener('pointerdown', closeReactionMenuOnOutside);
     window.removeEventListener('scroll', dismissReactionMenu, true);
@@ -193,8 +268,9 @@ watch(() => props.courseId, async (id) => {
 }, { immediate: true });
 watch(courseFilter, () => { wizard.value = null; load(); });
 
-async function select(conversation) {
+async function select(conversation, event) {
     if (sending.value) return;
+    conversationTrigger = event?.currentTarget ?? document.activeElement;
     closeReactionMenu();
     reply.value = null;
     deleteId.value = null;
@@ -297,7 +373,7 @@ async function searchHistory() {
                 <p v-if="listBusy" role="status" class="px-5 text-sm text-slate-500">{{ t('messaging.loading') }}</p>
                 <div v-else-if="!conversations.length" class="grid place-items-center gap-2 px-5 py-12 text-center"><span class="grid size-12 place-items-center rounded-2xl bg-brand-soft text-brand"><MessagingIcon name="messages" class="size-6" /></span><p class="text-sm font-semibold text-slate-600">{{ t('messaging.empty') }}</p></div>
                 <nav class="max-h-80 space-y-1.5 overflow-y-auto px-2 pb-3 xl:max-h-[42rem]" :aria-label="t('messaging.conversations')">
-                    <button v-for="conversation in conversations" :key="conversation.id" type="button" class="group flex min-h-20 w-full items-center gap-3 rounded-2xl border px-3 py-3 text-start transition focus-visible:outline-3 focus-visible:outline-brand disabled:opacity-60" :class="selected?.id === conversation.id ? 'border-brand/25 bg-brand-soft shadow-[inset_3px_0_0_#6b1d32]' : 'border-transparent hover:border-slate-200 hover:bg-slate-50'" :aria-pressed="selected?.id === conversation.id" :disabled="sending" @click="select(conversation)">
+                    <button v-for="conversation in conversations" :key="conversation.id" type="button" class="group flex min-h-20 w-full items-center gap-3 rounded-2xl border px-3 py-3 text-start transition focus-visible:outline-3 focus-visible:outline-brand disabled:opacity-60" :class="selected?.id === conversation.id ? 'border-brand/25 bg-brand-soft shadow-[inset_3px_0_0_#6b1d32]' : 'border-transparent hover:border-slate-200 hover:bg-slate-50'" :aria-pressed="selected?.id === conversation.id" :disabled="sending" @click="select(conversation, $event)">
                         <span class="grid size-11 shrink-0 place-items-center rounded-xl" :class="conversation.kind === 'private' ? 'bg-slate-100 text-brand' : 'bg-amber-50 text-amber-800'"><MessagingIcon :name="conversation.kind === 'private' ? 'user' : 'users'" class="size-5" /></span>
                         <span class="min-w-0 flex-1"><span class="block truncate text-sm font-extrabold text-slate-900">{{ conversation.title }}</span><span class="mt-0.5 block truncate text-xs text-slate-500">{{ conversation.course.title }}</span><span class="mt-1 block text-[11px] font-bold text-slate-500">{{ t(`messaging.kind.${conversation.kind}`) }}</span></span>
                         <span v-if="conversation.unread_count" class="grid min-w-6 shrink-0 place-items-center rounded-full bg-brand px-1.5 py-1 text-xs font-black text-white" :aria-label="t('messaging.unreadCount', { count: conversation.unread_count })">{{ conversation.unread_count }}</span>
@@ -307,15 +383,19 @@ async function searchHistory() {
             </aside>
 
             <div class="min-w-0 space-y-4">
-                <GroupWizard v-if="wizard && selectedCourse" :key="`${wizard}-${selected?.id ?? 0}`" :course="selectedCourse" :mode="wizard" :conversation="wizard === 'members' ? selected : null" @done="done" @cancel="wizard = null" />
-                <section v-if="selected" class="flex min-w-0 flex-col overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white shadow-[0_8px_28px_rgba(40,20,28,.04)]">
-                    <header class="space-y-4 border-b border-slate-100 bg-white p-4 sm:p-5">
-                        <div class="flex flex-wrap items-center justify-between gap-3"><div class="flex min-w-0 items-center gap-3"><span class="grid size-11 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand"><MessagingIcon :name="selected.kind === 'private' ? 'user' : 'users'" class="size-5" /></span><div class="min-w-0"><h3 class="truncate text-base font-black text-slate-950">{{ selected.title }}</h3><p class="flex min-w-0 items-center gap-1.5 truncate text-xs font-semibold text-slate-500"><MessagingIcon name="book" class="size-3.5 shrink-0" />{{ selected.course.title }} · {{ t(`messaging.kind.${selected.kind}`) }}</p></div></div><button v-if="selected.can_manage && selected.kind === 'selected'" type="button" class="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 px-3 text-sm font-bold text-brand transition hover:bg-brand-soft focus-visible:outline-3 focus-visible:outline-brand" @click="manage"><MessagingIcon name="users" class="size-4" />{{ t('messaging.manageMembers') }}</button></div>
+                <GroupWizard v-if="wizard && selectedCourse && !(mobile && selected)" :key="`${wizard}-${selected?.id ?? 0}`" :course="selectedCourse" :mode="wizard" :conversation="wizard === 'members' ? selected : null" @done="done" @cancel="wizard = null" />
+                <Teleport to="body" :disabled="!mobile">
+                <section v-if="selected" ref="conversationDialog" :role="mobile ? 'dialog' : undefined" :aria-modal="mobile ? true : undefined" :aria-label="selected.title" :dir="locale === 'ar' ? 'rtl' : 'ltr'" :style="mobile ? viewportStyle : undefined" :class="{ 'mobile-conversation': mobile }" class="flex min-w-0 flex-col overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white shadow-[0_8px_28px_rgba(40,20,28,.04)]">
+                    <header class="shrink-0 space-y-4 border-b border-slate-100 bg-white p-4 sm:p-5">
+                        <div class="flex flex-wrap items-center justify-between gap-3"><button v-if="mobile" ref="closeButton" type="button" class="grid size-11 shrink-0 place-items-center rounded-xl border border-slate-200 text-slate-700 focus-visible:outline-3 focus-visible:outline-brand" :aria-label="t('messaging.closeConversation')" @click="closeConversation"><MessagingIcon name="close" class="size-5" /></button><div class="flex min-w-0 flex-1 items-center gap-3"><span class="grid size-11 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand"><MessagingIcon :name="selected.kind === 'private' ? 'user' : 'users'" class="size-5" /></span><div class="min-w-0"><h3 class="truncate text-base font-black text-slate-950">{{ selected.title }}</h3><p class="flex min-w-0 items-center gap-1.5 truncate text-xs font-semibold text-slate-500"><MessagingIcon name="book" class="size-3.5 shrink-0" />{{ selected.course.title }} · {{ t(`messaging.kind.${selected.kind}`) }}</p></div></div><button v-if="selected.can_manage && selected.kind === 'selected'" type="button" class="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 px-3 text-sm font-bold text-brand transition hover:bg-brand-soft focus-visible:outline-3 focus-visible:outline-brand" @click="manage"><MessagingIcon name="users" class="size-4" />{{ t('messaging.manageMembers') }}</button></div>
                         <form class="flex min-w-0 gap-2" @submit.prevent="searchHistory"><label class="sr-only" for="message-search">{{ t('messaging.searchMessages') }}</label><div class="relative min-w-0 flex-1"><MessagingIcon name="search" class="pointer-events-none absolute start-3 top-3.5 size-4 text-slate-400" /><input id="message-search" v-model="historySearch" maxlength="120" :placeholder="t('messaging.searchMessages')" class="min-h-11 w-full rounded-xl border border-slate-300 pe-3 ps-10 text-sm"></div><button type="submit" class="min-h-11 rounded-xl border border-slate-200 px-3 text-sm font-bold text-brand transition hover:bg-brand-soft focus-visible:outline-3 focus-visible:outline-brand disabled:opacity-50" :disabled="historyBusy">{{ t('messaging.search') }}</button><button v-if="historyMode" type="button" class="grid size-11 shrink-0 place-items-center rounded-xl border border-slate-200 text-slate-600 transition hover:bg-slate-50" :aria-label="t('messaging.clearSearch')" @click="historySearch = ''; searchHistory()"><MessagingIcon name="close" class="size-4" /></button></form>
                     </header>
-                    <p v-if="historyMode" class="border-b border-amber-100 bg-amber-50 px-4 py-2 text-xs font-bold text-amber-950">{{ t('messaging.searchResults') }}</p>
+                    <div v-if="mobile && wizard && selectedCourse" class="min-h-0 overflow-y-auto"><GroupWizard :key="`${wizard}-${selected.id}`" :course="selectedCourse" :mode="wizard" :conversation="wizard === 'members' ? selected : null" @done="done" @cancel="wizard = null" /></div>
+                    <p v-if="mobile && !online" role="status" class="shrink-0 bg-amber-50 px-4 py-2 text-xs text-amber-950">{{ t('messaging.offline') }}</p>
+                    <p v-if="mobile && error" role="alert" class="shrink-0 bg-red-50 px-4 py-2 text-sm text-red-900">{{ t([403, 404].includes(error.status) ? 'messaging.denied' : 'messaging.error') }}</p>
+                    <p v-if="historyMode" class="shrink-0 border-b border-amber-100 bg-amber-50 px-4 py-2 text-xs font-bold text-amber-950">{{ t('messaging.searchResults') }}</p>
                     <p v-if="loading" role="status" class="p-4 text-sm text-slate-500">{{ t('messaging.loading') }}</p>
-                    <div ref="feed" class="min-h-56 max-h-[34rem] space-y-4 overflow-y-auto bg-[#fbf9fa] p-4 sm:p-6" tabindex="0" :aria-label="t('messaging.history')">
+                    <div ref="feed" class="conversation-feed min-h-56 max-h-[34rem] space-y-4 overflow-y-auto bg-[#fbf9fa] p-4 sm:p-6" tabindex="0" :aria-label="t('messaging.history')">
                         <button v-if="hasOlder" type="button" class="min-h-11 w-full rounded-xl border border-slate-200 bg-white text-sm font-bold text-brand transition hover:bg-brand-soft" @click="chat.older(historyMode ? historySearch : '')">{{ t('messaging.older') }}</button>
                         <div v-if="!loading && !messages.length" class="grid place-items-center gap-3 py-16 text-center text-slate-500"><span class="grid size-14 place-items-center rounded-2xl bg-white text-brand shadow-sm"><MessagingIcon name="messages" class="size-7" /></span><p class="text-sm font-semibold">{{ t('messaging.noMessages') }}</p></div>
                         <div v-for="message in messages" :key="message.id ?? message.client_id" dir="ltr" class="flex min-w-0" :class="message.user.id === auth.user?.id ? 'justify-end' : 'justify-start'">
@@ -339,10 +419,11 @@ async function searchHistory() {
                             </div>
                         </div>
                     </div>
-                    <div v-if="deleteId" ref="deleteDialog" role="alertdialog" @keydown.esc="deleteId = null" :aria-label="t('messaging.confirmDelete')" class="flex flex-wrap items-center gap-3 border-t border-red-100 bg-red-50 p-4 text-sm"><p class="min-w-0 flex-1 font-semibold text-red-900">{{ t('messaging.confirmDelete') }}</p><button type="button" class="min-h-11 rounded-xl border border-red-200 bg-white px-4 font-bold text-red-800" @click="deleteId = null">{{ t('messaging.cancel') }}</button><button type="button" class="min-h-11 rounded-xl bg-red-700 px-4 font-bold text-white" @click="remove">{{ t('messaging.delete') }}</button></div>
-                    <MessageComposer v-if="!historyMode" ref="composer" :key="selected.id" :sending="sending" :disabled="!selected.can_send || !online" :reply="reply" :send-error="sendError" @cancel-reply="reply = null" @send="send" />
+                    <div v-if="deleteId" ref="deleteDialog" role="alertdialog" @keydown.esc="deleteId = null" :aria-label="t('messaging.confirmDelete')" class="flex shrink-0 flex-wrap items-center gap-3 border-t border-red-100 bg-red-50 p-4 text-sm"><p class="min-w-0 flex-1 font-semibold text-red-900">{{ t('messaging.confirmDelete') }}</p><button type="button" class="min-h-11 rounded-xl border border-red-200 bg-white px-4 font-bold text-red-800" @click="deleteId = null">{{ t('messaging.cancel') }}</button><button type="button" class="min-h-11 rounded-xl bg-red-700 px-4 font-bold text-white" @click="remove">{{ t('messaging.delete') }}</button></div>
+                    <MessageComposer v-if="!historyMode" ref="composer" class="conversation-composer shrink-0" :compact="mobile" :key="selected.id" :sending="sending" :disabled="!selected.can_send || !online" :reply="reply" :send-error="sendError" @cancel-reply="reply = null" @send="send" />
                 </section>
-                <div v-else class="grid min-h-80 place-items-center gap-3 rounded-[1.5rem] border border-dashed border-slate-300 bg-white px-6 py-12 text-center"><span class="grid size-16 place-items-center rounded-2xl bg-brand-soft text-brand"><MessagingIcon name="messages" class="size-8" /></span><div><h3 class="text-lg font-black text-slate-900">{{ t('messaging.chooseConversation') }}</h3><p class="mt-1 text-sm text-slate-500">{{ t('messaging.selectConversationHint') }}</p></div></div>
+                </Teleport>
+                <div v-if="!selected" class="grid min-h-80 place-items-center gap-3 rounded-[1.5rem] border border-dashed border-slate-300 bg-white px-6 py-12 text-center"><span class="grid size-16 place-items-center rounded-2xl bg-brand-soft text-brand"><MessagingIcon name="messages" class="size-8" /></span><div><h3 class="text-lg font-black text-slate-900">{{ t('messaging.chooseConversation') }}</h3><p class="mt-1 text-sm text-slate-500">{{ t('messaging.selectConversationHint') }}</p></div></div>
             </div>
         </div>
         <Teleport to="body">
@@ -357,3 +438,28 @@ async function searchHistory() {
         </Teleport>
     </section>
 </template>
+
+<style scoped>
+.mobile-conversation {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    width: 100%;
+    height: 100dvh;
+    border: 0;
+    border-radius: 0;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+}
+.mobile-conversation .conversation-feed {
+    flex: 1 1 0%;
+    min-height: 0;
+    max-height: none;
+    overscroll-behavior: contain;
+}
+.mobile-conversation .conversation-composer {
+    max-height: 45%;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+</style>

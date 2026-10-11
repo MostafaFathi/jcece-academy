@@ -30,6 +30,14 @@ export function useCourseMessaging() {
         const last = messages.value.filter((message) => message.id).at(-1);
         if (last) await api.markRead(selected.value.id, last.id);
     }
+    function close() {
+        generation++;
+        if (echoChannel && globalThis.Echo) globalThis.Echo.leave(echoChannel);
+        echoChannel = null;
+        selected.value = null; messages.value = []; loading.value = false;
+        activeSearch.value = ''; hasOlder.value = false; sendError.value = null;
+        version = 0;
+    }
     async function select(conversation) {
         if (echoChannel && globalThis.Echo) globalThis.Echo.leave(echoChannel);
         echoChannel = null;
@@ -42,6 +50,7 @@ export function useCourseMessaging() {
             selected.value = detail; messages.value = mergeMessages([], result.items); hasOlder.value = result.items.length === 50;
             version = detail.version ?? 0;
             await readVisible();
+            if (token !== generation || disposed) return;
             if (globalThis.Echo) {
                 echoChannel = `course-conversation.${conversation.id}`;
                 globalThis.Echo.private(echoChannel).listen('.conversation.changed', () => sync()).error(() => { error.value = { status: 0 }; });
@@ -115,5 +124,5 @@ export function useCourseMessaging() {
     }
     onMounted(() => { document.addEventListener('visibilitychange', resume); window.addEventListener('online', resume); window.addEventListener('offline', resume); loop(); });
     onBeforeUnmount(() => { disposed = true; generation++; if (echoChannel && globalThis.Echo) globalThis.Echo.leave(echoChannel); clearTimeout(timer); document.removeEventListener('visibilitychange', resume); window.removeEventListener('online', resume); window.removeEventListener('offline', resume); });
-    return { conversations, selected, messages, error, sendError, loading, sending, online, hasOlder, notificationCount, page, lastPage, list, select, older, searchMessages, sync, send };
+    return { conversations, selected, messages, error, sendError, loading, sending, online, hasOlder, notificationCount, page, lastPage, list, select, close, older, searchMessages, sync, send };
 }
