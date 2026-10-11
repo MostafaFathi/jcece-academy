@@ -71,4 +71,9 @@ enum PermissionName: string
     case MessagingView = 'messaging.view';
     case MessagingSend = 'messaging.send';
     case MessagingGroupsManage = 'messaging.groups.manage';
+
+    case NotificationsManage = 'notifications.manage';
+    case NotificationSecurityView = 'notifications.security.view';
+    case AnnouncementsManage = 'announcements.manage';
+    case AnnouncementsPublish = 'announcements.publish';
 }

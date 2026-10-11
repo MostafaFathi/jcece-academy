@@ -8,7 +8,7 @@ import GroupWizard from './GroupWizard.vue';
 import MessageComposer from './MessageComposer.vue';
 import MessagingIcon from './MessagingIcon.vue';
 
-const props = defineProps({ courseId: { type: [Number, String], default: null } });
+const props = defineProps({ courseId: { type: [Number, String], default: null }, conversationId: { type: [Number, String], default: null } });
 const { t, locale } = useI18n();
 const auth = useAuthStore();
 const chat = useCourseMessaging();
@@ -265,6 +265,10 @@ watch(() => props.courseId, async (id) => {
     courseFilter.value = id ?? '';
     try { courses.value = await api.fetchMessagingCourses(); await load(); }
     catch (failure) { error.value = failure; }
+}, { immediate: true });
+watch(() => props.conversationId, async (id) => {
+    if (!id || selected.value?.id === Number(id)) return;
+    try { await select(await api.fetchConversation(id)); } catch (failure) { error.value = failure; }
 }, { immediate: true });
 watch(courseFilter, () => { wizard.value = null; load(); });
 

@@ -31,6 +31,11 @@ export const routes = [
             { path: 'refund-policy', name: 'policies.refund', component: () => import('../pages/PolicyPage.vue'), props: { slug: 'refund' }, meta: { title: 'policies.refund' } },
         ],
     },
+    { path: '/notifications', component: PublicLayout, meta: { requiresAuth: true }, children: [{ path: '', name: 'notifications', component: () => import('../pages/NotificationCenterPage.vue'), meta: { requiresAuth: true, title: 'notifications.title' } }] },
+    { path: '/notification-settings', component: PublicLayout, meta: { requiresAuth: true }, children: [{ path: '', name: 'notification-settings', component: () => import('../pages/NotificationPreferencesPage.vue'), meta: { requiresAuth: true, title: 'notifications.preferences' } }] },
+    { path: '/announcements/:id', component: PublicLayout, meta: { requiresAuth: true }, children: [{ path: '', name: 'announcements', component: () => import('../pages/AnnouncementPage.vue'), meta: { requiresAuth: true, title: 'notifications.manageAnnouncements' } }] },
+    { path: '/notification-management', component: PublicLayout, meta: { requiresAuth: true }, children: [{ path: '', name: 'notification-management', component: () => import('../pages/NotificationManagementPage.vue'), meta: { requiresAuth: true, title: 'notifications.management', permissions: ['notifications.manage'] } }] },
+    { path: '/announcement-management', component: PublicLayout, meta: { requiresAuth: true }, children: [{ path: '', name: 'announcement-management', component: () => import('../pages/AnnouncementManagementPage.vue'), meta: { requiresAuth: true, title: 'notifications.manageAnnouncements', permissions: ['announcements.manage'] } }] },
     {
         path: '/profile', component: PublicLayout, meta: { requiresAuth: true },
         children: [{ path: '', name: 'profile', component: () => import('../pages/ProfilePage.vue'), meta: { requiresAuth: true, title: 'profile.title' } }],

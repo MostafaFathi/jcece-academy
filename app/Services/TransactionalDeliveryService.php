@@ -11,11 +11,32 @@ use Throwable;
 
 class TransactionalDeliveryService
 {
+    public function retry(TransactionalDelivery $delivery, User $actor, AuditTrail $audit): TransactionalDelivery
+    {
+        return DB::transaction(function () use ($delivery, $actor, $audit): TransactionalDelivery {
+            $locked = TransactionalDelivery::query()->lockForUpdate()->findOrFail($delivery->id);
+            abort_unless($locked->status === 'failed' || ($locked->status === 'queued' && $locked->queued_at->lessThan(now()->subMinutes(10))), 409);
+            $locked->update(['status' => 'queued', 'queued_at' => now(), 'error_code' => null]);
+            $audit->record('transactional_delivery.retry_requested', $locked, $actor, ['order_id' => $locked->order_id]);
+            DB::afterCommit(function () use ($locked): void {
+                try {
+                    SendTransactionalDelivery::dispatch($locked->id);
+                } catch (Throwable $exception) {
+                    report($exception);
+                }
+            });
+
+            return $locked->refresh();
+        });
+    }
+
     public function dispatchStaleQueued(): int
     {
         $deliveryIds = TransactionalDelivery::query()
-            ->where('status', 'queued')
-            ->where('queued_at', '<', now()->subMinutes(10))
+            ->where(function ($query): void {
+                $query->where(fn ($q) => $q->where('status', 'queued')->where('queued_at', '<', now()->subMinutes(10)))
+                    ->orWhere(fn ($q) => $q->where('status', 'sending')->where('last_attempt_at', '<', now()->subMinutes(10)));
+            })
             ->orderBy('id')
             ->limit(100)
             ->pluck('id');

@@ -44,6 +44,8 @@ class RolesAndPermissionsSeeder extends Seeder
                 PermissionName::AssignmentSubmissionsGrade->value,
             ],
             RoleName::ContentManager->value => [
+                PermissionName::AnnouncementsManage->value,
+                PermissionName::AnnouncementsPublish->value,
                 PermissionName::CoursesView->value,
                 PermissionName::CoursesCreate->value,
                 PermissionName::CoursesUpdate->value,
@@ -110,6 +112,9 @@ class RolesAndPermissionsSeeder extends Seeder
                 $role->givePermissionTo($permissions);
             } elseif ($roleName === RoleName::Admin->value && in_array(PermissionName::RolesManage->value, $newPermissionKeys, true)) {
                 $role->givePermissionTo(PermissionName::RolesManage->value);
+            }
+            if ($roleName === RoleName::Admin->value) {
+                $role->givePermissionTo(array_values(array_filter($newPermissionKeys, fn (string $key): bool => str_starts_with($key, 'notifications.') || str_starts_with($key, 'announcements.'))));
             }
         }
 

@@ -15,7 +15,10 @@ import { ar as reports } from './reports';
 import { ar as rolePermissions } from './role-permissions';
 import { ar as assessmentAuthoring } from './assessment-authoring';
 
+import { ar as notifications } from './notifications';
+
 export default {
+    notifications,
     messaging,
     commerce,
     learning,
@@ -76,3 +79,4 @@ export default {
     errors: { forbiddenTitle: 'لا تملك صلاحية الوصول', forbiddenText: 'هذه الصفحة تتطلب صلاحيات إضافية.', notFoundTitle: 'الصفحة غير موجودة', notFoundText: 'قد يكون الرابط غير صحيح أو تم نقل الصفحة.', startupTitle: 'تعذر تشغيل التطبيق', startupText: 'لم نتمكن من التحقق من الجلسة. حاول مجددًا.', network: 'تعذر الاتصال بالخادم. تحقق من اتصالك وحاول مجددًا.', server: 'حدث خطأ غير متوقع في الخادم.', generic: 'تعذر إتمام الطلب.' },
     pages: { student: 'مساحة المتدرب', admin: 'لوحة الإدارة', instructor: 'مساحة المدرب', support: 'المبيعات والدعم' },
 };
+

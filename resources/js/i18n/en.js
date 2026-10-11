@@ -15,7 +15,10 @@ import { en as reports } from './reports';
 import { en as rolePermissions } from './role-permissions';
 import { en as assessmentAuthoring } from './assessment-authoring';
 
+import { en as notifications } from './notifications';
+
 export default {
+    notifications,
     messaging,
     commerce,
     learning,
@@ -66,3 +69,4 @@ export default {
     errors: { forbiddenTitle: 'Access denied', forbiddenText: 'This page requires additional permissions.', notFoundTitle: 'Page not found', notFoundText: 'The address may be incorrect or the page has moved.', startupTitle: 'Unable to start the app', startupText: 'We could not verify your session. Please try again.', network: 'Unable to reach the server. Check your connection and try again.', server: 'An unexpected server error occurred.', generic: 'The request could not be completed.' },
     pages: { student: 'Student area', admin: 'Administration', instructor: 'Instructor area', support: 'Sales & support' },
 };
+
