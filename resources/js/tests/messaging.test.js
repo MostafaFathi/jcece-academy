@@ -34,7 +34,85 @@ beforeEach(() => {
     api.fetchMessagingStudents.mockResolvedValue({ items: [{ id: 7, name: 'Eligible student' }], meta: { last_page: 1 } });
     URL.createObjectURL = vi.fn(() => 'blob:test'); URL.revokeObjectURL = vi.fn();
 });
-afterEach(() => { wrappers.forEach((wrapper) => wrapper.unmount()); wrappers = []; vi.useRealTimers(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+afterEach(() => { wrappers.forEach((wrapper) => wrapper.unmount()); wrappers = []; globalThis.Echo = null; vi.useRealTimers(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+
+function fakeTypingChannel() {
+    let receive, subscribed;
+    const channel = {
+        listen: vi.fn().mockReturnThis(),
+        listenForWhisper: vi.fn((event, callback) => { receive = callback; return channel; }),
+        subscribed: vi.fn((callback) => { subscribed = callback; return channel; }),
+        error: vi.fn().mockReturnThis(),
+        whisper: vi.fn().mockReturnThis(),
+    };
+    globalThis.Echo = { private: vi.fn(() => channel), leave: vi.fn() };
+    return { channel, receive: (payload) => receive(payload), ready: () => subscribed() };
+}
+
+describe('conversation typing status', () => {
+    it('shows another participant typing in the header without exposing draft content', async () => {
+        const socket = fakeTypingChannel();
+        const wrapper = render(CourseMessenger, { courseId: 1 });
+        await flushPromises();
+        await wrapper.find('nav button').trigger('click');
+        await flushPromises();
+        socket.ready();
+        await wrapper.get('#course-message-body').setValue('Private draft');
+        expect(socket.channel.whisper).toHaveBeenCalledWith('typing', { userId: 1, typing: true });
+        expect(JSON.stringify(socket.channel.whisper.mock.calls)).not.toContain('Private draft');
+
+        socket.receive({ userId: 1, typing: true });
+        expect(wrapper.text()).not.toContain('Typing…');
+        socket.receive({ userId: 2, typing: true });
+        await nextTick();
+        expect(wrapper.text()).toContain('Typing…');
+        socket.receive({ userId: 2, typing: false });
+        await nextTick();
+        expect(wrapper.text()).not.toContain('Typing…');
+    });
+
+    it('throttles whispers, stops after inactivity, and clears stale status on conversation changes', async () => {
+        const socket = fakeTypingChannel();
+        let chat;
+        render(defineComponent({ setup() { chat = useCourseMessaging(); return {}; }, template: '<div />' }));
+        await chat.select(conversation);
+        socket.ready();
+        chat.setTyping(true);
+        chat.setTyping(true);
+        expect(socket.channel.whisper).toHaveBeenCalledTimes(1);
+        await vi.advanceTimersByTimeAsync(2100);
+        chat.setTyping(true);
+        expect(socket.channel.whisper).toHaveBeenCalledTimes(2);
+        socket.receive({ userId: 2, typing: true });
+        expect(chat.typingUserIds.value.size).toBe(1);
+        await vi.advanceTimersByTimeAsync(2500);
+        expect(socket.channel.whisper).toHaveBeenLastCalledWith('typing', { userId: 1, typing: false });
+        chat.close();
+        expect(chat.typingUserIds.value.size).toBe(0);
+        socket.receive({ userId: 2, typing: true });
+        expect(chat.typingUserIds.value.size).toBe(0);
+        expect(globalThis.Echo.leave).toHaveBeenCalledWith('course-conversation.3');
+    });
+
+    it('expires a missing stop event and does not send while hidden or offline', async () => {
+        const socket = fakeTypingChannel();
+        let chat;
+        render(defineComponent({ setup() { chat = useCourseMessaging(); return {}; }, template: '<div />' }));
+        await chat.select(conversation);
+        socket.ready();
+        socket.receive({ userId: 2, typing: true });
+        await vi.advanceTimersByTimeAsync(5000);
+        expect(chat.typingUserIds.value.size).toBe(0);
+        Object.defineProperty(document, 'hidden', { configurable: true, value: true });
+        chat.setTyping(true);
+        expect(socket.channel.whisper).not.toHaveBeenCalled();
+        Object.defineProperty(document, 'hidden', { configurable: true, value: false });
+        Object.defineProperty(navigator, 'onLine', { configurable: true, value: false });
+        window.dispatchEvent(new Event('offline'));
+        chat.setTyping(true);
+        expect(socket.channel.whisper).not.toHaveBeenCalled();
+    });
+});
 
 describe('message reconciliation', () => {
     it('replaces optimistic messages and ignores duplicate events without losing old history', () => {

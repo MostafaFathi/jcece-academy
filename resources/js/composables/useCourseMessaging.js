@@ -1,5 +1,6 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue';
 import * as api from '../api/messaging';
+import { useAuthStore } from '../stores/auth';
 
 export function mergeMessages(current, incoming) {
     const byId = new Map(current.map((message) => [message.id ?? message.client_id, message]));
@@ -11,10 +12,64 @@ export function mergeMessages(current, incoming) {
 }
 
 export function useCourseMessaging() {
+    const auth = useAuthStore();
     const conversations = ref([]), selected = ref(null), messages = ref([]), error = ref(null), sendError = ref(null), loading = ref(false), sending = ref(false);
+    const typingUserIds = ref(new Set());
     const activeSearch = ref('');
     const online = ref(navigator.onLine), hasOlder = ref(false), notificationCount = ref(0), page = ref(1), lastPage = ref(1);
-    let listGeneration = 0, generation = 0, echoChannel = null, timer, disposed = false, backoff = 5000, filters = {}, version = 0, syncing = false;
+    let listGeneration = 0, generation = 0, echoChannel = null, echoConnection = null, activeChannel = null, channelReady = false, timer, typingIdleTimer, disposed = false, backoff = 5000, filters = {}, version = 0, syncing = false;
+    let localTyping = false, lastTypingWhisperAt = 0;
+    const remoteTypingTimers = new Map();
+    function clearRemoteTyping() {
+        for (const timeout of remoteTypingTimers.values()) clearTimeout(timeout);
+        remoteTypingTimers.clear();
+        typingUserIds.value = new Set();
+    }
+    function whisperTyping(typing) {
+        if (!activeChannel || !channelReady || !auth.user?.id || !online.value || document.hidden) return;
+        try {
+            activeChannel.whisper('typing', { userId: auth.user.id, typing });
+            if (typing) lastTypingWhisperAt = Date.now();
+        } catch { /* The websocket is optional; message delivery still uses the API. */ }
+    }
+    function stopTyping() {
+        clearTimeout(typingIdleTimer);
+        if (localTyping) whisperTyping(false);
+        localTyping = false;
+        lastTypingWhisperAt = 0;
+    }
+    function setTyping(typing) {
+        if (!typing || !selected.value?.can_send || !online.value || document.hidden) { stopTyping(); return; }
+        const wasTyping = localTyping;
+        localTyping = true;
+        if (!wasTyping || Date.now() - lastTypingWhisperAt >= 2000) whisperTyping(true);
+        clearTimeout(typingIdleTimer);
+        typingIdleTimer = setTimeout(stopTyping, 2500);
+    }
+    function receiveTyping(payload) {
+        const userId = Number(payload?.userId);
+        if (!Number.isSafeInteger(userId) || userId <= 0 || userId === auth.user?.id || !selected.value || document.hidden || typeof payload.typing !== 'boolean') return;
+        clearTimeout(remoteTypingTimers.get(userId));
+        remoteTypingTimers.delete(userId);
+        const next = new Set(typingUserIds.value);
+        if (payload.typing === true) {
+            next.add(userId);
+            remoteTypingTimers.set(userId, setTimeout(() => {
+                remoteTypingTimers.delete(userId);
+                typingUserIds.value = new Set([...typingUserIds.value].filter((id) => id !== userId));
+            }, 5000));
+        } else next.delete(userId);
+        typingUserIds.value = next;
+    }
+    function leaveChannel() {
+        stopTyping();
+        clearRemoteTyping();
+        if (echoChannel && echoConnection) echoConnection.leave(echoChannel);
+        echoChannel = null;
+        echoConnection = null;
+        activeChannel = null;
+        channelReady = false;
+    }
     async function list(params = filters) {
         const listToken = ++listGeneration;
         filters = params;
@@ -35,16 +90,14 @@ export function useCourseMessaging() {
     function close() {
         releasePresence();
         generation++;
-        if (echoChannel && globalThis.Echo) globalThis.Echo.leave(echoChannel);
-        echoChannel = null;
+        leaveChannel();
         selected.value = null; messages.value = []; loading.value = false;
         activeSearch.value = ''; hasOlder.value = false; sendError.value = null;
         version = 0;
     }
     async function select(conversation) {
         releasePresence();
-        if (echoChannel && globalThis.Echo) globalThis.Echo.leave(echoChannel);
-        echoChannel = null;
+        leaveChannel();
         const token = ++generation; selected.value = conversation; messages.value = []; error.value = null; sendError.value = null; loading.value = true;
         version = 0; activeSearch.value = '';
         try {
@@ -57,7 +110,13 @@ export function useCourseMessaging() {
             if (token !== generation || disposed) return;
             if (globalThis.Echo) {
                 echoChannel = `course-conversation.${conversation.id}`;
-                globalThis.Echo.private(echoChannel).listen('.conversation.changed', () => sync()).error(() => { error.value = { status: 0 }; });
+                echoConnection = globalThis.Echo;
+                activeChannel = echoConnection.private(echoChannel);
+                const channel = activeChannel;
+                channel.listen('.conversation.changed', () => { if (activeChannel === channel) void sync(); })
+                    .listenForWhisper('typing', (payload) => { if (activeChannel === channel) receiveTyping(payload); })
+                    .subscribed(() => { if (activeChannel !== channel) return; channelReady = true; if (localTyping) whisperTyping(true); })
+                    .error(() => { if (activeChannel !== channel) return; channelReady = false; error.value = { status: 0 }; });
             }
         } catch (failure) {
             if (token === generation) { error.value = failure; if ([403, 404].includes(failure.status)) { selected.value = null; messages.value = []; } }
@@ -105,15 +164,16 @@ export function useCourseMessaging() {
         } catch (failure) {
             if (token === generation) {
                 error.value = failure;
-                if ([403, 404].includes(failure.status)) { selected.value = null; messages.value = []; conversations.value = []; notificationCount.value = 0; }
+                if ([403, 404].includes(failure.status)) { leaveChannel(); selected.value = null; messages.value = []; conversations.value = []; notificationCount.value = 0; }
             }
             backoff = Math.min(backoff * 2, 30000);
         } finally { syncing = false; }
     }
     async function loop() { clearTimeout(timer); await sync(); if (!disposed) { clearTimeout(timer); timer = setTimeout(loop, backoff); } }
-    function resume() { if (document.hidden || !navigator.onLine) releasePresence(); online.value = navigator.onLine; if (!document.hidden && online.value) { clearTimeout(timer); loop(); } }
+    function resume() { if (document.hidden || !navigator.onLine) { releasePresence(); stopTyping(); clearRemoteTyping(); } online.value = navigator.onLine; if (!document.hidden && online.value) { clearTimeout(timer); loop(); } }
     async function send(payload, attachment, user, quotedMessage = null) {
         if (!selected.value || sending.value) return false;
+        stopTyping();
         const token = generation, id = selected.value.id;
         sending.value = true; error.value = null; sendError.value = null;
         messages.value = mergeMessages(messages.value, [{ ...payload, id: null, user, pending: true, created_at: new Date().toISOString(), reply: quotedMessage, attachments: [], reactions: [], attachment_name: attachment?.name ?? null, attachment_kind: attachment ? (attachment.type.startsWith('image/') ? 'image' : 'voice') : null }]);
@@ -131,6 +191,6 @@ export function useCourseMessaging() {
         } finally { sending.value = false; }
     }
     onMounted(() => { document.addEventListener('visibilitychange', resume); window.addEventListener('online', resume); window.addEventListener('offline', resume); loop(); });
-    onBeforeUnmount(() => { releasePresence(); disposed = true; generation++; if (echoChannel && globalThis.Echo) globalThis.Echo.leave(echoChannel); clearTimeout(timer); document.removeEventListener('visibilitychange', resume); window.removeEventListener('online', resume); window.removeEventListener('offline', resume); });
-    return { conversations, selected, messages, error, sendError, loading, sending, online, hasOlder, notificationCount, page, lastPage, list, select, close, older, searchMessages, sync, send };
+    onBeforeUnmount(() => { releasePresence(); disposed = true; generation++; leaveChannel(); clearTimeout(timer); document.removeEventListener('visibilitychange', resume); window.removeEventListener('online', resume); window.removeEventListener('offline', resume); });
+    return { conversations, selected, messages, typingUserIds, error, sendError, loading, sending, online, hasOlder, notificationCount, page, lastPage, list, select, close, older, searchMessages, sync, send, setTyping };
 }

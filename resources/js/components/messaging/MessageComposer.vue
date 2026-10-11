@@ -7,7 +7,7 @@ import MessagingIcon from './MessagingIcon.vue';
 import { emojiCategories } from './emoji-catalog';
 
 const props = defineProps({ sending: Boolean, disabled: Boolean, compact: Boolean, reply: { type: Object, default: null }, sendError: { type: Object, default: null } });
-const emit = defineEmits(['send', 'cancel-reply']);
+const emit = defineEmits(['send', 'cancel-reply', 'typing']);
 const { t, locale } = useI18n();
 const voice = useVoiceRecorder();
 const textarea = ref(null);
@@ -34,6 +34,8 @@ let awaitingAcknowledgment = false;
 
 defineExpose({ focus: () => textarea.value?.focus() });
 watch([body, attachment, () => props.reply?.id], () => { clientId = null; });
+watch(body, (value) => { emit('typing', Boolean(value.trim())); });
+watch(() => props.disabled, (disabled) => { if (disabled) emit('typing', false); });
 watch(voice.file, (file) => { if (file) { fileSelection++; attachment.value = file; } });
 watch(attachment, (file) => {
     if (preview.value) URL.revokeObjectURL(preview.value);
@@ -163,6 +165,7 @@ onMounted(() => {
     window.visualViewport?.addEventListener('resize', closeFloatingPicker);
 });
 onBeforeUnmount(() => {
+    emit('typing', false);
     fileSelection++;
     if (preview.value) URL.revokeObjectURL(preview.value);
     document.removeEventListener('pointerdown', closePickerOnOutside);
@@ -186,7 +189,7 @@ onBeforeUnmount(() => {
         <p v-if="sendErrorText" role="alert" class="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-800">{{ sendErrorText }}</p>
         <div v-if="preview" class="flex min-w-0 flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3"><img v-if="mimeKind === 'image'" :src="preview" :alt="t('messaging.preview')" class="max-h-32 max-w-40 rounded-lg object-contain"><audio v-else :src="preview" controls class="min-w-0 max-w-full" /><span class="min-w-0 flex-1 break-all text-xs font-semibold text-slate-600">{{ attachment.name }}</span><button type="button" class="grid size-11 shrink-0 place-items-center rounded-lg text-red-700 transition hover:bg-red-50 focus-visible:outline-3 focus-visible:outline-red-600" :aria-label="t('messaging.removeFile')" :disabled="sending" @click="attachment = null"><MessagingIcon name="close" class="size-4" /></button></div>
         <div class="flex min-w-0 flex-col gap-2 lg:flex-row lg:items-end">
-        <label class="sr-only" for="course-message-body">{{ t('messaging.message') }}</label><textarea ref="textarea" id="course-message-body" v-model="body" :disabled="disabled || sending" maxlength="10000" rows="1" :class="compact ? 'max-h-28 resize-none' : 'max-h-28 resize-y'" class="min-h-11 min-w-0 w-full rounded-xl border border-slate-300 bg-white p-2.5 text-xl leading-7 text-slate-900 placeholder:text-base placeholder:text-slate-400 disabled:bg-slate-50 lg:flex-1" :placeholder="t('messaging.compose')" @focus="onTextareaFocus" @keydown.enter="onComposerKeydown" />
+        <label class="sr-only" for="course-message-body">{{ t('messaging.message') }}</label><textarea ref="textarea" id="course-message-body" v-model="body" :disabled="disabled || sending" maxlength="10000" rows="1" :class="compact ? 'max-h-28 resize-none' : 'max-h-28 resize-y'" class="min-h-11 min-w-0 w-full rounded-xl border border-slate-300 bg-white p-2.5 text-xl leading-7 text-slate-900 placeholder:text-base placeholder:text-slate-400 disabled:bg-slate-50 lg:flex-1" :placeholder="t('messaging.compose')" @focus="onTextareaFocus" @blur="emit('typing', false)" @keydown.enter="onComposerKeydown" />
         <div class="flex flex-wrap items-center justify-end gap-2 lg:shrink-0 lg:flex-nowrap">
             <button ref="emojiTrigger" type="button" class="grid size-11 place-items-center rounded-xl border border-slate-200 bg-white text-slate-700 transition hover:border-brand/30 hover:bg-brand-soft hover:text-brand focus-visible:outline-3 focus-visible:outline-brand disabled:opacity-50" :disabled="disabled || sending" :aria-expanded="picker" aria-controls="course-emoji-picker" aria-haspopup="dialog" :aria-label="t('messaging.emoji')" :title="t('messaging.emoji')" @click="togglePicker"><MessagingIcon name="smile" class="size-5" /></button>
             <div><input id="course-message-file" type="file" accept="image/jpeg,image/png,image/webp,audio/webm,audio/ogg,audio/mp4,audio/wav,.m4a,.webm" :aria-label="t('messaging.attach')" :disabled="disabled || sending || voice.recording.value" class="peer sr-only" @change="choose"><label for="course-message-file" :title="t('messaging.attach')" class="grid size-11 cursor-pointer place-items-center rounded-xl border border-slate-200 bg-white text-slate-700 transition hover:border-brand/30 hover:bg-brand-soft hover:text-brand peer-focus-visible:outline-3 peer-focus-visible:outline-brand peer-disabled:cursor-not-allowed peer-disabled:opacity-50"><MessagingIcon name="paperclip" class="size-5" /></label></div>

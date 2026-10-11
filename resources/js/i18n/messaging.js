@@ -1,6 +1,6 @@
 export const en = {
     sent: 'Sent', read: 'Read', notSent: 'Not sent',
-    closeConversation: 'Close conversation',
+    closeConversation: 'Close conversation', typing: 'Typing…', groupTyping: 'Someone is typing…',
     messageActions: 'Message actions', messageActionsHint: 'Click or press Enter for actions',
     emojiCategories: 'Emoji categories', emojiCategory: { smileys: 'Smileys and emotions', people: 'People and gestures', animals: 'Animals and nature', food: 'Food and drink', activities: 'Activities', travel: 'Travel and places', objects: 'Objects', symbols: 'Symbols', flags: 'Flags' },
     composerShortcut: 'Enter to send · Shift+Enter for a new line',
@@ -12,7 +12,7 @@ export const en = {
 };
 export const ar = {
     sent: 'تم الإرسال', read: 'تمت القراءة', notSent: 'لم تُرسل',
-    closeConversation: 'إغلاق المحادثة',
+    closeConversation: 'إغلاق المحادثة', typing: 'يكتب الآن…', groupTyping: 'أحد المشاركين يكتب الآن…',
     messageActions: 'إجراءات الرسالة', messageActionsHint: 'اضغط لعرض الإجراءات',
     emojiCategories: 'تصنيفات الإيموجي', emojiCategory: { smileys: 'الوجوه والمشاعر', people: 'الأشخاص والإشارات', animals: 'الحيوانات والطبيعة', food: 'الطعام والشراب', activities: 'الأنشطة', travel: 'السفر والأماكن', objects: 'الأشياء', symbols: 'الرموز', flags: 'الأعلام' },
     composerShortcut: 'Enter للإرسال · Shift+Enter لسطر جديد',
