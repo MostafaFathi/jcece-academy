@@ -33,7 +33,7 @@ let fileSelection = 0;
 
 defineExpose({ focus: () => textarea.value?.focus() });
 watch([body, attachment, () => props.reply?.id], () => { clientId = null; });
-watch(voice.file, (file) => { if (file) attachment.value = file; });
+watch(voice.file, (file) => { if (file) { fileSelection++; attachment.value = file; } });
 watch(attachment, (file) => {
     if (preview.value) URL.revokeObjectURL(preview.value);
     preview.value = file ? URL.createObjectURL(file) : '';
@@ -64,6 +64,7 @@ async function choose(event) {
     validation.value = null;
     if (!file) return;
     const selection = ++fileSelection;
+    attachment.value = null;
     const image = ['image/jpeg', 'image/png', 'image/webp'].includes(file.type);
     const audio = /^(audio\/(webm|ogg|mp4|x-m4a|wav|x-wav)|video\/webm)$/.test(file.type);
     if ((!image && !audio) || file.size > (image ? 5 : 10) * 1024 * 1024) { validation.value = 'fileError'; return; }
@@ -130,6 +131,7 @@ onMounted(() => {
     window.addEventListener('resize', closePicker);
 });
 onBeforeUnmount(() => {
+    fileSelection++;
     if (preview.value) URL.revokeObjectURL(preview.value);
     document.removeEventListener('pointerdown', closePickerOnOutside);
     window.removeEventListener('scroll', closePickerOnScroll, true);

@@ -313,6 +313,17 @@ describe('composer', () => {
         expect(wrapper.get('[role="alert"]').text()).toContain('120 seconds');
         expect(wrapper.find('audio[controls]').exists()).toBe(false);
         expect(wrapper.get('button[type="submit"]').attributes('disabled')).toBeDefined();
+
+        Object.defineProperty(input.element, 'files', { configurable: true, value: [file] });
+        await input.trigger('change');
+        Object.defineProperty(audio, 'duration', { configurable: true, value: 42 });
+        audio.dispatchEvent(new Event('loadedmetadata'));
+        await flushPromises();
+
+        expect(wrapper.find('[role="alert"]').exists()).toBe(false);
+        expect(wrapper.get('audio[controls]').exists()).toBe(true);
+        await wrapper.find('form').trigger('submit');
+        expect(wrapper.emitted('send')[0][0].attachment).toBe(file);
         createElement.mockRestore();
     });
     it('prevents empty sends and displays unsupported microphone handling', async () => {
