@@ -31,7 +31,7 @@ class PublicPackageCourseResource extends JsonResource
                 'duration_minutes' => $this->course->duration_minutes,
                 'price' => app(CommercePricingService::class)->product($this->course)['active_price'],
                 'pricing' => app(CommercePricingService::class)->product($this->course),
-                'currency' => app(CommerceCatalogService::class)->currency(),
+                'currency' => app(CommerceCatalogService::class)->productCurrency($this->course),
                 'instructor' => $this->course->relationLoaded('instructor') ? new UserSummaryResource($this->course->instructor) : null,
                 'category' => $this->course->relationLoaded('category') ? new CategoryResource($this->course->category) : null,
             ]),

@@ -26,7 +26,7 @@ class CartResource extends JsonResource
             'discount_total' => $this->pricing_summary['discount_total'] ?? '0.00',
             'coupon_code' => $this->coupon_code,
             'coupon_error' => $this->coupon_error,
-            'currency' => app(CommerceCatalogService::class)->currency(),
+            'currency' => $this->pricing_summary['currency'] ?? app(CommerceCatalogService::class)->currency(),
         ];
     }
 }

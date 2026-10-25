@@ -7,10 +7,11 @@ use App\Models\Course;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class CourseService
 {
-    public function __construct(private AuditTrail $audit) {}
+    public function __construct(private AuditTrail $audit, private CommerceCatalogService $catalog) {}
 
     /** @param array<string, mixed> $attributes */
     public function create(array $attributes, User $actor): Course
@@ -43,6 +44,7 @@ class CourseService
         }
 
         return DB::transaction(function () use ($course, $attributes, $actor, $orderedRelations, $relationValues): Course {
+            $currentCurrency = $this->catalog->lockedCurrency();
             if ($course->exists) {
                 $course = Course::query()->whereKey($course->id)->lockForUpdate()->firstOrFail();
             }
@@ -55,7 +57,11 @@ class CourseService
             }
 
             if (! $course->exists) {
+                if ($currentCurrency === null) {
+                    throw ValidationException::withMessages(['currency' => 'Configure a valid site currency before creating a course.']);
+                }
                 $attributes['created_by'] = $actor->id;
+                $attributes['currency'] = $currentCurrency;
             }
 
             if (($attributes['status'] ?? null) === CourseStatus::Published->value && empty($attributes['published_at']) && $course->published_at === null) {

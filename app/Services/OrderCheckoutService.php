@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Cart;
 use App\Models\Order;
 use App\Models\Package;
+use App\Models\SiteSetting;
 use App\Models\User;
 use App\OrderStatus;
 use App\PurchasableType;
@@ -36,6 +37,8 @@ class OrderCheckoutService
                 return $this->loadOrder($existingOrder);
             }
 
+            SiteSetting::current();
+            SiteSetting::query()->whereKey(1)->lockForUpdate()->firstOrFail();
             $cart = Cart::query()->whereBelongsTo($user)->lockForUpdate()->first();
 
             if ($cart === null) {
@@ -62,14 +65,6 @@ class OrderCheckoutService
                 throw ValidationException::withMessages(['cart' => 'The cart is empty.']);
             }
 
-            $currency = $this->catalog->currency();
-
-            if ($currency === null) {
-                throw ValidationException::withMessages([
-                    'currency' => 'Checkout currency is not configured with a valid 3-character ISO code.',
-                ]);
-            }
-
             $quote = $this->pricing->quote($cartItems, $cart->coupon_code, $user, true);
             if ($quote['currency'] === null) {
                 throw ValidationException::withMessages(['currency' => 'Checkout currency is not configured.']);
@@ -88,7 +83,7 @@ class OrderCheckoutService
                 'order_number' => 'JCEC-'.now()->format('Ymd').'-'.Str::upper((string) Str::ulid()),
                 'idempotency_key' => $attributes['idempotency_key'],
                 'status' => $isFree ? OrderStatus::Paid : OrderStatus::Pending,
-                'currency' => $currency,
+                'currency' => $quote['currency'],
                 'subtotal' => $quote['subtotal'],
                 'discount_total' => $quote['discount_total'],
                 'tax_total' => '0.00',

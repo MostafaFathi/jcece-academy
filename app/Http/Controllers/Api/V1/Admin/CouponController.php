@@ -6,9 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\Admin\StoreCouponRequest;
 use App\Models\Coupon;
 use App\Services\AuditTrail;
+use App\Services\CommerceCatalogService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class CouponController extends Controller
 {
@@ -30,10 +32,14 @@ class CouponController extends Controller
         return response()->json($coupon->loadCount(['redemptions as reserved_count' => fn ($query) => $query->where('status', 'reserved'), 'redemptions as consumed_count' => fn ($query) => $query->where('status', 'consumed')]));
     }
 
-    public function store(StoreCouponRequest $request, AuditTrail $audit): JsonResponse
+    public function store(StoreCouponRequest $request, AuditTrail $audit, CommerceCatalogService $catalog): JsonResponse
     {
-        $coupon = DB::transaction(function () use ($request, $audit): Coupon {
-            $coupon = Coupon::query()->create([...$request->validated(), 'created_by' => $request->user()->id, 'updated_by' => $request->user()->id]);
+        $coupon = DB::transaction(function () use ($request, $audit, $catalog): Coupon {
+            $currency = $catalog->lockedCurrency();
+            if ($currency === null) {
+                throw ValidationException::withMessages(['currency' => 'Configure a valid site currency before creating a coupon.']);
+            }
+            $coupon = Coupon::query()->create([...$request->validated(), 'currency' => $currency, 'created_by' => $request->user()->id, 'updated_by' => $request->user()->id]);
             $audit->record('coupon.created', $coupon, $request->user());
 
             return $coupon;
@@ -42,9 +48,10 @@ class CouponController extends Controller
         return response()->json($coupon, 201);
     }
 
-    public function update(StoreCouponRequest $request, Coupon $coupon, AuditTrail $audit): JsonResponse
+    public function update(StoreCouponRequest $request, Coupon $coupon, AuditTrail $audit, CommerceCatalogService $catalog): JsonResponse
     {
-        $coupon = DB::transaction(function () use ($request, $coupon, $audit): Coupon {
+        $coupon = DB::transaction(function () use ($request, $coupon, $audit, $catalog): Coupon {
+            $catalog->lockedCurrency();
             $locked = Coupon::query()->lockForUpdate()->findOrFail($coupon->id);
             $wasActive = $locked->is_active;
             $locked->update([...$request->validated(), 'updated_by' => $request->user()->id]);

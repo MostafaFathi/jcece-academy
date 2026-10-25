@@ -50,7 +50,8 @@ class CommercePricingService
     public function quote(Collection $cartItems, ?string $code = null, ?User $user = null, bool $lock = false): array
     {
         $pricedAt = now();
-        $currency = $this->catalog->currency();
+        $currency = null;
+        $currencySelected = false;
         $lines = [];
         $subtotal = BigDecimal::zero()->toScale(2);
         $promotionalSavings = BigDecimal::zero()->toScale(2);
@@ -63,6 +64,12 @@ class CommercePricingService
             if (! $this->catalog->isPurchasable($product)) {
                 throw ValidationException::withMessages(['cart' => 'A cart item is no longer available.']);
             }
+            $productCurrency = $this->catalog->productCurrency($product);
+            if ($currencySelected && $currency !== $productCurrency) {
+                throw ValidationException::withMessages(['currency' => 'Items with different currencies must be purchased in separate orders.']);
+            }
+            $currency = $productCurrency;
+            $currencySelected = true;
             $price = $this->product($product, $pricedAt);
             $regular = BigDecimal::of($price['regular_price']);
             $active = BigDecimal::of($price['active_price']);
@@ -71,12 +78,17 @@ class CommercePricingService
             $lines[] = ['cart_item' => $cartItem, 'product' => $product, 'regular_price' => $price['regular_price'], 'active_price' => $price['active_price'], 'promotional_discount' => $price['promotional_savings'], 'coupon_discount' => '0.00', 'total' => $price['active_price']];
         }
 
+        $currency ??= $this->catalog->currency();
+
         $coupon = null;
         $couponDiscount = BigDecimal::zero()->toScale(2);
         if ($code !== null && trim($code) !== '') {
             $coupon = Coupon::query()->where('code', $this->normalizeCode($code))->when($lock, fn ($query) => $query->lockForUpdate())->first();
             if ($coupon === null || ! $coupon->is_active || ($coupon->starts_at !== null && $pricedAt->lt($coupon->starts_at)) || ($coupon->expires_at !== null && $pricedAt->gte($coupon->expires_at))) {
                 throw ValidationException::withMessages(['coupon_code' => 'This coupon is not currently valid.']);
+            }
+            if ($this->catalog->couponCurrency($coupon) !== $currency) {
+                throw ValidationException::withMessages(['coupon_code' => 'This coupon uses a different currency.']);
             }
             if (! in_array($coupon->discount_type, ['fixed', 'percentage'], true)
                 || ! in_array($coupon->applies_to, ['all', 'course', 'package'], true)

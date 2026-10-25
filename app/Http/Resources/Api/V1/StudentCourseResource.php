@@ -24,6 +24,7 @@ class StudentCourseResource extends JsonResource
             'level' => $this->level->value,
             'language' => $this->language,
             'duration_minutes' => $this->duration_minutes,
+            'discussion_enabled' => $this->discussion_enabled,
         ];
     }
 }

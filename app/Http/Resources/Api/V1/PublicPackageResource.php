@@ -21,7 +21,8 @@ class PublicPackageResource extends JsonResource
         $savings = null;
         if ($this->resource->relationLoaded('courseMemberships')
             && $this->resource->courseMemberships->isNotEmpty()
-            && (int) $this->resource->total_memberships_count === $this->resource->courseMemberships->count()) {
+            && (int) $this->resource->total_memberships_count === $this->resource->courseMemberships->count()
+            && $this->resource->courseMemberships->every(fn ($membership): bool => app(CommerceCatalogService::class)->productCurrency($membership->course) === app(CommerceCatalogService::class)->productCurrency($this->resource))) {
             $individualTotal = $this->resource->courseMemberships->reduce(
                 fn (BigDecimal $total, $membership): BigDecimal => $total->plus((string) app(CommercePricingService::class)->product($membership->course)['active_price']),
                 BigDecimal::zero(),
@@ -42,7 +43,7 @@ class PublicPackageResource extends JsonResource
             'price' => $pricing['active_price'],
             'pricing' => $pricing,
             'savings_vs_individual' => $savings,
-            'currency' => app(CommerceCatalogService::class)->currency(),
+            'currency' => app(CommerceCatalogService::class)->productCurrency($this->resource),
             'compare_price' => app(CommercePricingService::class)->product($this->resource)['promotion_active'] ? $this->price : null,
             'access_duration_days' => $this->access_duration_days,
             'is_lifetime' => $this->access_duration_days === null,

@@ -4,6 +4,7 @@ import { nextTick } from 'vue';
 import { createPinia, setActivePinia } from 'pinia';
 import i18n, { setLocale } from '../i18n';
 import * as api from '../api/learning';
+import * as discussionApi from '../api/lesson-discussions';
 import MyCoursesPage from '../pages/MyCoursesPage.vue';
 import CourseLearningPage from '../pages/CourseLearningPage.vue';
 import LearningCurriculum from '../components/learning/LearningCurriculum.vue';
@@ -18,6 +19,7 @@ import { useAuthStore } from '../stores/auth';
 const route = vi.hoisted(() => ({ query: {} }));
 vi.mock('vue-router', () => ({ useRoute: () => route }));
 vi.mock('../api/learning', () => ({ fetchMyCourses: vi.fn(), fetchLearningCourse: vi.fn(), fetchCourseProgress: vi.fn(), completeLesson: vi.fn(), saveLessonProgress: vi.fn(), downloadLessonResource: vi.fn() }));
+vi.mock('../api/lesson-discussions', () => ({ fetchLessonComments: vi.fn(), fetchLessonReplies: vi.fn(), postLessonComment: vi.fn() }));
 const enrollment = (extra = {}) => ({ id: 1, status: 'active', has_access: true, access_state: 'active', access_expires_at: null, is_lifetime: false, completed_lessons: 1, total_lessons: 4, progress_percentage: 25, course: { slug: 'bim', title: 'BIM Course', thumbnail: null, instructor: { name: 'Trainer' } }, resume: { lesson: { id: 2, title: 'Video lesson' } }, ...extra });
 const lesson = (id, type) => ({ id, title: `${type} lesson`, type, content: 'Protected reading', description: 'Learning notes', video_url: 'https://example.test/video.mp4', video_id: 'do-not-build-url', duration_seconds: 300, resources: [], progress: null });
 const details = () => ({ ...enrollment(), course: enrollment().course, curriculum: [{ id: 1, title: 'First section', lessons: [lesson(1, 'text'), lesson(2, 'video'), lesson(3, 'file'), lesson(4, 'link')] }] });
@@ -34,6 +36,7 @@ beforeEach(() => {
     api.fetchMyCourses.mockResolvedValue({ items: [], meta: null });
     api.fetchLearningCourse.mockImplementation(async () => details());
     api.fetchCourseProgress.mockImplementation(async () => progress());
+    discussionApi.fetchLessonComments.mockResolvedValue({ data: [], next_before: null });
 });
 
 describe('My Courses', () => {
@@ -79,6 +82,21 @@ describe('My Courses', () => {
 });
 
 describe('Learning player', () => {
+    it('shows an isolated discussion for each selected lesson only when enabled', async () => {
+        const data = details();
+        data.course.discussion_enabled = true;
+        const wrapper = await player(data);
+        expect(discussionApi.fetchLessonComments).toHaveBeenCalledWith('bim', 2);
+        expect(wrapper.text()).toContain('Lesson discussion');
+
+        await wrapper.get('[data-testid="next-lesson"]').trigger('click');
+        await flushPromises();
+        expect(discussionApi.fetchLessonComments).toHaveBeenCalledWith('bim', 3);
+
+        wrapper.unmount();
+        const disabled = await player(details());
+        expect(disabled.text()).not.toContain('Lesson discussion');
+    });
     it('does not render protected content until both authorized responses resolve', async () => {
         const pending = deferred(); api.fetchCourseProgress.mockReturnValue(pending.promise);
         const wrapper = render(CourseLearningPage, { slug: 'bim' }); await flushPromises();

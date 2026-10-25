@@ -3,8 +3,10 @@
 namespace App\Services;
 
 use App\CourseStatus;
+use App\Models\Coupon;
 use App\Models\Course;
 use App\Models\Package;
+use App\Models\SiteSetting;
 use App\PackageStatus;
 use App\PurchasableType;
 use Illuminate\Database\Eloquent\Builder;
@@ -13,6 +15,35 @@ use Illuminate\Validation\ValidationException;
 class CommerceCatalogService
 {
     public function currency(): ?string
+    {
+        $currency = strtoupper((string) (SiteSetting::query()->value('currency') ?? $this->legacyCurrency()));
+
+        return preg_match('/^[A-Z]{3}$/', $currency) === 1 ? $currency : null;
+    }
+
+    public function lockedCurrency(): ?string
+    {
+        SiteSetting::current();
+        $currency = strtoupper((string) (SiteSetting::query()->whereKey(1)->lockForUpdate()->value('currency') ?? config('jcec.commerce.currency')));
+
+        return preg_match('/^[A-Z]{3}$/', $currency) === 1 ? $currency : null;
+    }
+
+    public function productCurrency(Course|Package $product): ?string
+    {
+        $currency = strtoupper((string) ($product->currency ?? $this->legacyCurrency()));
+
+        return preg_match('/^[A-Z]{3}$/', $currency) === 1 ? $currency : null;
+    }
+
+    public function couponCurrency(Coupon $coupon): ?string
+    {
+        $currency = strtoupper((string) ($coupon->currency ?? $this->legacyCurrency()));
+
+        return preg_match('/^[A-Z]{3}$/', $currency) === 1 ? $currency : null;
+    }
+
+    public function legacyCurrency(): ?string
     {
         $currency = strtoupper((string) config('jcec.commerce.currency'));
 

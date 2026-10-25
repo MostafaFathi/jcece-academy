@@ -11,6 +11,7 @@ import ProgressSummary from '../components/learning/ProgressSummary.vue';
 import LearningError from '../components/learning/LearningError.vue';
 import LearningCurriculum from '../components/learning/LearningCurriculum.vue';
 import LessonResources from '../components/learning/LessonResources.vue';
+import LessonDiscussion from '../components/learning/LessonDiscussion.vue';
 import TextLesson from '../components/learning/TextLesson.vue';
 import VideoLesson from '../components/learning/VideoLesson.vue';
 import FileLesson from '../components/learning/FileLesson.vue';
@@ -46,6 +47,7 @@ async function select(id) { videoRenderer.value?.pause?.(); await selectLesson(i
                     <div class="border-b border-slate-100 pb-5"><p class="text-xs font-bold text-brand">{{ t(`learning.types.${activeLesson.type}`) }} · {{ t(`learning.lessonStatus.${activeLesson.progress?.status || 'not_started'}`) }}</p><h2 class="mt-3 break-words text-xl font-black text-slate-950 sm:text-2xl">{{ activeLesson.title }}</h2><p v-if="activeLesson.description" class="mt-3 whitespace-pre-wrap break-words text-sm leading-7 text-slate-500">{{ activeLesson.description }}</p></div>
                     <component :is="renderer" v-if="renderer" :key="activeLesson.id" ref="videoRenderer" :lesson="activeLesson" :course-slug="slug" :busy="busy" @save-position="savePosition" />
                     <LessonResources :resources="activeLesson.resources" :busy="busy" :downloading-id="downloadingId" @download="download" />
+                    <LessonDiscussion v-if="course.course.discussion_enabled" :key="activeLesson.id" :course-slug="slug" :lesson-id="activeLesson.id" :instructor-id="course.course.instructor?.id ?? null" />
                     <div class="flex flex-wrap items-center justify-between gap-4 border-t border-slate-100 pt-6"><BaseButton data-testid="complete-lesson" :loading="busy" :disabled="activeLesson.progress?.status === 'completed'" @click="complete">{{ t(activeLesson.progress?.status === 'completed' ? 'learning.completed' : 'learning.complete') }}</BaseButton><nav class="flex flex-wrap gap-2" :aria-label="t('learning.curriculum')"><BaseButton variant="secondary" data-testid="previous-lesson" :disabled="busy || activeIndex <= 0" @click="select(lessons[activeIndex - 1].id)"><span aria-hidden="true">{{ locale === 'ar' ? '→' : '←' }}</span>{{ t('learning.previousLesson') }}</BaseButton><BaseButton variant="secondary" data-testid="next-lesson" :disabled="busy || activeIndex >= lessons.length - 1" @click="select(lessons[activeIndex + 1].id)">{{ t('learning.nextLesson') }}<span aria-hidden="true">{{ locale === 'ar' ? '←' : '→' }}</span></BaseButton></nav></div>
                 </article>
             </div>

@@ -8,13 +8,16 @@ use App\Models\SiteFaq;
 use App\Models\SitePage;
 use App\Models\SiteSetting;
 use App\PermissionName;
+use App\Services\CommerceCatalogService;
+use App\Services\CommerceCurrencyChangeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class SiteContentController extends Controller
 {
-    public function index(Request $request): JsonResponse
+    public function index(Request $request, CommerceCatalogService $catalog, CommerceCurrencyChangeService $currencyChanges): JsonResponse
     {
         $this->authorizeManage($request);
         foreach (SitePage::SLUGS as $slug) {
@@ -24,7 +27,12 @@ class SiteContentController extends Controller
         return response()->json(['data' => [
             'pages' => SitePage::query()->whereIn('slug', SitePage::SLUGS)->orderBy('slug')->get(),
             'faqs' => SiteFaq::query()->orderBy('sort_order')->orderBy('id')->get(),
-            'settings' => ['home_autoplay_enabled' => (bool) (SiteSetting::query()->value('home_autoplay_enabled') ?? true)],
+            'settings' => [
+                'home_autoplay_enabled' => (bool) (SiteSetting::query()->value('home_autoplay_enabled') ?? true),
+                'currency' => $catalog->currency(),
+                'catalog_currencies' => $currencyChanges->catalogCurrencies(),
+                'can_convert_currency' => $this->canConvertCurrency($request),
+            ],
         ]]);
     }
 
@@ -36,6 +44,25 @@ class SiteContentController extends Controller
         $settings->update($attributes);
 
         return response()->json(['data' => ['home_autoplay_enabled' => $settings->home_autoplay_enabled]]);
+    }
+
+    public function updateCurrency(Request $request, CommerceCurrencyChangeService $currencyChanges): JsonResponse
+    {
+        $this->authorizeManage($request);
+        abort_unless($this->canConvertCurrency($request), 403);
+        $attributes = $request->validate([
+            'currency' => ['required', 'string', Rule::in(['ILS', 'USD', 'JOD', 'EUR', 'GBP', 'AED', 'SAR', 'EGP', 'TRY'])],
+            'scope' => ['required', Rule::in(['all', 'future'])],
+            'rates' => ['sometimes', 'array'],
+            'rates.*' => ['required', 'string', 'regex:/^\d{1,10}(?:\.\d{1,8})?$/'],
+        ]);
+
+        return response()->json(['data' => $currencyChanges->change(
+            $attributes['currency'],
+            $attributes['scope'],
+            $attributes['rates'] ?? [],
+            $request->user(),
+        )]);
     }
 
     public function updatePage(Request $request, string $slug): JsonResponse
@@ -114,5 +141,12 @@ class SiteContentController extends Controller
     private function authorizeManage(Request $request): void
     {
         abort_unless($request->user()?->can(PermissionName::SiteContentManage->value), 403);
+    }
+
+    private function canConvertCurrency(Request $request): bool
+    {
+        return $request->user()?->can(PermissionName::CoursesUpdate->value)
+            && $request->user()?->can(PermissionName::PackagesUpdate->value)
+            && $request->user()?->can(PermissionName::CouponsManage->value);
     }
 }

@@ -6,14 +6,15 @@ use App\Http\Controllers\Controller;
 use App\Models\SiteFaq;
 use App\Models\SitePage;
 use App\Models\SiteSetting;
+use App\Services\CommerceCatalogService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class SiteContentController extends Controller
 {
-    public function settings(): JsonResponse
+    public function settings(CommerceCatalogService $catalog): JsonResponse
     {
-        return response()->json(['data' => ['home_autoplay_enabled' => (bool) (SiteSetting::query()->value('home_autoplay_enabled') ?? true)]]);
+        return response()->json(['data' => ['home_autoplay_enabled' => (bool) (SiteSetting::query()->value('home_autoplay_enabled') ?? true), 'currency' => $catalog->currency()]]);
     }
 
     public function page(Request $request, SitePage $sitePage): JsonResponse

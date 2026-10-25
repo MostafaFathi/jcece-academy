@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useAuthStore } from '../stores/auth';
@@ -9,6 +9,7 @@ import PageHeading from '../components/ui/PageHeading.vue';
 import LoadingState from '../components/ui/LoadingState.vue';
 import BaseAlert from '../components/ui/BaseAlert.vue';
 import EmptyState from '../components/ui/EmptyState.vue';
+import LessonDiscussion from '../components/learning/LessonDiscussion.vue';
 
 const route = useRoute();
 const auth = useAuthStore();
@@ -17,6 +18,8 @@ const course = ref(null);
 const sections = ref([]);
 const quizzes = ref([]);
 const assignments = ref([]);
+const discussionLessonId = ref(null);
+const discussionLessons = computed(() => sections.value.filter((section) => section.is_active).flatMap((section) => section.lessons ?? []).filter((lesson) => lesson.is_published));
 const loading = ref(true);
 const error = ref(null);
 const saving = ref(false);
@@ -41,6 +44,7 @@ async function load() {
         ]);
         course.value = courseResult;
         sections.value = curriculumResult.items;
+        if (!discussionLessons.value.some((lesson) => lesson.id === discussionLessonId.value)) discussionLessonId.value = discussionLessons.value[0]?.id ?? null;
         quizzes.value = quizResult.items;
         assignments.value = assignmentResult.items;
         Object.assign(form, { title: courseResult.title, short_description: courseResult.short_description ?? '', description: courseResult.description ?? '' });
@@ -70,7 +74,8 @@ onMounted(load);
             <PageHeading :title="course.title" :description="course.short_description ?? ''"><template #actions><RouterLink v-if="auth.can('messaging.view')" :to="{ name: 'instructor.messages', query: { course: course.id } }" class="inline-flex min-h-11 items-center gap-2 rounded-xl border border-brand px-5 py-2.5 text-sm font-bold text-brand transition hover:bg-brand-soft focus-visible:outline-3 focus-visible:outline-brand"><MessagingIcon name="messages" class="size-5" />{{ t('messaging.conversations') }}</RouterLink><RouterLink v-if="course.capabilities?.can_view_curriculum" :to="{ name: 'instructor.courses.curriculum', params: { courseId } }" class="inline-flex min-h-11 items-center rounded-xl border border-brand px-5 py-2.5 text-sm font-bold text-brand">{{ t('curriculum.manage') }}</RouterLink></template></PageHeading>
             <section class="grid gap-4 rounded-3xl border border-slate-200 bg-white p-6 sm:grid-cols-3"><div><p class="text-xs font-bold text-slate-500">{{ t('instructor.status') }}</p><p class="mt-1 font-bold">{{ t(`instructor.statusLabels.${course.status}`) }}</p></div><div><p class="text-xs font-bold text-slate-500">{{ t('instructor.category') }}</p><p class="mt-1 font-bold">{{ course.category?.name ?? '—' }}</p></div><div><p class="text-xs font-bold text-slate-500">{{ t('instructor.level') }}</p><p class="mt-1 font-bold">{{ t(`labels.levels.${course.level}`) }}</p></div></section>
             <section v-if="course.capabilities?.can_update_course" class="space-y-4 rounded-3xl border border-slate-200 bg-white p-6"><h2 class="text-xl font-black">{{ t('instructor.editMetadata') }}</h2><p class="text-sm text-slate-500">{{ t('instructor.metadataHint') }}</p><BaseAlert v-if="saveError" tone="danger">{{ t('instructor.mutationError') }} {{ saveError.errors?.title?.[0] ?? '' }}</BaseAlert><BaseAlert v-if="saved" tone="success">{{ t('instructor.saveSuccess') }}</BaseAlert><form class="grid gap-3" @submit.prevent="save"><label class="text-sm font-bold" for="instructor-title">{{ t('instructor.title') }}</label><input id="instructor-title" v-model="form.title" required maxlength="255" class="min-h-11 rounded-xl border px-4"><label class="text-sm font-bold" for="instructor-short">{{ t('instructor.shortDescription') }}</label><textarea id="instructor-short" v-model="form.short_description" maxlength="1000" rows="2" class="rounded-xl border px-4 py-3" /><label class="text-sm font-bold" for="instructor-description">{{ t('instructor.description') }}</label><textarea id="instructor-description" v-model="form.description" rows="4" class="rounded-xl border px-4 py-3" /><button type="submit" :disabled="saving" class="min-h-11 w-fit rounded-xl bg-primary px-5 font-bold text-brand-dark disabled:opacity-50">{{ t('instructor.saveMetadata') }}</button></form></section>
-            <section v-if="course.capabilities?.can_view_curriculum" class="space-y-4"><div><h2 class="text-xl font-black">{{ t('instructor.curriculum') }}</h2><p v-if="!course.capabilities?.can_create_curriculum && !course.capabilities?.can_update_curriculum && !course.capabilities?.can_delete_curriculum" class="text-sm text-slate-500">{{ t('instructor.readOnlyCurriculum') }}</p></div><EmptyState v-if="!sections.length" :title="t('instructor.curriculum')" /><article v-for="section in sections" :key="section.id" class="rounded-3xl border border-slate-200 bg-white p-5"><h3 class="font-black">{{ section.title }}</h3><ol class="mt-3 space-y-3"><li v-for="lesson in section.lessons ?? []" :key="lesson.id" class="rounded-xl bg-slate-50 p-4"><p class="font-bold">{{ lesson.title }}</p><p class="text-xs text-slate-500">{{ t(`labels.lessonTypes.${lesson.type}`) }}</p><ul v-if="lesson.resources?.length" class="mt-2 space-y-1 text-sm"><li v-for="resource in lesson.resources" :key="resource.id">{{ t('instructor.resource') }}: {{ resource.title }} <span v-if="resource.download_available" class="text-slate-500">({{ t('instructor.unavailable') }})</span></li></ul></li></ol></article></section>
+            <section v-if="course.capabilities?.can_view_curriculum" class="space-y-4"><div><h2 class="text-xl font-black">{{ t('instructor.curriculum') }}</h2><p v-if="!course.capabilities?.can_create_curriculum && !course.capabilities?.can_update_curriculum && !course.capabilities?.can_delete_curriculum" class="text-sm text-slate-500">{{ t('instructor.readOnlyCurriculum') }}</p></div><EmptyState v-if="!sections.length" :title="t('instructor.curriculum')" /><article v-for="section in sections" :key="section.id" class="rounded-3xl border border-slate-200 bg-white p-5"><h3 class="font-black">{{ section.title }}</h3><ol class="mt-3 space-y-3"><li v-for="lesson in section.lessons ?? []" :key="lesson.id" class="rounded-xl bg-slate-50 p-4"><p class="font-bold">{{ lesson.title }}</p><p class="text-xs text-slate-500">{{ t(`labels.lessonTypes.${lesson.type}`) }}</p><button v-if="course.discussion_enabled && section.is_active && lesson.is_published" type="button" class="mt-2 min-h-9 rounded-lg text-xs font-bold text-brand underline" @click="discussionLessonId = lesson.id">{{ t('lessonDiscussion.title') }}</button><ul v-if="lesson.resources?.length" class="mt-2 space-y-1 text-sm"><li v-for="resource in lesson.resources" :key="resource.id">{{ t('instructor.resource') }}: {{ resource.title }} <span v-if="resource.download_available" class="text-slate-500">({{ t('instructor.unavailable') }})</span></li></ul></li></ol></article></section>
+            <LessonDiscussion v-if="course.discussion_enabled && discussionLessonId" :key="discussionLessonId" :course-slug="course.slug" :lesson-id="discussionLessonId" :instructor-id="auth.user?.id ?? null" />
             <div class="grid gap-6 lg:grid-cols-2">
                 <section v-if="auth.canAny(['assessments.view', 'assignment_submissions.view'])" class="space-y-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
                     <div class="flex flex-wrap items-center justify-between gap-3"><h2 class="text-xl font-black">{{ t('instructor.quizzes') }}</h2><RouterLink v-if="course.capabilities?.can_create_quiz" :to="{ name: 'instructor.quizzes.create', params: { courseId } }" class="inline-flex min-h-11 items-center rounded-xl bg-primary px-4 text-sm font-bold text-brand-dark">{{ t('assessmentAuthoring.createQuiz') }}</RouterLink></div>

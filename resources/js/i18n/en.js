@@ -1,4 +1,5 @@
 import { en as messaging } from './messaging';
+import { en as lessonDiscussion } from './lesson-discussions';
 import { en as commerce } from './commerce';
 import { en as learning } from './learning';
 import { en as assessments } from './assessments';
@@ -11,6 +12,7 @@ import { en as certificatePolicy } from './certificate-policy';
 import { en as path } from './sequential';
 import { en as audit } from './audit';
 import { en as phase15f } from './phase15f';
+import { en as siteCurrency } from './site-currency';
 import { en as reports } from './reports';
 import { en as rolePermissions } from './role-permissions';
 import { en as assessmentAuthoring } from './assessment-authoring';
@@ -18,6 +20,7 @@ import { en as assessmentAuthoring } from './assessment-authoring';
 import { en as notifications } from './notifications';
 
 export default {
+    lessonDiscussion,
     notifications,
     messaging,
     commerce,
@@ -35,6 +38,7 @@ export default {
     rolePermissions,
     assessmentAuthoring,
     ...phase15f,
+    siteCurrency,
     brand: {
         name: 'JCEC Academy', tagline: 'Learn today… build a better tomorrow', promise: 'Build professional skills that create a real difference in your future.', description: 'An Arabic-first professional learning platform bringing specialized content, assessment, and practical progress into one experience.',
     },
@@ -52,7 +56,7 @@ export default {
         eyebrow: 'Skills today for a brighter tomorrow', heroTitle: 'Professional learning designed to move you from knowledge to achievement', heroDescription: 'Discover focused courses and learning paths with clear curricula and an experience shaped around your professional ambition.', browseCourses: 'Explore courses', browsePackages: 'Explore learning paths', recentEyebrow: 'Learn with focus', recentTitle: 'Individual courses', recentDescription: 'Content currently published by the academy, ordered from newest so you can start with the right choice.', categoriesEyebrow: 'Choose your field', categoriesTitle: 'Categories', categoriesDescription: 'Browse available categories and go directly to published courses in your field.', packagesEyebrow: 'A complete journey', packagesTitle: 'Course bundles', packagesDescription: 'Related courses brought together in one clear learning experience.', howEyebrow: 'Simple steps', howTitle: 'How the service works', howDescription: 'A clear path from discovery to practical application.', stepExplore: 'Explore your options', stepExploreText: 'Compare published courses and packages based on your goal and level.', stepLearn: 'Learn at your pace', stepLearnText: 'Follow an organized curriculum with clear details before you begin.', stepGrow: 'Build your skill', stepGrowText: 'Turn knowledge into professional progress through practical steps.', whyEyebrow: 'Why JCEC', whyTitle: 'An experience focused on what you actually need', whyPractical: 'Career focused', whyPracticalText: 'Programs designed around skills that apply in a professional environment.', whyClear: 'Clear experience', whyClearText: 'Transparent curriculum, duration, and level details before you decide.', whyFlexible: 'Flexible learning', whyFlexibleText: 'Access content for the period defined for each course or package.', ctaTitle: 'Ready for your next step?', ctaText: 'Browse published content and choose the experience closest to your ambition.', emptyCourses: 'No courses are currently published.', emptyPackages: 'No packages are currently published.', emptyCategories: 'No categories are currently available.',
     },
     catalog: {
-        coursesTitle: 'Courses that create real progress', coursesDescription: 'Search and filter using options supported by the academy catalog.', packagesTitle: 'Packages and learning paths', packagesDescription: 'Discover published course collections and choose the journey that matches your goal.', searchCourses: 'Search course title or description', searchPackages: 'Search package title or description', category: 'Category', allCategories: 'All categories', level: 'Level', allLevels: 'All levels', language: 'Content language', allLanguages: 'All languages', type: 'Package type', allTypes: 'All types', sort: 'Sort by', latest: 'Newest', oldest: 'Oldest', priceAsc: 'Price: low to high', priceDesc: 'Price: high to low', titleSort: 'Title A–Z', price: 'Price', packagePrice: 'Package price', free: 'Free', featured: 'Featured', minutes: '{count} min', courseCount: '{count} courses', ratingLabel: 'Rated {rating} out of 5 from {count} reviews', filters: 'Filter results', filtersDescription: 'Your choices stay in the URL so you can share them.', emptyCourses: 'No matching courses found', emptyCoursesText: 'Try a different search term or remove some filters.', emptyPackages: 'No matching packages found', emptyPackagesText: 'Try changing the search or package type.', loadError: 'Content could not be loaded right now.', resultSummary: 'Showing {from}–{to} of {total} results',
+        coursesTitle: 'Courses that create real progress', coursesDescription: 'Search and filter using options supported by the academy catalog.', packagesTitle: 'Packages and learning paths', packagesDescription: 'Discover published course collections and choose the journey that matches your goal.', searchCourses: 'Search course title or description', searchPackages: 'Search package title or description', category: 'Category', allCategories: 'All categories', level: 'Level', allLevels: 'All levels', language: 'Content language', allLanguages: 'All languages', type: 'Package type', allTypes: 'All types', sort: 'Sort by', latest: 'Newest', oldest: 'Oldest', priceAsc: 'Price: low to high', priceDesc: 'Price: high to low', titleSort: 'Title A–Z', price: 'Price', packagePrice: 'Package price', free: 'Free', featured: 'Featured', minutes: '{count} min', hours: '{count} hr', courseCount: '{count} courses', ratingLabel: 'Rated {rating} out of 5 from {count} reviews', filters: 'Filter results', filtersDescription: 'Your choices stay in the URL so you can share them.', emptyCourses: 'No matching courses found', emptyCoursesText: 'Try a different search term or remove some filters.', emptyPackages: 'No matching packages found', emptyPackagesText: 'Try changing the search or package type.', loadError: 'Content could not be loaded right now.', resultSummary: 'Showing {from}–{to} of {total} results',
     },
     course: {
         overview: 'Overview', curriculum: 'Course curriculum', outcomes: 'What you will learn', requirements: 'Requirements', audience: 'Who this course is for', tools: 'Required tools', instructor: 'Course instructor', reviews: 'Learner reviews', reviewCount: '{count} published reviews', noReviews: 'No published reviews yet.', lessons: '{count} lessons', preview: 'Preview available', lesson: 'Lesson', certificate: 'Completion certificate', discussions: 'Course discussions', accessDays: '{count} days of access', accessUnspecified: 'Access period not specified', signInCta: 'Sign in to continue', purchaseSoon: 'Purchase coming soon', published: 'Published course', detailError: 'Course details could not be loaded.', notFound: 'The requested course was not found.', backToCourses: 'Back to courses', ratingDistribution: 'Rating distribution',

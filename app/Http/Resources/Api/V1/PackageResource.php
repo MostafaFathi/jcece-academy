@@ -25,7 +25,7 @@ class PackageResource extends JsonResource
             'type' => $this->type->value,
             'price' => app(CommercePricingService::class)->product($this->resource)['active_price'],
             'pricing' => app(CommercePricingService::class)->product($this->resource),
-            'currency' => app(CommerceCatalogService::class)->currency(),
+            'currency' => app(CommerceCatalogService::class)->productCurrency($this->resource),
             'compare_price' => $this->compare_price,
             'legacy_compare_price' => $this->compare_price,
             'promotional_price' => $this->promotional_price,

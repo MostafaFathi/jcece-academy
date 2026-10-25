@@ -6,6 +6,7 @@ import { canAccessRoute, createAccessGuard } from '../router/access';
 import { navigationByArea, visibleNavigation } from '../composables/navigation';
 import { validScore } from '../utils/grading';
 import * as instructor from '../api/instructor';
+import * as discussionApi from '../api/lesson-discussions';
 import InstructorDashboardPage from '../pages/InstructorDashboardPage.vue';
 import InstructorCoursesPage from '../pages/InstructorCoursesPage.vue';
 import InstructorCoursePage from '../pages/InstructorCoursePage.vue';
@@ -23,6 +24,7 @@ vi.mock('../api/instructor', () => Object.fromEntries([
     'fetchInstructorAssignment', 'createInstructorAssignment', 'updateInstructorAssignment', 'archiveInstructorAssignment', 'fetchInstructorSubmissions', 'fetchInstructorSubmission', 'gradeInstructorSubmission',
     'requestInstructorRevision', 'correctInstructorGrade', 'downloadInstructorSubmissionFile', 'downloadInstructorAssignmentAttachment',
 ].map((name) => [name, vi.fn()])));
+vi.mock('../api/lesson-discussions', () => ({ fetchLessonComments: vi.fn(), fetchLessonReplies: vi.fn(), postLessonComment: vi.fn() }));
 
 const collection = (items, lastPage = 1) => ({ items, meta: { current_page: 1, last_page: lastPage } });
 const course = { id: 4, title: 'Owned course', short_description: 'A practical course', description: 'Details', status: 'published', level: 'beginner', category: { name: 'Professional skills' }, capabilities: { can_view_curriculum: true, can_create_curriculum: false, can_update_curriculum: false, can_delete_curriculum: false, can_update_course: true }, updated_at: '2026-09-25T10:00:00Z' };
@@ -38,6 +40,7 @@ beforeEach(() => {
     instructor.fetchInstructorSummary.mockResolvedValue({ courses: 3, published_courses: 2, draft_courses: 1, awaiting_grading: 4 });
     instructor.fetchInstructorCourses.mockResolvedValue(collection([course], 2));
     instructor.fetchInstructorCourse.mockImplementation(async () => ({ ...course, capabilities: { ...course.capabilities, can_create_quiz: state.permissions.includes('assessments.view') && state.permissions.includes('assessments.create'), can_create_assignment: state.permissions.includes('assignments.view') && state.permissions.includes('assignments.create') } }));
+    discussionApi.fetchLessonComments.mockResolvedValue({ data: [], next_before: null });
     instructor.updateInstructorCourse.mockResolvedValue(course);
     instructor.fetchInstructorCurriculum.mockResolvedValue(collection([{ id: 1, title: 'Section', lessons: [{ id: 2, title: 'Lesson', type: 'text', resources: [{ id: 3, title: 'Guide', download_available: true }] }] }]));
     instructor.fetchInstructorQuizzes.mockImplementation(async () => collection([{ id: 5, title: 'Quiz', status: 'published', passing_score: 70, capabilities: { can_update: state.permissions.includes('assessments.view') && state.permissions.includes('assessments.update'), can_delete: state.permissions.includes('assessments.view') && state.permissions.includes('assessments.delete') } }]));
@@ -94,6 +97,16 @@ describe('instructor navigation and scoped routes', () => {
 });
 
 describe('instructor dashboard and courses', () => {
+    it('opens discussions for published lessons in the owned course', async () => {
+        state.route.params = { courseId: '4' };
+        instructor.fetchInstructorCourse.mockResolvedValue({ ...course, slug: 'owned-course', discussion_enabled: true });
+        instructor.fetchInstructorCurriculum.mockResolvedValue(collection([{ id: 1, title: 'Section', is_active: true, lessons: [{ id: 2, title: 'Published lesson', is_published: true, type: 'text', resources: [] }] }]));
+        const wrapper = render(InstructorCoursePage);
+        await flushPromises();
+
+        expect(discussionApi.fetchLessonComments).toHaveBeenCalledWith('owned-course', 2);
+        expect(wrapper.text()).toContain('Lesson discussion');
+    });
     it('loads truthful summary and handles server errors', async () => {
         const wrapper = render(InstructorDashboardPage);
         expect(wrapper.text()).toContain('Loading');

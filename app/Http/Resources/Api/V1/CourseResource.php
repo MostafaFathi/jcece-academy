@@ -34,7 +34,7 @@ class CourseResource extends JsonResource
             'access_duration_days' => $this->access_duration_days,
             'price' => app(CommercePricingService::class)->product($this->resource)['active_price'],
             'pricing' => app(CommercePricingService::class)->product($this->resource),
-            'currency' => app(CommerceCatalogService::class)->currency(),
+            'currency' => app(CommerceCatalogService::class)->productCurrency($this->resource),
             'compare_price' => $request->routeIs('api.v1.admin.*') ? $this->compare_price : (app(CommercePricingService::class)->product($this->resource)['promotion_active'] ? $this->price : null),
             'legacy_compare_price' => $this->when($request->routeIs('api.v1.admin.*'), $this->compare_price),
             'promotional_price' => $this->promotional_price,

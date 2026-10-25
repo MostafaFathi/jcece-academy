@@ -47,6 +47,11 @@ class Lesson extends Model
         return $this->hasMany(LessonVideoUpload::class);
     }
 
+    public function comments(): HasMany
+    {
+        return $this->hasMany(LessonComment::class);
+    }
+
     /** @return array<string, string> */
     protected function casts(): array
     {

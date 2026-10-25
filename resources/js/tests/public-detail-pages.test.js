@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
 import { flushPromises, mount } from '@vue/test-utils';
 import CourseDetailPage from '../pages/CourseDetailPage.vue';
+import CourseCard from '../components/public/CourseCard.vue';
 import PackageDetailPage from '../pages/PackageDetailPage.vue';
 import i18n, { setLocale } from '../i18n';
 import { fetchCourse } from '../api/courses';
@@ -24,7 +25,7 @@ describe('public detail pages', () => {
 
     it('renders public course curriculum and published reviews without exposing file paths', async () => {
         fetchCourse.mockResolvedValue({
-            id: 1, slug: 'bim', title: 'BIM Essentials', short_description: 'Learn BIM', description: 'Safe description', level: 'beginner', language: 'en', price: '20.00', access_duration_days: 90, certificate_enabled: true,
+            id: 1, slug: 'bim', title: 'BIM Essentials', short_description: 'Learn BIM', description: 'Safe description', level: 'beginner', language: 'en', price: '20.00', duration_minutes: 90, access_duration_days: 90, certificate_enabled: true,
             rating_summary: { average_rating: 5, review_count: 1 },
             curriculum: [{ id: 1, title: 'Introduction', lessons: [{ id: 1, title: 'Welcome lesson', type: 'video', duration_seconds: 300, is_preview: true, sort_order: 0, file_path: 'private/lesson.pdf' }] }],
         });
@@ -32,8 +33,24 @@ describe('public detail pages', () => {
         const wrapper = mount(CourseDetailPage, { props: { slug: 'bim' }, global: global() });
         await flushPromises();
         expect(wrapper.text()).toContain('Welcome lesson');
+        expect(wrapper.text()).toContain('1.5 hr');
+        expect(wrapper.text()).toContain('5 min');
         expect(wrapper.text()).toContain('Published feedback');
         expect(wrapper.html()).not.toContain('private/lesson.pdf');
+    });
+
+    it('shows course-card duration in hours for existing minute values', async () => {
+        const wrapper = mount(CourseCard, {
+            props: { course: { id: 2, slug: 'core', title: 'Core Course', level: 'beginner', price: '20.00', duration_minutes: 120, is_featured: true } },
+            global: { ...global(), stubs: { ...global().stubs, AddToCartButton: true, MediaFrame: { template: '<div><slot /></div>' }, MoneyAmount: true, RatingStars: true } },
+        });
+
+        expect(wrapper.text()).toContain('2 hr');
+        setLocale('ar'); await flushPromises();
+        expect(wrapper.text()).toContain('2 ساعة');
+        expect(wrapper.text()).toContain('مميزة');
+        expect(wrapper.text()).not.toContain('مختارة');
+        wrapper.unmount();
     });
 
     it('uses the backend aggregate when a pending review is absent from public results', async () => {

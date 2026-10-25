@@ -1,1 +1,0 @@
-import{D as e,R as t}from"./app-BX_578Xc.js";import{t as n}from"./AppShellLayout-B2THbNcy.js";var r={__name:`AdminLayout`,setup(r){return(r,i)=>(t(),e(n,{area:`admin`}))}};export{r as default};

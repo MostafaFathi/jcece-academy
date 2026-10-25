@@ -37,6 +37,10 @@ export async function saveSiteSettings(payload) {
     return unwrapResource(await api.put('api/v1/admin/site-settings', payload));
 }
 
+export async function saveSiteCurrency(payload) {
+    return unwrapResource(await api.put('api/v1/admin/site-currency', payload));
+}
+
 export async function saveSitePage(slug, payload) {
     return unwrapResource(await api.put(`api/v1/admin/site-pages/${encodeURIComponent(slug)}`, payload));
 }

@@ -1,7 +1,7 @@
 <script setup>
-import { onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { deleteSiteFaq, fetchAdminSiteContent, fetchContactMessages, publishSitePage, saveSiteFaq, saveSitePage, saveSiteSettings } from '../api/public-site';
+import { deleteSiteFaq, fetchAdminSiteContent, fetchContactMessages, publishSitePage, saveSiteCurrency, saveSiteFaq, saveSitePage, saveSiteSettings } from '../api/public-site';
 import BaseAlert from '../components/ui/BaseAlert.vue';
 import LoadingState from '../components/ui/LoadingState.vue';
 import PageHeading from '../components/ui/PageHeading.vue';
@@ -11,6 +11,17 @@ const pages = ref([]);
 const faqs = ref([]);
 const contacts = ref([]);
 const homeAutoplayEnabled = ref(true);
+const currentCurrency = ref(null);
+const selectedCurrency = ref('ILS');
+const currencyScope = ref('future');
+const catalogCurrencies = ref([]);
+const canConvertCurrency = ref(false);
+const currencyRates = reactive({});
+const currencyBusy = ref(false);
+const currencyError = ref(null);
+const currencyResult = ref(null);
+const currencyOptions = ['ILS', 'USD', 'JOD', 'EUR', 'GBP', 'AED', 'SAR', 'EGP', 'TRY'];
+const requiredSourceCurrencies = computed(() => catalogCurrencies.value.filter((currency) => currency !== selectedCurrency.value));
 const selected = ref('about');
 const draft = reactive({ draft_ar: '', draft_en: '' });
 const faqDraft = reactive({ id: null, question_ar: '', answer_ar: '', question_en: '', answer_en: '', sort_order: 0, is_active: false });
@@ -36,11 +47,34 @@ async function load() {
         pages.value = result.pages;
         faqs.value = result.faqs;
         homeAutoplayEnabled.value = result.settings?.home_autoplay_enabled ?? true;
+        currentCurrency.value = result.settings?.currency ?? null;
+        selectedCurrency.value = currentCurrency.value ?? 'ILS';
+        catalogCurrencies.value = result.settings?.catalog_currencies ?? [currentCurrency.value].filter(Boolean);
+        canConvertCurrency.value = result.settings?.can_convert_currency ?? false;
         choose(selected.value);
         const contactResult = await fetchContactMessages();
         contacts.value = contactResult.data ?? [];
     } catch (failure) { error.value = failure; }
     finally { loading.value = false; }
+}
+
+async function saveCurrency() {
+    if (currencyBusy.value || (currencyScope.value === 'future' && selectedCurrency.value === currentCurrency.value)) return;
+    if (!window.confirm(t('siteCurrency.confirm'))) return;
+    currencyBusy.value = true;
+    currencyError.value = null;
+    currencyResult.value = null;
+    try {
+        const rates = currencyScope.value === 'all'
+            ? Object.fromEntries(requiredSourceCurrencies.value.map((currency) => [currency, String(currencyRates[currency] ?? '')]))
+            : {};
+        currencyResult.value = await saveSiteCurrency({ currency: selectedCurrency.value, scope: currencyScope.value, rates });
+        currentCurrency.value = currencyResult.value.currency;
+        catalogCurrencies.value = currencyScope.value === 'all'
+            ? [currentCurrency.value]
+            : [...new Set([...catalogCurrencies.value, currentCurrency.value])];
+    } catch (failure) { currencyError.value = failure; }
+    finally { currencyBusy.value = false; }
 }
 
 async function savePage() {
@@ -108,6 +142,18 @@ onMounted(load);
             <BaseAlert v-if="error" tone="danger">{{ t('errors.generic') }} <button type="button" class="font-bold underline" @click="load">{{ t('common.retry') }}</button></BaseAlert>
             <BaseAlert v-if="saved" tone="success">{{ t('policies.saved') }}</BaseAlert>
             <section class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><h2 class="text-xl font-black">{{ t('site.homeSettings') }}</h2><p class="mt-2 text-sm text-slate-600">{{ t('site.homeAutoplayHint') }}</p><form class="mt-5 flex flex-wrap items-center justify-between gap-4" @submit.prevent="saveSettings"><label class="flex cursor-pointer items-center gap-3 font-bold"><input v-model="homeAutoplayEnabled" type="checkbox" class="size-5 accent-brand">{{ t('site.homeAutoplay') }}</label><button type="submit" :disabled="busy" class="min-h-11 rounded-xl bg-primary px-6 font-bold text-brand-dark disabled:opacity-50">{{ t('site.saveSettings') }}</button></form></section>
+            <section v-if="canConvertCurrency" class="space-y-5 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm" aria-labelledby="site-currency-title">
+                <div><h2 id="site-currency-title" class="text-xl font-black">{{ t('siteCurrency.title') }}</h2><p class="mt-2 text-sm text-slate-600">{{ t('siteCurrency.current') }}: <bdi class="font-bold">{{ currentCurrency }}</bdi></p></div>
+                <BaseAlert tone="warning">{{ t('siteCurrency.historyHint') }}</BaseAlert>
+                <BaseAlert v-if="currencyError" tone="danger" role="alert">{{ currencyError?.message ?? t('siteCurrency.error') }} <span v-for="(messages, field) in currencyError?.errors ?? {}" :key="field" class="block">{{ messages[0] }}</span></BaseAlert>
+                <BaseAlert v-if="currencyResult" tone="success" role="status">{{ t('siteCurrency.saved') }} <span v-if="currencyResult.scope === 'all'">{{ t('siteCurrency.converted', currencyResult.converted) }}</span></BaseAlert>
+                <form class="space-y-5" @submit.prevent="saveCurrency">
+                    <div class="max-w-sm"><label for="site-currency" class="mb-2 block text-sm font-bold">{{ t('siteCurrency.target') }}</label><select id="site-currency" v-model="selectedCurrency" class="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-4"><option v-for="code in currencyOptions" :key="code" :value="code">{{ t(`siteCurrency.codes.${code}`) }} ({{ code }})</option></select></div>
+                    <fieldset class="space-y-3"><legend class="mb-2 text-sm font-bold">{{ t('siteCurrency.scope') }}</legend><label class="flex items-start gap-3 rounded-xl border border-slate-200 p-4"><input v-model="currencyScope" type="radio" value="future" class="mt-1 size-4 accent-brand"><span><strong class="block">{{ t('siteCurrency.future') }}</strong><span class="text-sm text-slate-600">{{ t('siteCurrency.futureHint') }}</span></span></label><label v-if="canConvertCurrency" class="flex items-start gap-3 rounded-xl border border-slate-200 p-4"><input v-model="currencyScope" type="radio" value="all" class="mt-1 size-4 accent-brand"><span><strong class="block">{{ t('siteCurrency.all') }}</strong><span class="text-sm text-slate-600">{{ t('siteCurrency.allHint') }}</span></span></label></fieldset>
+                    <div v-if="currencyScope === 'all' && requiredSourceCurrencies.length" class="grid gap-4 sm:grid-cols-2"><label v-for="source in requiredSourceCurrencies" :key="source" class="block text-sm font-bold">{{ t('siteCurrency.rate', { source, target: selectedCurrency }) }}<input v-model="currencyRates[source]" type="number" min="0.00000001" step="any" required inputmode="decimal" class="mt-2 min-h-11 w-full rounded-xl border border-slate-300 px-4" :aria-label="t('siteCurrency.rate', { source, target: selectedCurrency })"><span class="mt-1 block text-xs font-normal text-slate-500">{{ t('siteCurrency.rateHint', { source, target: selectedCurrency }) }}</span></label></div>
+                    <button type="submit" :disabled="currencyBusy || (currencyScope === 'future' && selectedCurrency === currentCurrency)" class="min-h-11 rounded-xl bg-primary px-6 font-bold text-brand-dark disabled:opacity-50">{{ currencyBusy ? t('siteCurrency.saving') : t('siteCurrency.apply') }}</button>
+                </form>
+            </section>
             <section class="rounded-3xl border border-slate-200 bg-white p-6"><h2 class="text-xl font-black">{{ t('site.manage') }}</h2><nav class="mt-5 flex flex-wrap gap-2" :aria-label="t('site.manage')"><button v-for="page in pages" :key="page.slug" type="button" class="min-h-11 rounded-xl px-4 text-sm font-bold" :class="selected === page.slug ? 'bg-primary text-brand-dark' : 'bg-slate-100 text-slate-700'" @click="choose(page.slug)">{{ t(`site.${page.slug}`) }}</button></nav><form class="mt-6 space-y-5" @submit.prevent="savePage"><div><label for="site-ar" class="mb-2 block font-bold">{{ t('site.arabic') }}</label><textarea id="site-ar" v-model="draft.draft_ar" dir="rtl" rows="8" maxlength="20000" class="w-full rounded-xl border border-slate-300 p-4" /></div><div><label for="site-en" class="mb-2 block font-bold">{{ t('site.english') }}</label><textarea id="site-en" v-model="draft.draft_en" dir="ltr" rows="8" maxlength="20000" class="w-full rounded-xl border border-slate-300 p-4" /></div><div class="flex flex-wrap gap-3"><button type="submit" :disabled="busy" class="min-h-11 rounded-xl bg-primary px-6 font-bold text-brand-dark disabled:opacity-50">{{ t('site.save') }}</button><button type="button" :disabled="busy || !draft.draft_ar || !draft.draft_en" class="min-h-11 rounded-xl border border-brand px-6 font-bold text-brand disabled:opacity-50" @click="publish">{{ t('site.publish') }}</button></div></form></section>
             <section class="rounded-3xl border border-slate-200 bg-white p-6"><h2 class="text-xl font-black">{{ t('site.faq') }}</h2><ul class="mt-5 space-y-3"><li v-for="faq in faqs" :key="faq.id" class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 p-4"><span>{{ faq.question_ar }} <small class="text-slate-500">· {{ faq.is_active ? t('site.published') : t('site.draft') }}</small></span><span class="flex gap-3"><button type="button" class="font-bold text-brand underline" @click="editFaq(faq)">{{ t('common.open') }}</button><button type="button" class="font-bold text-red-700 underline" @click="removeFaq(faq.id)">{{ t('site.removeFaq') }}</button></span></li></ul><form class="mt-6 grid gap-4 sm:grid-cols-2" @submit.prevent="submitFaq"><label v-for="field in ['question_ar', 'answer_ar', 'question_en', 'answer_en']" :key="field" class="block"><span class="mb-2 block text-sm font-bold">{{ t(`site.${field.replace('_ar', 'Ar').replace('_en', 'En')}`) }}</span><textarea v-model="faqDraft[field]" :dir="field.endsWith('_ar') ? 'rtl' : 'ltr'" rows="3" required :maxlength="field.startsWith('question') ? 1000 : 5000" class="w-full rounded-xl border border-slate-300 p-3" /></label><label class="block"><span class="mb-2 block text-sm font-bold">{{ t('site.order') }}</span><input v-model.number="faqDraft.sort_order" type="number" min="0" class="min-h-11 w-full rounded-xl border border-slate-300 px-3"></label><label class="flex items-center gap-2"><input v-model="faqDraft.is_active" type="checkbox" class="size-5 accent-brand">{{ t('site.active') }}</label><div class="sm:col-span-2 flex gap-3"><button type="submit" :disabled="busy" class="min-h-11 rounded-xl bg-primary px-6 font-bold text-brand-dark disabled:opacity-50">{{ t('site.saveFaq') }}</button><button type="button" class="min-h-11 rounded-xl border border-slate-300 px-5" @click="resetFaq">{{ t('common.reset') }}</button></div></form></section>
             <section class="rounded-3xl border border-slate-200 bg-white p-6"><h2 class="text-xl font-black">{{ t('site.contacts') }}</h2><p v-if="!contacts.length" class="mt-4 text-sm text-slate-500">{{ t('common.noResults') }}</p><ul v-else class="mt-5 space-y-4"><li v-for="item in contacts" :key="item.id" class="rounded-xl border border-slate-200 p-4"><p class="font-bold">{{ item.subject }}</p><p class="mt-1 text-sm text-slate-600">{{ item.name }} · {{ item.email }}</p><p class="mt-3 whitespace-pre-line break-words text-sm">{{ item.message }}</p></li></ul></section>

@@ -136,6 +136,52 @@ describe('admin forms', () => {
         await wrapper.get('form').trigger('submit'); await flushPromises();
         expect(api.createAdminCourse).toHaveBeenCalledWith(expect.objectContaining({ category_id: 2, instructor_id: 8, status: 'draft' })); wrapper.unmount();
     });
+    it('offers translated content languages and submits the selected language for a new course', async () => {
+        state.permissions.push('courses.create'); api.createAdminCourse.mockResolvedValue(course);
+        const wrapper = render(AdminCourseFormPage); await flushPromises();
+        const language = wrapper.get('#course-language');
+        expect(language.element.tagName).toBe('SELECT');
+        expect(language.findAll('option').map((option) => option.text())).toEqual(['Arabic', 'English']);
+        await language.setValue('en');
+        await wrapper.get('form').trigger('submit'); await flushPromises();
+        expect(api.createAdminCourse.mock.calls[0][0].language).toBe('en'); wrapper.unmount();
+    });
+    it('preserves a previously saved course language outside the standard options', async () => {
+        state.route.params.id = 7;
+        api.fetchAdminCourse.mockResolvedValueOnce({ ...course, language: 'fr' });
+        const wrapper = render(AdminCourseFormPage); await flushPromises();
+        const language = wrapper.get('#course-language');
+        expect(language.element.value).toBe('fr');
+        expect(language.find('option[value="fr"]').exists()).toBe(true);
+        await language.setValue('en');
+        await language.setValue('fr');
+        await wrapper.get('form').trigger('submit'); await flushPromises();
+        expect(api.updateAdminCourse.mock.calls[0][1].language).toBe('fr'); wrapper.unmount();
+    });
+    it('accepts course duration in hours and saves whole minutes to the API', async () => {
+        state.permissions.push('courses.create'); api.createAdminCourse.mockResolvedValue(course);
+        const wrapper = render(AdminCourseFormPage); await flushPromises();
+        expect(wrapper.text()).toContain('Duration in hours');
+        await wrapper.get('#course-duration').setValue('1.5');
+        await wrapper.get('form').trigger('submit'); await flushPromises();
+        expect(api.createAdminCourse.mock.calls[0][0].duration_minutes).toBe(90); wrapper.unmount();
+    });
+    it('preserves an existing course duration after displaying it in hours', async () => {
+        state.route.params.id = 7;
+        api.fetchAdminCourse.mockResolvedValueOnce({ ...course, duration_minutes: 65 });
+        const wrapper = render(AdminCourseFormPage); await flushPromises();
+        expect(wrapper.get('#course-duration').element.value).toBe('1.08');
+        await wrapper.get('form').trigger('submit'); await flushPromises();
+        expect(api.updateAdminCourse.mock.calls[0][1].duration_minutes).toBe(65); wrapper.unmount();
+    });
+    it('rejects nonpositive course hours before submitting', async () => {
+        state.permissions.push('courses.create');
+        const wrapper = render(AdminCourseFormPage); await flushPromises();
+        await wrapper.get('#course-duration').setValue('-1');
+        await wrapper.get('form').trigger('submit'); await flushPromises();
+        expect(api.createAdminCourse).not.toHaveBeenCalled();
+        expect(wrapper.get('#course-duration-error').text()).toContain('greater than zero'); wrapper.unmount();
+    });
     it('preserves the current and newly selected instructor across search result changes', async () => {
         state.route.params.id = 7;
         instructorApi.fetchInstructorOptions.mockResolvedValueOnce({ items: [{ id: 9, name: 'Other' }], meta: { current_page: 1, last_page: 1 } })

@@ -44,3 +44,11 @@ export function formatDate(value, locale = 'ar') {
 
     return new Intl.DateTimeFormat(locale === 'ar' ? 'ar' : 'en', { dateStyle: 'medium' }).format(date);
 }
+
+export function courseHoursFromMinutes(minutes) {
+    return Number((Number(minutes) / 60).toFixed(2));
+}
+
+export function courseMinutesFromHours(hours) {
+    return Math.round(Number(hours) * 60);
+}

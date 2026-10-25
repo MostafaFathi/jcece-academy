@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-#[Fillable(['home_autoplay_enabled'])]
+#[Fillable(['home_autoplay_enabled', 'currency'])]
 class SiteSetting extends Model
 {
     /** @use HasFactory<SiteSettingFactory> */
@@ -15,7 +15,7 @@ class SiteSetting extends Model
 
     public static function current(): self
     {
-        return self::query()->firstOrCreate(['id' => 1], ['home_autoplay_enabled' => true]);
+        return self::query()->firstOrCreate(['id' => 1], ['home_autoplay_enabled' => true, 'currency' => strtoupper((string) config('jcec.commerce.currency'))]);
     }
 
     /** @return array<string, string> */

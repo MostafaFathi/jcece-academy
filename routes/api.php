@@ -95,6 +95,7 @@ use App\Http\Controllers\Api\V1\Me\CheckoutController;
 use App\Http\Controllers\Api\V1\Me\CourseController as MeCourseController;
 use App\Http\Controllers\Api\V1\Me\CourseReviewController as MeCourseReviewController;
 use App\Http\Controllers\Api\V1\Me\FinancialDocumentController as MeFinancialDocumentController;
+use App\Http\Controllers\Api\V1\Me\LessonCommentController;
 use App\Http\Controllers\Api\V1\Me\LessonProgressController;
 use App\Http\Controllers\Api\V1\Me\LessonResourceDownloadController;
 use App\Http\Controllers\Api\V1\Me\LocalePreferenceController;
@@ -209,6 +210,10 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
 
         Route::scopeBindings()->group(function (): void {
             Route::patch('courses/{course:slug}/lessons/{lesson}/progress', [LessonProgressController::class, 'update'])->name('courses.lessons.progress.update');
+            Route::get('courses/{course:slug}/lessons/{lesson}/comments', [LessonCommentController::class, 'index'])->name('courses.lessons.comments.index');
+            Route::get('courses/{course:slug}/lessons/{lesson}/comments/{comment}/replies', [LessonCommentController::class, 'replies'])->name('courses.lessons.comments.replies.index');
+            Route::get('courses/{course:slug}/lessons/{lesson}/comments/{comment}/attachment', [LessonCommentController::class, 'attachment'])->name('courses.lessons.comments.attachment');
+            Route::post('courses/{course:slug}/lessons/{lesson}/comments', [LessonCommentController::class, 'store'])->middleware('throttle:12,1')->name('courses.lessons.comments.store');
             Route::post('courses/{course:slug}/lessons/{lesson}/complete', [LessonProgressController::class, 'complete'])->name('courses.lessons.complete');
             Route::get('courses/{course:slug}/lessons/{lesson}/resources/{resource}/download', LessonResourceDownloadController::class)->name('courses.lessons.resources.download');
         });
@@ -240,6 +245,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::get('policy-pages', [AdminPolicyPageController::class, 'index'])->name('policy-pages.index');
         Route::get('site-content', [AdminSiteContentController::class, 'index'])->name('site-content.index');
         Route::put('site-settings', [AdminSiteContentController::class, 'updateSettings'])->name('site-settings.update');
+        Route::put('site-currency', [AdminSiteContentController::class, 'updateCurrency'])->middleware('throttle:5,1')->name('site-currency.update');
         Route::put('site-pages/{slug}', [AdminSiteContentController::class, 'updatePage'])->name('site-pages.update');
         Route::post('site-pages/{slug}/publication', [AdminSiteContentController::class, 'publishPage'])->name('site-pages.publish');
         Route::post('site-faqs', [AdminSiteContentController::class, 'storeFaq'])->name('site-faqs.store');
