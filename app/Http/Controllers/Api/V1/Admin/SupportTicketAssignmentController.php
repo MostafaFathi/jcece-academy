@@ -16,6 +16,7 @@ class SupportTicketAssignmentController extends Controller
     {
         Gate::authorize('manage', $ticket);
         $assignee = User::query()->findOrFail($request->integer('assigned_to'));
+        abort_if($assignee->is_super_admin && ! $request->user()->is_super_admin, 404);
 
         return new AdminSupportTicketResource($service->assign($request->user(), $ticket, $assignee, $request->validated('expected_updated_at')));
     }

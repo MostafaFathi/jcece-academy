@@ -18,6 +18,10 @@ class UpdateUserRequest extends FormRequest
      */
     public function authorize(): bool
     {
+        /** @var User $user */
+        $user = $this->route('user');
+        abort_if($user->is_super_admin && ! $user->is($this->user()), 404);
+
         return true;
     }
 
@@ -48,6 +52,12 @@ class UpdateUserRequest extends FormRequest
             function (Validator $validator): void {
                 /** @var User $user */
                 $user = $this->route('user');
+                if ($user->is_super_admin && $this->has('email') && $this->input('email') !== $user->email) {
+                    $validator->errors()->add('email', 'The super-admin email cannot be changed here.');
+                }
+                if ($user->is_super_admin && $this->has('roles') && $this->input('roles') !== [RoleName::Admin->value]) {
+                    $validator->errors()->add('roles', 'The super-admin role cannot be changed here.');
+                }
                 if ($this->has('roles') && is_array($this->input('roles')) && ! $validator->errors()->has('roles')) {
                     $newInstructor = in_array(RoleName::Instructor->value, $this->input('roles'), true);
                     if ($newInstructor !== $user->hasRole(RoleName::Instructor->value)) {

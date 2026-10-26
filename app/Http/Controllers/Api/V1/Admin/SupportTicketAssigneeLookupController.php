@@ -23,6 +23,7 @@ class SupportTicketAssigneeLookupController extends Controller
         $search = trim((string) ($filters['search'] ?? ''));
         $assignees = User::query()
             ->permission(PermissionName::SupportTicketsManage->value)
+            ->when(! $request->user()->is_super_admin, fn ($query) => $query->where('is_super_admin', false))
             ->when(isset($filters['id']), fn ($query) => $query->whereKey($filters['id']))
             ->when($search !== '', fn ($query) => $query->where('name', 'like', "%{$search}%"))
             ->orderBy('name')

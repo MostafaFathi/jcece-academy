@@ -24,9 +24,10 @@ class DevelopmentCatalogSeederTest extends TestCase
     {
         $this->seed([RolesAndPermissionsSeeder::class, PolicyPageSeeder::class, DevelopmentSeeder::class]);
 
-        $this->assertSame(8, User::query()->count());
+        $this->assertSame(9, User::query()->count());
+        $this->assertSame(1, User::query()->where('is_super_admin', true)->count());
         foreach ([RoleName::Admin, RoleName::Instructor, RoleName::ContentManager, RoleName::SalesSupport] as $role) {
-            $this->assertSame(2, User::query()->role($role->value)->count());
+            $this->assertSame($role === RoleName::Admin ? 3 : 2, User::query()->role($role->value)->count());
         }
         $this->assertSame(0, User::query()->role(RoleName::Student->value)->count());
         $this->assertSame(3, Category::query()->count());
@@ -42,7 +43,8 @@ class DevelopmentCatalogSeederTest extends TestCase
 
         $this->seed(DevelopmentSeeder::class);
 
-        $this->assertSame(8, User::query()->count());
+        $this->assertSame(9, User::query()->count());
+        $this->assertSame(1, User::query()->where('is_super_admin', true)->count());
         $this->assertSame(6, Course::query()->count());
         $this->assertSame(12, Lesson::query()->count());
         $this->assertSame(3, Package::query()->count());

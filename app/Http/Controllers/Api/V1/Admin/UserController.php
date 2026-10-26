@@ -15,6 +15,7 @@ use App\Services\RolePermissionManagementService;
 use App\UserStatus;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
@@ -31,6 +32,7 @@ class UserController extends Controller
         Gate::authorize('viewAny', User::class);
         $filters = $request->validated();
         $users = User::query()->with('roles')
+            ->when(! $request->user()->is_super_admin, fn (Builder $query) => $query->where('is_super_admin', false))
             ->when($filters['search'] ?? null, fn (Builder $query, string $search) => $query->where(function (Builder $query) use ($search): void {
                 $query->where('name', 'like', "%{$search}%")->orWhere('email', 'like', "%{$search}%");
             }))
@@ -68,8 +70,9 @@ class UserController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(User $user): AdminUserResource
+    public function show(Request $request, User $user): AdminUserResource
     {
+        abort_if($user->is_super_admin && ! $request->user()->is($user), 404);
         Gate::authorize('view', $user);
 
         return new AdminUserResource($user->load('roles'));
@@ -80,6 +83,7 @@ class UserController extends Controller
      */
     public function update(UpdateUserRequest $request, User $user, AuditTrail $audit, RolePermissionManagementService $roleManagement): AdminUserResource
     {
+        abort_if($user->is_super_admin && ! $request->user()->is($user), 404);
         Gate::authorize('update', $user);
         $attributes = $request->validated();
 

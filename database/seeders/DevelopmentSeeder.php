@@ -14,6 +14,7 @@ class DevelopmentSeeder extends Seeder
 
         $this->call([
             StaffSeeder::class,
+            SuperAdminSeeder::class,
             CatalogSeeder::class,
             SitePageSeeder::class,
             SiteFaqSeeder::class,

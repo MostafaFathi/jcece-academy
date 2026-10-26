@@ -47,7 +47,7 @@ class DashboardSummaryController extends Controller
             $summary['draft_courses'] = Course::query()->where('status', CourseStatus::Draft)->count();
         }
         if ($canViewUsers) {
-            $summary['total_users'] = User::query()->count();
+            $summary['total_users'] = User::query()->when(! $actor->is_super_admin, fn ($query) => $query->where('is_super_admin', false))->count();
             $summary['total_students'] = User::query()->role(RoleName::Student->value)->count();
         }
         if ($canViewInstructors) {

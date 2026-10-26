@@ -21,7 +21,8 @@ class UserPolicy
      */
     public function view(User $user, User $model): bool
     {
-        return $user->can(PermissionName::UsersView->value);
+        return $user->can(PermissionName::UsersView->value)
+            && (! $model->is_super_admin || $user->is($model));
     }
 
     /**
@@ -38,6 +39,7 @@ class UserPolicy
     public function update(User $user, User $model): bool
     {
         return ($user->can(PermissionName::UsersUpdate->value) || $user->can(PermissionName::UsersManage->value))
+            && (! $model->is_super_admin || $user->is($model))
             && (! $model->hasRole(RoleName::Admin->value) || ($user->hasRole(RoleName::Admin->value) && $user->can(PermissionName::UsersManage->value)));
     }
 

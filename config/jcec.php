@@ -54,4 +54,9 @@ return [
         'email' => env('JCEC_DEV_ADMIN_EMAIL', 'admin@jcec.test'),
         'password' => env('JCEC_DEV_ADMIN_PASSWORD', 'password'),
     ],
+
+    'super_admin' => [
+        'email' => env('JCEC_SUPER_ADMIN_EMAIL', 'superadmin@email.com'),
+        'password' => env('JCEC_SUPER_ADMIN_PASSWORD', ''),
+    ],
 ];
