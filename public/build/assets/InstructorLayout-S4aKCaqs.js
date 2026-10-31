@@ -1,0 +1,1 @@
+import{D as e,R as t}from"./app-CbCA7LKP.js";import{t as n}from"./AppShellLayout-B1jnVBGG.js";var r={__name:`InstructorLayout`,setup(r){return(r,i)=>(t(),e(n,{area:`instructor`}))}};export{r as default};

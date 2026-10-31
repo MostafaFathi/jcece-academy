@@ -48,13 +48,18 @@ class CurriculumDeletionService
             ->lockForUpdate()
             ->get();
 
-        abort_if($uploads->contains(fn (LessonVideoUpload $upload): bool => blank($upload->video_guid)), 409, 'Reconcile uncertain video uploads before deleting curriculum.');
-
         $uploadsByLesson = $uploads->groupBy('lesson_id');
         $failedVideoCount = 0;
 
         foreach ($lessons as $lesson) {
             foreach ($uploadsByLesson->get($lesson->id, []) as $upload) {
+                if (blank($upload->video_guid)) {
+                    $upload->update(['status' => 'cleanup_failed', 'is_current' => false]);
+                    $failedVideoCount++;
+
+                    continue;
+                }
+
                 try {
                     $this->bunny->delete($upload->video_guid);
                     $upload->update(['status' => 'deleted', 'is_current' => false, 'deleted_at' => now()]);

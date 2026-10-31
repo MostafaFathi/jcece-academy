@@ -121,7 +121,7 @@ describe('curriculum builder', () => {
 
         await lessonCard.findAll('button').find((button) => button.text() === 'Delete').trigger('click'); await flushPromises();
 
-        expect(wrapper.text()).toContain('The lesson was deleted, but Bunny Stream cleanup failed. Videos requiring removal: 1');
+        expect(wrapper.text()).toContain('The lesson was deleted, but Bunny Stream cleanup is unresolved for 1 video upload(s)');
         expect(wrapper.text()).not.toContain('Read');
         wrapper.unmount();
     });
@@ -132,7 +132,7 @@ describe('curriculum builder', () => {
 
         await wrapper.findAll('button').find((button) => button.text() === 'Delete' && button.element.closest('li')?.textContent.includes('Introduction')).trigger('click'); await flushPromises();
 
-        expect(wrapper.text()).toContain('The section and its lessons were deleted, but Bunny Stream cleanup failed. Videos requiring removal: 2');
+        expect(wrapper.text()).toContain('The section and its lessons were deleted, but Bunny Stream cleanup is unresolved for 2 video upload(s)');
         expect(wrapper.text()).not.toContain('Introduction');
         wrapper.unmount();
     });

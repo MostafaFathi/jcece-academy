@@ -87,13 +87,32 @@ class LessonVideoUploadController extends Controller
         if ($reservation['created']) {
             try {
                 $guid = $bunny->create($lesson->title);
-                $upload->update(['video_guid' => $guid, 'status' => 'uploading']);
             } catch (\Throwable $exception) {
-                $upload->update(['status' => 'uncertain']);
+                LessonVideoUpload::query()->whereKey($upload->id)->where('status', 'creating')->update(['status' => 'uncertain']);
                 throw new ServiceUnavailableHttpException(null, 'Video upload creation is uncertain; contact an administrator before retrying.');
+            }
+
+            $lessonWasDeleted = DB::transaction(function () use ($lesson, $upload, $guid): bool {
+                $lockedLesson = Lesson::withTrashed()->whereKey($lesson->id)->lockForUpdate()->firstOrFail();
+                $lockedUpload = LessonVideoUpload::query()->whereKey($upload->id)->lockForUpdate()->firstOrFail();
+                $lessonWasDeleted = $lockedLesson->trashed() || $lockedUpload->status === 'cleanup_failed';
+
+                $lockedUpload->update([
+                    'video_guid' => $guid,
+                    'status' => $lessonWasDeleted ? 'cleanup_failed' : 'uploading',
+                ]);
+
+                return $lessonWasDeleted;
+            });
+
+            if ($lessonWasDeleted) {
+                $this->deleteRemote($upload->refresh(), $bunny);
+
+                abort(409, 'The lesson was deleted while its video was being created.');
             }
         }
 
+        $upload->refresh();
         abort_unless($upload->status === 'uploading' && filled($upload->video_guid), 409);
 
         return response()->json(['data' => [
