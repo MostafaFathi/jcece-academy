@@ -1,6 +1,9 @@
 export const en = {
     curriculum: {
         videoNotConfigured: 'Bunny Stream is not configured on this server. Ask an administrator to enable it; do not paste keys here.',
+        videoDeleteReconcile: 'This lesson has a video upload with an uncertain identity. Ask an administrator to reconcile it in Bunny Stream before deleting the lesson.',
+        videoDeleteUnavailable: 'The protected videos could not be removed from Bunny Stream. The lesson is still available; try deleting it again later.',
+        confirmDeleteVideoLesson: 'Delete this lesson and permanently remove its protected videos from Bunny Stream? The lesson itself will be soft-deleted.',
         videoRetryCleanup: 'Retry remote cleanup',
         videoRequestTimeout: 'The upload request timed out. Check your connection, then choose the same file to resume. If it continues, inspect the failed request in the browser Network tab.',
         videoUploadStages: { preparing: 'Creating a secure upload session…', connecting: 'Connecting directly to Bunny Stream…', transferring: 'Sending video to Bunny Stream…', processing: 'Upload complete; checking video processing…' },
@@ -22,6 +25,9 @@ export const en = {
 export const ar = {
     curriculum: {
         videoNotConfigured: 'لم يُهيّأ Bunny Stream على هذا الخادم. اطلب من الإدارة تفعيله؛ لا تضع المفاتيح هنا.',
+        videoDeleteReconcile: 'يوجد رفع فيديو لهذا الدرس بهوية غير مؤكدة. اطلب من الإدارة مطابقة الرفع في Bunny Stream قبل حذف الدرس.',
+        videoDeleteUnavailable: 'تعذّر حذف الفيديوهات المحمية من Bunny Stream. بقي الدرس كما هو؛ أعد محاولة حذفه لاحقًا.',
+        confirmDeleteVideoLesson: 'حذف هذا الدرس وإزالة فيديوهاته المحمية نهائيًا من Bunny Stream؟ سيُحذف الدرس حذفًا مرنًا.',
         videoRetryCleanup: 'إعادة محاولة الحذف من المزوّد',
         videoRequestTimeout: 'انتهت مهلة طلب الرفع. تحقّق من الاتصال ثم اختر الملف نفسه للاستئناف. إذا تكرر، افحص الطلب الفاشل في تبويب Network بالمتصفح.',
         videoUploadStages: { preparing: 'جارٍ إنشاء جلسة رفع آمنة…', connecting: 'جارٍ الاتصال المباشر بـ Bunny Stream…', transferring: 'جارٍ إرسال الفيديو إلى Bunny Stream…', processing: 'اكتمل الرفع؛ جارٍ فحص معالجة الفيديو…' },

@@ -8,9 +8,11 @@ use App\Http\Requests\Api\V1\Admin\UpdateLessonRequest;
 use App\Http\Resources\Api\V1\LessonResource as LessonApiResource;
 use App\Models\CourseSection;
 use App\Models\Lesson;
+use App\Services\BunnyStreamClient;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 
 class LessonController extends Controller
@@ -70,12 +72,37 @@ class LessonController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(CourseSection $section, Lesson $lesson): Response
+    public function destroy(CourseSection $section, Lesson $lesson, BunnyStreamClient $bunny): Response
     {
         abort_unless($lesson->course_section_id === $section->id, 404);
         Gate::authorize('delete', $lesson);
-        abort_if($lesson->videoUploads()->where('status', '!=', 'deleted')->exists(), 409, 'Remove protected video uploads before deleting this lesson.');
-        $lesson->delete();
+
+        DB::transaction(function () use ($lesson, $bunny): void {
+            $lockedLesson = Lesson::query()->whereKey($lesson->id)->lockForUpdate()->firstOrFail();
+            $uploads = $lockedLesson->videoUploads()
+                ->where('status', '!=', 'deleted')
+                ->orderBy('is_current')
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get();
+
+            abort_if($uploads->contains(fn ($upload): bool => blank($upload->video_guid)), 409, 'Reconcile uncertain video uploads before deleting this lesson.');
+
+            if ($uploads->isNotEmpty()) {
+                $bunny->requireConfigured();
+            }
+
+            foreach ($uploads as $upload) {
+                $bunny->delete($upload->video_guid);
+                $upload->update(['status' => 'deleted', 'is_current' => false, 'deleted_at' => now()]);
+            }
+
+            if ($uploads->isNotEmpty() && $lockedLesson->video_provider === 'bunny_stream') {
+                $lockedLesson->update(['protected_video_asset_key' => null, 'video_provider' => null]);
+            }
+
+            $lockedLesson->delete();
+        });
 
         return response()->noContent();
     }

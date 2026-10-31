@@ -96,6 +96,23 @@ describe('curriculum builder', () => {
         await lessonCard().findAll('button').find((button) => button.text() === 'Delete').trigger('click'); await flushPromises();
         expect(curriculum.deleteLesson).toHaveBeenCalledWith(11, 21); wrapper.unmount();
     });
+    it.each([
+        [409, 'uncertain identity'],
+        [503, 'could not be removed'],
+    ])('explains why protected video lesson deletion failed with %i', async (status, message) => {
+        curriculum.fetchSections.mockResolvedValue([{ ...sections[0], lessons: [{ ...lesson, type: 'video' }] }]);
+        curriculum.deleteLesson.mockRejectedValue({ status });
+        const wrapper = render(AdminCurriculumPage); await flushPromises();
+        const lessonCard = wrapper.findAll('li').find((item) => item.classes().includes('rounded-2xl') && item.text().includes('Read'));
+
+        await lessonCard.findAll('button').find((button) => button.text() === 'Delete').trigger('click'); await flushPromises();
+
+        expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining('permanently remove its protected videos'));
+        expect(curriculum.deleteLesson).toHaveBeenCalledWith(11, 21);
+        expect(wrapper.text()).toContain(message);
+        expect(wrapper.text()).toContain('Read');
+        wrapper.unmount();
+    });
     it('shows protected video upload immediately after creating a video lesson', async () => {
         curriculum.createLesson.mockResolvedValue({ id: 40, title: 'Video lesson', slug: 'video-lesson', type: 'video', is_preview: false, is_published: false });
         const wrapper = render(AdminCurriculumPage, {}, { LessonVideoUploader: { props: ['lesson', 'initialFile'], template: '<div data-test="video-uploader">{{ lesson.id }} · {{ initialFile?.name }}</div>' } });
