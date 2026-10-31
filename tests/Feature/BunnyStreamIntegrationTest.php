@@ -250,6 +250,38 @@ class BunnyStreamIntegrationTest extends TestCase
         Http::assertSentCount(4);
     }
 
+    public function test_lesson_deletion_reports_provider_status_and_rejects_false_success(): void
+    {
+        $this->configureBunny();
+        [$author, $lesson] = $this->authorAndLesson();
+        $upload = $lesson->videoUploads()->create([
+            'uploaded_by' => $author->id, 'request_id' => $this->payload()['request_id'], 'video_guid' => self::GUID,
+            'filename' => 'lesson.mp4', 'mime_type' => 'video/mp4', 'size_bytes' => 1024, 'status' => 'ready', 'is_current' => true,
+        ]);
+        Http::preventStrayRequests();
+        Http::fake([
+            'video.bunnycdn.com/library/773691/videos/'.self::GUID => Http::sequence()
+                ->push(['success' => false, 'statusCode' => 403], 403)
+                ->push(['success' => false, 'statusCode' => 500], 200)
+                ->push(['success' => true], 200),
+        ]);
+        Sanctum::actingAs($author);
+        $path = "/api/v1/admin/sections/{$lesson->section->id}/lessons/{$lesson->id}";
+
+        $this->deleteJson($path)->assertServiceUnavailable()->assertJsonPath('message', 'Video provider could not remove the video (Bunny HTTP 403).');
+        $this->assertNotSoftDeleted($lesson);
+        $this->assertSame('ready', $upload->refresh()->status);
+
+        $this->deleteJson($path)->assertServiceUnavailable()->assertJsonPath('message', 'Video provider could not remove the video (Bunny HTTP 200).');
+        $this->assertNotSoftDeleted($lesson);
+        $this->assertSame('ready', $upload->refresh()->status);
+
+        $this->deleteJson($path)->assertNoContent();
+        $this->assertSoftDeleted($lesson);
+        $this->assertSame('deleted', $upload->refresh()->status);
+        Http::assertSentCount(3);
+    }
+
     public function test_lesson_deletion_requires_reconciliation_when_upload_has_no_provider_id(): void
     {
         [$author, $lesson] = $this->authorAndLesson();

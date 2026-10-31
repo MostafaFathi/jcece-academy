@@ -5,6 +5,7 @@ namespace App\Services;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpKernel\Exception\ServiceUnavailableHttpException;
 
 class BunnyStreamClient
@@ -84,11 +85,22 @@ class BunnyStreamClient
         try {
             $response = $this->request()->delete($this->videoCollectionUrl().'/'.$guid);
         } catch (ConnectionException) {
+            Log::warning('Bunny Stream video deletion could not connect.', [
+                'video_guid' => $guid,
+            ]);
+
             throw new ServiceUnavailableHttpException(null, 'Video provider is temporarily unavailable.');
         }
 
-        if (! $response->successful() && $response->status() !== 404) {
-            throw new ServiceUnavailableHttpException(null, 'Video provider could not remove the video.');
+        if ($response->status() !== 404 && (! $response->successful() || $response->json('success') === false)) {
+            Log::warning('Bunny Stream video deletion failed.', [
+                'video_guid' => $guid,
+                'http_status' => $response->status(),
+                'provider_status_code' => $response->json('statusCode'),
+                'provider_success' => $response->json('success'),
+            ]);
+
+            throw new ServiceUnavailableHttpException(null, 'Video provider could not remove the video (Bunny HTTP '.$response->status().').');
         }
     }
 
