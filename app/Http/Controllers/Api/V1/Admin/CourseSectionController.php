@@ -8,6 +8,7 @@ use App\Http\Requests\Api\V1\Admin\UpdateCourseSectionRequest;
 use App\Http\Resources\Api\V1\CourseSectionResource;
 use App\Models\Course;
 use App\Models\CourseSection;
+use App\Services\CurriculumDeletionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
@@ -64,11 +65,15 @@ class CourseSectionController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Course $course, CourseSection $section): Response
+    public function destroy(Course $course, CourseSection $section, CurriculumDeletionService $deletion): Response|JsonResponse
     {
+        abort_unless($section->course_id === $course->id, 404);
         Gate::authorize('delete', $section);
-        abort_if($section->lessons()->whereHas('videoUploads', fn ($query) => $query->where('status', '!=', 'deleted'))->exists(), 409, 'Remove protected video uploads before deleting this section.');
-        $section->delete();
+        $failedVideoCount = $deletion->deleteSection($section);
+
+        if ($failedVideoCount > 0) {
+            return response()->json(['warning' => ['code' => 'bunny_cleanup_failed', 'failed_video_count' => $failedVideoCount]]);
+        }
 
         return response()->noContent();
     }

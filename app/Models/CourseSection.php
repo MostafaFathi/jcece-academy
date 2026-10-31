@@ -8,12 +8,13 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable(['course_id', 'title', 'description', 'sort_order', 'is_active'])]
 class CourseSection extends Model
 {
     /** @use HasFactory<CourseSectionFactory> */
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     public function course(): BelongsTo
     {

@@ -219,7 +219,7 @@ class BunnyStreamIntegrationTest extends TestCase
         Http::assertSentCount(2);
     }
 
-    public function test_lesson_deletion_can_be_retried_after_partial_provider_cleanup_failure(): void
+    public function test_lesson_deletion_succeeds_and_keeps_failed_video_cleanup_records(): void
     {
         $this->configureBunny();
         [$author, $lesson] = $this->authorAndLesson();
@@ -234,23 +234,25 @@ class BunnyStreamIntegrationTest extends TestCase
         ]);
         Http::preventStrayRequests();
         Http::fake([
-            'video.bunnycdn.com/library/773691/videos/'.$oldGuid => Http::sequence()->push([], 204)->push([], 404),
-            'video.bunnycdn.com/library/773691/videos/'.self::GUID => Http::sequence()->push([], 500)->push([], 204),
+            'video.bunnycdn.com/library/773691/videos/'.$oldGuid => Http::response([], 204),
+            'video.bunnycdn.com/library/773691/videos/'.self::GUID => Http::response([], 500),
         ]);
         Sanctum::actingAs($author);
         $path = "/api/v1/admin/sections/{$lesson->section->id}/lessons/{$lesson->id}";
 
-        $this->deleteJson($path)->assertServiceUnavailable();
-        $this->assertNotSoftDeleted($lesson);
-        $this->assertSame('retired', $old->refresh()->status);
-        $this->assertSame('ready', $current->refresh()->status);
-
-        $this->deleteJson($path)->assertNoContent();
+        $this->deleteJson($path)->assertOk()
+            ->assertJsonPath('warning.code', 'bunny_cleanup_failed')
+            ->assertJsonPath('warning.failed_video_count', 1);
         $this->assertSoftDeleted($lesson);
-        Http::assertSentCount(4);
+        $this->assertNull($lesson->refresh()->protected_video_asset_key);
+        $this->assertSame('deleted', $old->refresh()->status);
+        $this->assertSame('cleanup_failed', $current->refresh()->status);
+        $this->assertSame(self::GUID, $current->video_guid);
+        $this->getJson("/api/v1/admin/sections/{$lesson->section->id}/lessons/{$lesson->id}")->assertNotFound();
+        Http::assertSentCount(2);
     }
 
-    public function test_lesson_deletion_reports_provider_status_and_rejects_false_success(): void
+    public function test_lesson_deletion_does_not_mark_false_success_as_video_cleanup(): void
     {
         $this->configureBunny();
         [$author, $lesson] = $this->authorAndLesson();
@@ -260,26 +262,15 @@ class BunnyStreamIntegrationTest extends TestCase
         ]);
         Http::preventStrayRequests();
         Http::fake([
-            'video.bunnycdn.com/library/773691/videos/'.self::GUID => Http::sequence()
-                ->push(['success' => false, 'statusCode' => 403], 403)
-                ->push(['success' => false, 'statusCode' => 500], 200)
-                ->push(['success' => true], 200),
+            'video.bunnycdn.com/library/773691/videos/'.self::GUID => Http::response(['success' => false, 'statusCode' => 500], 200),
         ]);
         Sanctum::actingAs($author);
         $path = "/api/v1/admin/sections/{$lesson->section->id}/lessons/{$lesson->id}";
 
-        $this->deleteJson($path)->assertServiceUnavailable()->assertJsonPath('message', 'Video provider could not remove the video (Bunny HTTP 403).');
-        $this->assertNotSoftDeleted($lesson);
-        $this->assertSame('ready', $upload->refresh()->status);
-
-        $this->deleteJson($path)->assertServiceUnavailable()->assertJsonPath('message', 'Video provider could not remove the video (Bunny HTTP 200).');
-        $this->assertNotSoftDeleted($lesson);
-        $this->assertSame('ready', $upload->refresh()->status);
-
-        $this->deleteJson($path)->assertNoContent();
+        $this->deleteJson($path)->assertOk()->assertJsonPath('warning.failed_video_count', 1);
         $this->assertSoftDeleted($lesson);
-        $this->assertSame('deleted', $upload->refresh()->status);
-        Http::assertSentCount(3);
+        $this->assertSame('cleanup_failed', $upload->refresh()->status);
+        Http::assertSentCount(1);
     }
 
     public function test_lesson_deletion_requires_reconciliation_when_upload_has_no_provider_id(): void
@@ -298,7 +289,7 @@ class BunnyStreamIntegrationTest extends TestCase
         Http::assertNothingSent();
     }
 
-    public function test_lesson_deletion_keeps_the_lesson_when_video_provider_is_not_configured(): void
+    public function test_lesson_deletion_warns_and_keeps_cleanup_record_when_video_provider_is_not_configured(): void
     {
         config()->set('jcec.bunny_stream.enabled', false);
         [$author, $lesson] = $this->authorAndLesson();
@@ -309,13 +300,15 @@ class BunnyStreamIntegrationTest extends TestCase
         Http::preventStrayRequests();
         Sanctum::actingAs($author);
 
-        $this->deleteJson("/api/v1/admin/sections/{$lesson->section->id}/lessons/{$lesson->id}")->assertServiceUnavailable();
+        $this->deleteJson("/api/v1/admin/sections/{$lesson->section->id}/lessons/{$lesson->id}")
+            ->assertOk()->assertJsonPath('warning.failed_video_count', 1);
 
-        $this->assertNotSoftDeleted($lesson);
+        $this->assertSoftDeleted($lesson);
+        $this->assertSame('cleanup_failed', $lesson->videoUploads()->firstOrFail()->status);
         Http::assertNothingSent();
     }
 
-    public function test_course_and_section_deletion_cannot_orphan_a_bunny_upload(): void
+    public function test_section_deletion_keeps_failed_video_records_and_course_deletion_still_blocks_active_uploads(): void
     {
         [$author, $lesson] = $this->authorAndLesson();
         $section = $lesson->section;
@@ -326,9 +319,66 @@ class BunnyStreamIntegrationTest extends TestCase
         ]);
         Sanctum::actingAs($author);
 
-        $this->deleteJson("/api/v1/admin/courses/{$course->id}/sections/{$section->id}")->assertStatus(409);
         $this->deleteJson("/api/v1/admin/courses/{$course->id}")->assertStatus(409);
-        $this->assertNotNull($lesson->fresh());
+        $this->deleteJson("/api/v1/admin/courses/{$course->id}/sections/{$section->id}")
+            ->assertOk()->assertJsonPath('warning.failed_video_count', 1);
+        $this->assertSoftDeleted($section);
+        $this->assertSoftDeleted($lesson);
+        $this->assertSame('cleanup_failed', $lesson->videoUploads()->firstOrFail()->status);
+    }
+
+    public function test_section_deletion_attempts_all_videos_and_soft_deletes_all_lessons(): void
+    {
+        $this->configureBunny();
+        [$author, $firstLesson] = $this->authorAndLesson();
+        $section = $firstLesson->section;
+        $secondLesson = Lesson::factory()->video()->for($section, 'section')->create();
+        $firstUpload = $firstLesson->videoUploads()->create([
+            'uploaded_by' => $author->id, 'request_id' => $this->payload()['request_id'], 'video_guid' => self::GUID,
+            'filename' => 'first.mp4', 'mime_type' => 'video/mp4', 'size_bytes' => 1024, 'status' => 'ready', 'is_current' => true,
+        ]);
+        $secondGuid = '123e4567-e89b-42d3-a456-426614174001';
+        $secondUpload = $secondLesson->videoUploads()->create([
+            'uploaded_by' => $author->id, 'request_id' => '550e8400-e29b-41d4-a716-446655440001', 'video_guid' => $secondGuid,
+            'filename' => 'second.mp4', 'mime_type' => 'video/mp4', 'size_bytes' => 1024, 'status' => 'ready', 'is_current' => true,
+        ]);
+        Http::preventStrayRequests();
+        Http::fake([
+            'video.bunnycdn.com/library/773691/videos/'.self::GUID => Http::response([], 401),
+            'video.bunnycdn.com/library/773691/videos/'.$secondGuid => Http::response([], 204),
+        ]);
+        Sanctum::actingAs($author);
+
+        $this->deleteJson("/api/v1/admin/courses/{$section->course_id}/sections/{$section->id}")
+            ->assertOk()->assertJsonPath('warning.code', 'bunny_cleanup_failed')
+            ->assertJsonPath('warning.failed_video_count', 1);
+
+        $this->assertSoftDeleted($section);
+        $this->assertSoftDeleted($firstLesson);
+        $this->assertSoftDeleted($secondLesson);
+        $this->assertSame('cleanup_failed', $firstUpload->refresh()->status);
+        $this->assertSame('deleted', $secondUpload->refresh()->status);
+        $this->getJson("/api/v1/admin/courses/{$section->course_id}/sections/{$section->id}")->assertNotFound();
+        Http::assertSentCount(2);
+    }
+
+    public function test_section_deletion_does_not_start_remote_cleanup_when_upload_identity_is_unknown(): void
+    {
+        $this->configureBunny();
+        [$author, $lesson] = $this->authorAndLesson();
+        $section = $lesson->section;
+        $lesson->videoUploads()->create([
+            'uploaded_by' => $author->id, 'request_id' => $this->payload()['request_id'],
+            'filename' => 'unknown.mp4', 'mime_type' => 'video/mp4', 'size_bytes' => 1024, 'status' => 'uncertain',
+        ]);
+        Http::preventStrayRequests();
+        Sanctum::actingAs($author);
+
+        $this->deleteJson("/api/v1/admin/courses/{$section->course_id}/sections/{$section->id}")->assertConflict();
+
+        $this->assertNotSoftDeleted($section);
+        $this->assertNotSoftDeleted($lesson);
+        Http::assertNothingSent();
     }
 
     public function test_replacement_keeps_old_video_until_new_video_is_ready_then_deletes_old_remote_video(): void

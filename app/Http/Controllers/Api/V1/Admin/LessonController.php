@@ -8,11 +8,10 @@ use App\Http\Requests\Api\V1\Admin\UpdateLessonRequest;
 use App\Http\Resources\Api\V1\LessonResource as LessonApiResource;
 use App\Models\CourseSection;
 use App\Models\Lesson;
-use App\Services\BunnyStreamClient;
+use App\Services\CurriculumDeletionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 
 class LessonController extends Controller
@@ -72,37 +71,16 @@ class LessonController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(CourseSection $section, Lesson $lesson, BunnyStreamClient $bunny): Response
+    public function destroy(CourseSection $section, Lesson $lesson, CurriculumDeletionService $deletion): Response|JsonResponse
     {
         abort_unless($lesson->course_section_id === $section->id, 404);
         Gate::authorize('delete', $lesson);
 
-        DB::transaction(function () use ($lesson, $bunny): void {
-            $lockedLesson = Lesson::query()->whereKey($lesson->id)->lockForUpdate()->firstOrFail();
-            $uploads = $lockedLesson->videoUploads()
-                ->where('status', '!=', 'deleted')
-                ->orderBy('is_current')
-                ->orderBy('id')
-                ->lockForUpdate()
-                ->get();
+        $failedVideoCount = $deletion->deleteLesson($lesson);
 
-            abort_if($uploads->contains(fn ($upload): bool => blank($upload->video_guid)), 409, 'Reconcile uncertain video uploads before deleting this lesson.');
-
-            if ($uploads->isNotEmpty()) {
-                $bunny->requireConfigured();
-            }
-
-            foreach ($uploads as $upload) {
-                $bunny->delete($upload->video_guid);
-                $upload->update(['status' => 'deleted', 'is_current' => false, 'deleted_at' => now()]);
-            }
-
-            if ($uploads->isNotEmpty() && $lockedLesson->video_provider === 'bunny_stream') {
-                $lockedLesson->update(['protected_video_asset_key' => null, 'video_provider' => null]);
-            }
-
-            $lockedLesson->delete();
-        });
+        if ($failedVideoCount > 0) {
+            return response()->json(['warning' => ['code' => 'bunny_cleanup_failed', 'failed_video_count' => $failedVideoCount]]);
+        }
 
         return response()->noContent();
     }

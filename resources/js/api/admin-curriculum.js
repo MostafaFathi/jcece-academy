@@ -5,12 +5,12 @@ const base = '/api/v1/admin';
 export async function fetchSections(courseId) { return unwrapCollection(await api.get(`${base}/courses/${courseId}/sections`)).items; }
 export async function createSection(courseId, payload) { return unwrapResource(await api.post(`${base}/courses/${courseId}/sections`, payload)); }
 export async function updateSection(courseId, sectionId, payload) { return unwrapResource(await api.patch(`${base}/courses/${courseId}/sections/${sectionId}`, payload)); }
-export async function deleteSection(courseId, sectionId) { await api.delete(`${base}/courses/${courseId}/sections/${sectionId}`); }
+export async function deleteSection(courseId, sectionId) { const response = await api.delete(`${base}/courses/${courseId}/sections/${sectionId}`); return response.data?.warning ?? null; }
 export async function reorderSections(courseId, ids) { return unwrapCollection(await api.post(`${base}/courses/${courseId}/sections/reorder`, { ids })).items; }
 
 export async function createLesson(sectionId, payload) { return unwrapResource(await api.post(`${base}/sections/${sectionId}/lessons`, payload)); }
 export async function updateLesson(sectionId, lessonId, payload) { return unwrapResource(await api.patch(`${base}/sections/${sectionId}/lessons/${lessonId}`, payload)); }
-export async function deleteLesson(sectionId, lessonId) { await api.delete(`${base}/sections/${sectionId}/lessons/${lessonId}`); }
+export async function deleteLesson(sectionId, lessonId) { const response = await api.delete(`${base}/sections/${sectionId}/lessons/${lessonId}`); return response.data?.warning ?? null; }
 export async function reorderLessons(sectionId, ids) { return unwrapCollection(await api.post(`${base}/sections/${sectionId}/lessons/reorder`, { ids })).items; }
 
 export async function fetchLessonResources(lessonId) { return unwrapCollection(await api.get(`${base}/lessons/${lessonId}/resources`)).items; }

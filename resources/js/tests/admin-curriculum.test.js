@@ -107,10 +107,43 @@ describe('curriculum builder', () => {
 
         await lessonCard.findAll('button').find((button) => button.text() === 'Delete').trigger('click'); await flushPromises();
 
-        expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining('permanently remove its protected videos'));
+        expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining('attempt to remove its protected videos'));
         expect(curriculum.deleteLesson).toHaveBeenCalledWith(11, 21);
         expect(wrapper.text()).toContain(message);
         expect(wrapper.text()).toContain('Read');
+        wrapper.unmount();
+    });
+    it('shows a warning after deleting a lesson when Bunny cleanup fails', async () => {
+        curriculum.fetchSections.mockResolvedValueOnce([{ ...sections[0], lessons: [{ ...lesson, type: 'video' }] }]).mockResolvedValueOnce([{ ...sections[0], lessons: [] }]);
+        curriculum.deleteLesson.mockResolvedValue({ code: 'bunny_cleanup_failed', failed_video_count: 1 });
+        const wrapper = render(AdminCurriculumPage); await flushPromises();
+        const lessonCard = wrapper.findAll('li').find((item) => item.classes().includes('rounded-2xl') && item.text().includes('Read'));
+
+        await lessonCard.findAll('button').find((button) => button.text() === 'Delete').trigger('click'); await flushPromises();
+
+        expect(wrapper.text()).toContain('The lesson was deleted, but Bunny Stream cleanup failed. Videos requiring removal: 1');
+        expect(wrapper.text()).not.toContain('Read');
+        wrapper.unmount();
+    });
+    it('shows a warning after deleting a section when Bunny cleanup fails', async () => {
+        curriculum.fetchSections.mockResolvedValueOnce(structuredClone(sections)).mockResolvedValueOnce([structuredClone(sections[1])]);
+        curriculum.deleteSection.mockResolvedValue({ code: 'bunny_cleanup_failed', failed_video_count: 2 });
+        const wrapper = render(AdminCurriculumPage); await flushPromises();
+
+        await wrapper.findAll('button').find((button) => button.text() === 'Delete' && button.element.closest('li')?.textContent.includes('Introduction')).trigger('click'); await flushPromises();
+
+        expect(wrapper.text()).toContain('The section and its lessons were deleted, but Bunny Stream cleanup failed. Videos requiring removal: 2');
+        expect(wrapper.text()).not.toContain('Introduction');
+        wrapper.unmount();
+    });
+    it('explains why a section with an unidentified video cannot be deleted', async () => {
+        curriculum.deleteSection.mockRejectedValue({ status: 409 });
+        const wrapper = render(AdminCurriculumPage); await flushPromises();
+
+        await wrapper.findAll('button').find((button) => button.text() === 'Delete' && button.element.closest('li')?.textContent.includes('Introduction')).trigger('click'); await flushPromises();
+
+        expect(wrapper.text()).toContain('This section has a video upload with an uncertain identity');
+        expect(wrapper.text()).toContain('Introduction');
         wrapper.unmount();
     });
     it('shows protected video upload immediately after creating a video lesson', async () => {

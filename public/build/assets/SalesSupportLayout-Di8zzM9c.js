@@ -1,0 +1,1 @@
+import{D as e,R as t}from"./app-BlHZJ_4l.js";import{t as n}from"./AppShellLayout-CVD8G-rV.js";var r={__name:`SalesSupportLayout`,setup(r){return(r,i)=>(t(),e(n,{area:`support`}))}};export{r as default};

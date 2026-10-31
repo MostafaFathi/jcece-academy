@@ -20,6 +20,7 @@ const sections = ref([]);
 const loading = ref(true);
 const busy = ref(false);
 const error = ref(null);
+const deletionWarning = ref(null);
 const editError = ref(null);
 const openSectionId = ref(null);
 const sectionEditorId = ref(null);
@@ -61,9 +62,9 @@ async function saveSection() {
 }
 async function removeSection(section) {
     if (busy.value || !window.confirm(t('curriculum.confirmDeleteSection', { count: section.lessons?.length ?? 0 }))) return;
-    busy.value = true; error.value = null;
-    try { await deleteSection(courseId, section.id); if (openSectionId.value === section.id) openSectionId.value = null; await refreshSections(); }
-    catch (failure) { error.value = failure; await refreshSections(); }
+    busy.value = true; error.value = null; deletionWarning.value = null;
+    try { const warning = await deleteSection(courseId, section.id); if (warning?.code === 'bunny_cleanup_failed') deletionWarning.value = { target: 'section', count: warning.failed_video_count }; if (openSectionId.value === section.id) openSectionId.value = null; await refreshSections(); }
+    catch (failure) { error.value = { ...failure, operation: 'deleteSection' }; await refreshSections(); }
     finally { busy.value = false; }
 }
 function editLesson(section, lesson = null) { lessonEditor.value = { sectionId: section.id, lesson }; editError.value = null; openSectionId.value = section.id; }
@@ -88,8 +89,8 @@ async function saveLesson(payload) {
 }
 async function removeLesson(section, lesson) {
     if (busy.value || !window.confirm(t(lesson.type === 'video' ? 'curriculum.confirmDeleteVideoLesson' : 'curriculum.confirmDeleteLesson'))) return;
-    busy.value = true; error.value = null;
-    try { await deleteLesson(section.id, lesson.id); if (resourceLessonId.value === lesson.id) resourceLessonId.value = null; await refreshSections(); }
+    busy.value = true; error.value = null; deletionWarning.value = null;
+    try { const warning = await deleteLesson(section.id, lesson.id); if (warning?.code === 'bunny_cleanup_failed') deletionWarning.value = { target: 'lesson', count: warning.failed_video_count }; if (resourceLessonId.value === lesson.id) resourceLessonId.value = null; await refreshSections(); }
     catch (failure) { error.value = { ...failure, operation: 'deleteLesson' }; await refreshSections(); }
     finally { busy.value = false; }
 }
@@ -113,7 +114,8 @@ async function move(items, index, direction, reorder) {
         <LoadingState v-if="loading" />
         <BaseAlert v-else-if="error && !course" tone="danger">{{ t(error.status === 403 ? 'admin.notAllowed' : 'admin.loadError') }} <button type="button" class="font-bold underline" @click="load">{{ t('common.retry') }}</button></BaseAlert>
         <template v-else-if="course">
-            <BaseAlert v-if="error" tone="danger">{{ t(error.operation === 'deleteLesson' && error.status === 409 ? 'curriculum.videoDeleteReconcile' : error.operation === 'deleteLesson' && error.status === 503 ? 'curriculum.videoDeleteUnavailable' : error.status === 422 ? 'admin.validation' : error.status === 403 ? 'admin.notAllowed' : 'admin.saveError') }} <button type="button" class="font-bold underline" @click="refreshSections">{{ t('common.retry') }}</button></BaseAlert>
+            <BaseAlert v-if="deletionWarning" tone="warning">{{ t(deletionWarning.target === 'section' ? 'curriculum.videoDeletePartialSection' : 'curriculum.videoDeletePartialLesson', { count: deletionWarning.count }) }}</BaseAlert>
+            <BaseAlert v-if="error" tone="danger">{{ t(error.operation === 'deleteSection' && error.status === 409 ? 'curriculum.videoDeleteReconcileSection' : error.operation === 'deleteLesson' && error.status === 409 ? 'curriculum.videoDeleteReconcile' : error.operation === 'deleteLesson' && error.status === 503 ? 'curriculum.videoDeleteUnavailable' : error.status === 422 ? 'admin.validation' : error.status === 403 ? 'admin.notAllowed' : 'admin.saveError') }} <button type="button" class="font-bold underline" @click="refreshSections">{{ t('common.retry') }}</button></BaseAlert>
             <div class="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-600"><span class="font-bold text-slate-900">{{ course.title }}</span><span>{{ t(`admin.courseStatus.${course.status}`) }}</span><span>{{ t('curriculum.sectionCount', { count: sections.length }) }}</span><RouterLink v-if="canEditCourse" :to="{ name: 'admin.courses.edit', params: { id: course.id } }" class="ms-auto font-bold text-brand underline">{{ t('admin.editCourse') }}</RouterLink></div>
             <form v-if="sectionEditorId === 'new'" class="space-y-4 rounded-2xl border border-brand/20 bg-white p-5" @submit.prevent="saveSection"><h2 class="font-black">{{ t('curriculum.addSection') }}</h2><label class="block text-sm font-bold" for="new-section-title">{{ t('admin.title') }}</label><input id="new-section-title" v-model="sectionForm.title" required maxlength="255" class="w-full rounded-xl border border-slate-300 px-4 py-3"><p v-if="editError?.errors?.title" role="alert" class="text-sm text-red-700">{{ editError.errors.title[0] }}</p><label class="block text-sm font-bold" for="new-section-description">{{ t('admin.description') }}</label><textarea id="new-section-description" v-model="sectionForm.description" rows="2" class="w-full rounded-xl border border-slate-300 px-4 py-3" /><label class="flex items-center gap-2 text-sm"><input v-model="sectionForm.is_active" type="checkbox" class="size-5 accent-brand">{{ t('admin.active') }}</label><div class="flex gap-2"><BaseButton type="submit" :loading="busy">{{ t('admin.create') }}</BaseButton><BaseButton variant="secondary" @click="sectionEditorId = null">{{ t('admin.cancel') }}</BaseButton></div></form>
             <BaseAlert v-if="!sections.length && sectionEditorId !== 'new'">{{ t('curriculum.empty') }}</BaseAlert>

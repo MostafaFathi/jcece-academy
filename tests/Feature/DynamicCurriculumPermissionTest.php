@@ -64,7 +64,7 @@ class DynamicCurriculumPermissionTest extends TestCase
             ->assertOk()->assertJsonPath('data.0.id', $created);
         $this->deleteJson("/api/v1/admin/courses/{$course->id}/sections/{$second->id}")->assertNoContent();
         $this->assertDatabaseHas('course_sections', ['id' => $created, 'title' => 'Updated section', 'sort_order' => 0]);
-        $this->assertDatabaseMissing('course_sections', ['id' => $second->id]);
+        $this->assertSoftDeleted($second);
 
         Sanctum::actingAs($admin);
         $updated = $this->getJson('/api/v1/admin/roles/instructor')->assertOk()->json();
